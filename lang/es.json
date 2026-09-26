@@ -1,0 +1,20 @@
+{
+    "Reset your password": "Restablece tu contraseña",
+    "You are receiving this email because we received a password reset request for your account.": "Recibes este correo porque se pidió cambiar la contraseña de tu cuenta.",
+    "Reset Password": "Crear contraseña nueva",
+    "This password reset link will expire in :count minutes.": "Este enlace vence en :count minutos.",
+    "If you did not request a password reset, no further action is required.": "Si no pediste cambiar tu contraseña, puedes ignorar este correo.",
+    "Hello!": "¡Hola!",
+    "Whoops!": "¡Ups!",
+    "Regards,": "Saludos,",
+    "If you're having trouble clicking the \":actionText\" button, copy and paste the URL below\ninto your web browser:": "Si no puedes hacer clic en el botón \":actionText\", copia y pega esta dirección en tu navegador:",
+    "All rights reserved.": "Todos los derechos reservados.",
+    "Forbidden": "Acceso denegado",
+    "This action is unauthorized.": "No tienes permiso para realizar esta acción.",
+    "Not Found": "No encontrado",
+    "Page Expired": "La página expiró",
+    "Too Many Requests": "Demasiadas solicitudes",
+    "Server Error": "Error del servidor",
+    "Unauthorized": "No autorizado",
+    "Service Unavailable": "Servicio no disponible"
+}
