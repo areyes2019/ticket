@@ -35,7 +35,9 @@
             </div>
         @elseif ($tipo === 'select')
             <select id="{{ $id }}" name="{{ $nombre }}" {{ $attributes }}>
-                <option value="">{{ $vacia }}</option>
+                @if ($vacia !== false)
+                    <option value="">{{ $vacia }}</option>
+                @endif
                 @foreach ($opciones as $valorOpcion => $textoOpcion)
                     <option value="{{ $valorOpcion }}" @selected((string) old($nombre, $valor) === (string) $valorOpcion)>{{ $textoOpcion }}</option>
                 @endforeach

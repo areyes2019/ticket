@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable(['nombre_comercial', 'nombre_contacto', 'correo', 'telefono', 'rfc'])]
@@ -37,6 +38,14 @@ class Proveedor extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * @return HasMany<Articulo, $this>
+     */
+    public function articulos(): HasMany
+    {
+        return $this->hasMany(Articulo::class);
     }
 
     /**

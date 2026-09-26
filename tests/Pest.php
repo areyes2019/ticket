@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /*
@@ -44,7 +45,32 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+/**
+ * Cabeceras con las que Axios pide el fragmento de la búsqueda dinámica.
+ *
+ * @return array<string, string>
+ */
+function cabecerasAjax(): array
 {
-    // ..
+    return ['X-Requested-With' => 'XMLHttpRequest', 'Accept' => 'application/json'];
+}
+
+/**
+ * Un puñado de claves SAT reales, para no depender de la descarga completa
+ * del catálogo (catalogos-sat:actualizar).
+ */
+function sembrarCatalogosSat(): void
+{
+    DB::table('sat_claves_prod_serv')->insert([
+        ['clave' => '01010101', 'descripcion' => 'No existe en el catálogo'],
+        ['clave' => '44121600', 'descripcion' => 'Suministros de escritorio'],
+        ['clave' => '44121604', 'descripcion' => 'Sellos de goma'],
+        ['clave' => '60121000', 'descripcion' => 'Pinturas y medios y aplicadores'],
+    ]);
+
+    DB::table('sat_claves_unidad')->insert([
+        ['clave' => 'H87', 'nombre' => 'Pieza'],
+        ['clave' => 'E48', 'nombre' => 'Unidad de servicio'],
+        ['clave' => 'KGM', 'nombre' => 'Kilogramo'],
+    ]);
 }

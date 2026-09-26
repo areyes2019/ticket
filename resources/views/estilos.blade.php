@@ -42,12 +42,13 @@
         <x-campo nombre="muestra_contrasena" etiqueta="Contraseña" tipo="password" />
         <x-campo nombre="muestra_casilla" etiqueta="Casilla" tipo="checkbox" />
         <x-campo nombre="muestra_select" etiqueta="Lista de opciones" tipo="select" :opciones="['a' => 'Opción A', 'b' => 'Opción B']" valor="b" />
-        <p><code>&lt;x-campo nombre="…" etiqueta="…" tipo="text|email|password|checkbox|select" valor="…" ayuda="…" :opciones="[valor =&gt; texto]" vacia="…" /&gt;</code></p>
+        <p><code>&lt;x-campo nombre="…" etiqueta="…" tipo="text|email|password|checkbox|select" valor="…" ayuda="…" :opciones="[valor =&gt; texto]" vacia="…" (:vacia="false" sin opción vacía) /&gt;</code></p>
+        <p>Campo con sugerencias: <code>&lt;x-campo … data-autocompletar="&lt;url&gt;" /&gt;</code> más <code>js/autocompletar.js</code>; la URL responde <code>[{ clave, descripcion }]</code> y la descripción elegida se escribe en el texto de ayuda. Se ve en el formulario de artículos (requiere sesión).</p>
     </x-card>
 
     <x-card titulo="Iconos del sistema">
         <div class="muestra">
-            @foreach (['speedometer2', 'clock-history', 'box-arrow-in-right', 'box-arrow-right', 'person-plus', 'envelope', 'key', 'eye', 'eye-slash', 'check-circle', 'x-circle', 'exclamation-triangle', 'truck', 'people', 'plus-lg', 'search', 'pencil', 'trash', 'save'] as $icono)
+            @foreach (['speedometer2', 'clock-history', 'box-arrow-in-right', 'box-arrow-right', 'person-plus', 'envelope', 'key', 'eye', 'eye-slash', 'check-circle', 'x-circle', 'exclamation-triangle', 'truck', 'people', 'plus-lg', 'search', 'pencil', 'trash', 'save', 'x-lg', 'box-seam', 'upload', 'download', 'arrow-left', 'arrow-up', 'arrow-down', 'arrow-down-up'] as $icono)
                 <span class="muestra-icono"><x-icono :nombre="$icono" />{{ $icono }}</span>
             @endforeach
         </div>
@@ -57,6 +58,17 @@
     <x-card titulo="Paginación">
         <x-paginacion :paginador="new Illuminate\Pagination\LengthAwarePaginator([], 75, 25, 2, ['path' => route('estilos')])" />
         <p><code>&lt;x-paginacion :paginador="$paginador" /&gt;</code></p>
+    </x-card>
+
+    <x-card titulo="Celda truncada">
+        <table class="tabla">
+            <tbody>
+                <tr>
+                    <td><span class="celda-truncada" title="Sello redondo de Ø X 45 mm con mango ergonómico y cojín de tinta azul">Sello redondo de Ø X 45 mm con mango ergonómico y cojín de tinta azul</span></td>
+                </tr>
+            </tbody>
+        </table>
+        <p><code>&lt;span class="celda-truncada" title="texto completo"&gt;texto completo&lt;/span&gt;</code></p>
     </x-card>
 
     <x-card titulo="Etiquetas de estado">

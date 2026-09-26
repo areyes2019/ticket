@@ -19,6 +19,7 @@
                 <a href="{{ route('dashboard') }}"><x-icono nombre="speedometer2" />Dashboard</a>
                 <a href="{{ route('clientes.index') }}"><x-icono nombre="people" />Clientes</a>
                 <a href="{{ route('proveedores.index') }}"><x-icono nombre="truck" />Proveedores</a>
+                <a href="{{ route('articulos.index') }}"><x-icono nombre="box-seam" />Artículos</a>
                 @can('ver-historial-accesos')
                     <a href="{{ route('historial-accesos.index') }}"><x-icono nombre="clock-history" />Historial de accesos</a>
                 @endcan

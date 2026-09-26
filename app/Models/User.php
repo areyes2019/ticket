@@ -65,6 +65,14 @@ class User extends Authenticatable
     }
 
     /**
+     * @return HasMany<Articulo, $this>
+     */
+    public function articulos(): HasMany
+    {
+        return $this->hasMany(Articulo::class);
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>

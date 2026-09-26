@@ -19,16 +19,6 @@ function datosCliente(array $cambios = []): array
     ];
 }
 
-/**
- * Cabeceras con las que Axios pide el fragmento de la búsqueda dinámica.
- *
- * @return array<string, string>
- */
-function cabecerasAjax(): array
-{
-    return ['X-Requested-With' => 'XMLHttpRequest', 'Accept' => 'application/json'];
-}
-
 describe('acceso', function () {
     it('pide iniciar sesión para ver los clientes', function () {
         $this->get('/clientes')->assertRedirect(route('login'));

@@ -5,6 +5,7 @@
 // disparan la búsqueda al escribir. La respuesta es HTML generado por Blade:
 // cada elemento con id de la respuesta reemplaza al elemento con el mismo id
 // en la página (por ejemplo, las filas de la tabla y la paginación).
+// Los enlaces con data-busqueda-enlace se cargan por AJAX igual que la paginación.
 (function () {
     const ESPERA_MS = 300;
 
@@ -113,9 +114,10 @@
             buscar(parametrosDelFormulario());
         });
 
-        // Enlaces de paginación: cargar la página pedida por AJAX.
+        // Enlaces de paginación y enlaces marcados con data-busqueda-enlace (por
+        // ejemplo, los títulos que ordenan): cargar el resultado pedido por AJAX.
         document.addEventListener('click', function (evento) {
-            const enlace = evento.target.closest('.paginacion a');
+            const enlace = evento.target.closest('.paginacion a, a[data-busqueda-enlace]');
 
             if (!enlace || evento.ctrlKey || evento.metaKey || evento.shiftKey) {
                 return;
