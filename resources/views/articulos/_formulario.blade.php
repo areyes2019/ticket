@@ -1,14 +1,15 @@
 @include('articulos._mensajes')
 
-@if ($proveedores === [])
+@if ($catalogos === [])
     <x-alerta tipo="advertencia">
-        Para registrar artículos primero necesitas un proveedor.
-        <a href="{{ route('proveedores.create') }}">Registrar un proveedor</a>
+        Para registrar artículos primero necesitas un catálogo.
+        <a href="{{ route('catalogos.create') }}">Registrar un catálogo</a>
     </x-alerta>
 @else
     @push('scripts')
         <script src="{{ asset('js/autocompletar.js') }}"></script>
         <script src="{{ asset('js/precio-con-iva.js') }}"></script>
+        <script src="{{ asset('js/precio-con-descuento.js') }}"></script>
     @endpush
 
     <form method="POST" action="{{ $accion }}">
@@ -18,7 +19,8 @@
         @endisset
 
         <x-card>
-            <x-campo nombre="proveedor_id" etiqueta="Proveedor" tipo="select" :opciones="$proveedores" :valor="$articulo?->proveedor_id" vacia="Selecciona un proveedor" required />
+            <x-campo nombre="catalogo_id" etiqueta="Catálogo" tipo="select" :opciones="$catalogos" :valor="$articulo?->catalogo_id" vacia="Selecciona un catálogo" required
+                ayuda="Proveedor — Catálogo (descuento). El proveedor del artículo es el del catálogo." />
             <x-campo nombre="nombre" etiqueta="Nombre" :valor="$articulo?->nombre" maxlength="255" required />
             <x-campo nombre="modelo" etiqueta="Modelo" :valor="$articulo?->modelo" maxlength="255" required />
             <x-campo nombre="clave_prod_serv" etiqueta="Clave de producto/servicio (SAT)" :valor="$articulo?->clave_prod_serv" maxlength="8" autocomplete="off" required
@@ -32,6 +34,11 @@
             <p class="precio-con-iva">
                 Precio con IVA ({{ App\Models\Articulo::TASA_IVA * 100 }}%):
                 <output for="precio_unitario_sin_iva" data-precio-con-iva data-tasa-iva="{{ App\Models\Articulo::TASA_IVA }}">{{ $articulo ? '$'.number_format($articulo->precio_unitario_con_iva, 2) : '—' }}</output>
+            </p>
+            <p class="precio-con-iva">
+                Precio con descuento del catálogo (sin IVA):
+                <output for="precio_unitario_sin_iva catalogo_id" data-precio-con-descuento data-precio="precio_unitario_sin_iva" data-catalogo="catalogo_id"
+                    data-descuentos="{{ json_encode($descuentos, JSON_FORCE_OBJECT) }}">{{ $articulo ? '$'.number_format((float) $articulo->precio_con_descuento, 2) : '—' }}</output>
             </p>
         </x-card>
 

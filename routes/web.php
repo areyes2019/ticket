@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ArticuloController;
+use App\Http\Controllers\CatalogoController;
 use App\Http\Controllers\CatalogoSatController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\ConstanciaController;
@@ -39,6 +40,10 @@ Route::middleware(['auth', AsegurarUsuarioActivo::class])->group(function () {
     Route::resource('proveedores', ProveedorController::class)
         ->except('show')
         ->parameters(['proveedores' => 'proveedor']);
+
+    Route::resource('catalogos', CatalogoController::class)
+        ->except('show')
+        ->parameters(['catalogos' => 'catalogo']);
 
     Route::get('articulos/buscar', [ArticuloController::class, 'buscar'])->name('articulos.buscar');
     Route::get('articulos/importar', [ImportacionArticulosController::class, 'create'])->name('articulos.importar');

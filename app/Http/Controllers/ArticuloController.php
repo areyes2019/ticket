@@ -86,7 +86,7 @@ class ArticuloController extends Controller
     private function articulos(ListadoArticulosRequest $request): LengthAwarePaginator
     {
         return $request->user()->articulos()
-            ->with('proveedor')
+            ->with(['proveedor', 'catalogo'])
             ->filtrar($request->filtros())
             ->ordenar($request->orden(), $request->direccion())
             ->paginate($request->porPagina())
@@ -117,9 +117,12 @@ class ArticuloController extends Controller
         $claveProdServ = old('clave_prod_serv', $articulo?->clave_prod_serv);
         $claveUnidad = old('clave_unidad', $articulo?->clave_unidad);
 
+        $catalogos = $request->user()->catalogos()->disponibles()->get();
+
         return [
             'articulo' => $articulo,
-            'proveedores' => $request->user()->proveedores()->orderBy('nombre_comercial')->pluck('nombre_comercial', 'id')->all(),
+            'catalogos' => $catalogos->pluck('etiqueta', 'id')->all(),
+            'descuentos' => $catalogos->pluck('descuento', 'id')->all(),
             'objetosImpuesto' => ObjetoImpuesto::opciones(),
             'descripcionProdServ' => $claveProdServ ? SatClaveProdServ::find($claveProdServ)?->descripcion : null,
             'descripcionUnidad' => $claveUnidad ? SatClaveUnidad::find(mb_strtoupper($claveUnidad))?->nombre : null,

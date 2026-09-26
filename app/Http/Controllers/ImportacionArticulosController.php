@@ -17,7 +17,7 @@ class ImportacionArticulosController extends Controller
     public function create(Request $request): View
     {
         return view('articulos.importar', [
-            'proveedores' => $request->user()->proveedores()->orderBy('nombre_comercial')->pluck('nombre_comercial', 'id')->all(),
+            'catalogos' => $request->user()->catalogos()->disponibles()->get()->pluck('etiqueta', 'id')->all(),
             'reporte' => session('reporte'),
         ]);
     }
@@ -28,16 +28,16 @@ class ImportacionArticulosController extends Controller
      */
     public function store(ImportarArticulosRequest $request, ImportadorArticulosCsv $importador): RedirectResponse
     {
-        $proveedor = $request->user()->proveedores()->findOrFail($request->integer('proveedor_id'));
+        $catalogo = $request->user()->catalogos()->findOrFail($request->integer('catalogo_id'));
 
         try {
-            $reporte = $importador->importar($request->file('archivo')->getRealPath(), $request->user(), $proveedor);
+            $reporte = $importador->importar($request->file('archivo')->getRealPath(), $request->user(), $catalogo);
         } catch (ArchivoCsvInvalido $excepcion) {
             return back()->withErrors(['archivo' => $excepcion->getMessage()])->withInput();
         }
 
         return redirect()->route('articulos.importar')
             ->with('reporte', $reporte)
-            ->withInput(['proveedor_id' => $proveedor->id]);
+            ->withInput(['catalogo_id' => $catalogo->id]);
     }
 }

@@ -5,7 +5,7 @@ namespace App\Services\Articulos;
 use App\Enums\ObjetoImpuesto;
 use App\Http\Requests\ArticuloRequest;
 use App\Models\Articulo;
-use App\Models\Proveedor;
+use App\Models\Catalogo;
 use App\Models\User;
 use Illuminate\Support\Facades\Validator;
 
@@ -22,7 +22,7 @@ class ImportadorArticulosCsv
      *
      * @throws ArchivoCsvInvalido
      */
-    public function importar(string $ruta, User $usuario, Proveedor $proveedor): array
+    public function importar(string $ruta, User $usuario, Catalogo $catalogo): array
     {
         $archivo = $this->abrirComoUtf8($ruta);
         $encabezado = $this->leerEncabezado($archivo);
@@ -39,8 +39,8 @@ class ImportadorArticulosCsv
 
             $datos = $this->normalizar($this->combinar($encabezado, $celdas));
             $validador = Validator::make(
-                [...$datos, 'proveedor_id' => $proveedor->id],
-                ArticuloRequest::reglas($usuario->id, $proveedor->id),
+                [...$datos, 'catalogo_id' => $catalogo->id],
+                ArticuloRequest::reglas($usuario->id, $catalogo->id),
                 $this->mensajes($datos),
                 array_combine(Articulo::COLUMNAS_CSV, Articulo::COLUMNAS_CSV),
             );

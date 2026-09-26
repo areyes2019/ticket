@@ -1,5 +1,5 @@
 @php
-    $columnas = ['nombre' => 'Nombre', 'modelo' => 'Modelo', 'proveedor' => 'Proveedor', 'precio' => 'Precio con IVA'];
+    $columnas = ['nombre' => 'Nombre', 'modelo' => 'Modelo', 'proveedor' => 'Proveedor', 'catalogo' => 'Catálogo', 'precio' => 'Precio con IVA'];
 @endphp
 
 {{-- Cada título ordena por su columna; un segundo clic invierte la dirección. --}}

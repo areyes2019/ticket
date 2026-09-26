@@ -48,7 +48,7 @@
 
     <x-card titulo="Iconos del sistema">
         <div class="muestra">
-            @foreach (['speedometer2', 'clock-history', 'box-arrow-in-right', 'box-arrow-right', 'person-plus', 'envelope', 'key', 'eye', 'eye-slash', 'check-circle', 'x-circle', 'exclamation-triangle', 'truck', 'people', 'plus-lg', 'search', 'pencil', 'trash', 'save', 'x-lg', 'box-seam', 'upload', 'download', 'arrow-left', 'arrow-up', 'arrow-down', 'arrow-down-up'] as $icono)
+            @foreach (['speedometer2', 'clock-history', 'box-arrow-in-right', 'box-arrow-right', 'person-plus', 'envelope', 'key', 'eye', 'eye-slash', 'check-circle', 'x-circle', 'exclamation-triangle', 'truck', 'collection', 'people', 'plus-lg', 'search', 'pencil', 'trash', 'save', 'x-lg', 'box-seam', 'upload', 'download', 'arrow-left', 'arrow-up', 'arrow-down', 'arrow-down-up'] as $icono)
                 <span class="muestra-icono"><x-icono :nombre="$icono" />{{ $icono }}</span>
             @endforeach
         </div>

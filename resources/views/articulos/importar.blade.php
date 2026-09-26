@@ -41,17 +41,17 @@
         @endif
     @endif
 
-    @if ($proveedores === [])
+    @if ($catalogos === [])
         <x-alerta tipo="advertencia">
-            Para importar artículos primero necesitas un proveedor.
-            <a href="{{ route('proveedores.create') }}">Registrar un proveedor</a>
+            Para importar artículos primero necesitas un catálogo.
+            <a href="{{ route('catalogos.create') }}">Registrar un catálogo</a>
         </x-alerta>
     @else
         <x-card titulo="Archivo CSV">
             <p>La primera fila debe ser el encabezado, con estas columnas en cualquier orden:</p>
             <pre class="bloque-codigo"><code>{{ implode(',', App\Models\Articulo::COLUMNAS_CSV) }}</code></pre>
             <p>
-                Todas las filas se registran en el proveedor que elijas. Se aceptan archivos guardados desde
+                Todas las filas se registran en el catálogo que elijas (y en su proveedor). Se aceptan archivos guardados desde
                 Excel como "CSV UTF-8" o "CSV (delimitado por comas)". Si necesitas una plantilla, exporta tu
                 listado de artículos.
             </p>
@@ -59,7 +59,7 @@
             <form method="POST" action="{{ route('articulos.importar.store') }}" enctype="multipart/form-data">
                 @csrf
 
-                <x-campo nombre="proveedor_id" etiqueta="Proveedor" tipo="select" :opciones="$proveedores" vacia="Selecciona un proveedor" required />
+                <x-campo nombre="catalogo_id" etiqueta="Catálogo" tipo="select" :opciones="$catalogos" vacia="Selecciona un catálogo" required />
                 <x-campo nombre="archivo" etiqueta="Archivo CSV" tipo="file" accept=".csv,text/csv" required />
 
                 <div class="acciones">

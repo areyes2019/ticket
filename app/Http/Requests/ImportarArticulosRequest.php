@@ -15,7 +15,7 @@ class ImportarArticulosRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'proveedor_id' => ['required', 'integer', ArticuloRequest::reglaProveedor($this->user()->id)],
+            'catalogo_id' => ['required', 'integer', ArticuloRequest::reglaCatalogo($this->user()->id)],
             'archivo' => ['required', 'file', 'mimes:csv,txt', 'max:2048'],
         ];
     }
@@ -26,7 +26,7 @@ class ImportarArticulosRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'proveedor_id.exists' => 'Selecciona uno de tus proveedores.',
+            'catalogo_id.exists' => 'Selecciona uno de tus catálogos.',
             'archivo.mimes' => 'El archivo debe ser un CSV.',
         ];
     }
@@ -37,7 +37,7 @@ class ImportarArticulosRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'proveedor_id' => 'proveedor',
+            'catalogo_id' => 'catálogo',
             'archivo' => 'archivo',
         ];
     }

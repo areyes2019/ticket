@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Enums\ObjetoImpuesto;
 use App\Models\Articulo;
+use App\Models\Catalogo;
 use Illuminate\Auth\Access\Response;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -40,19 +41,26 @@ class ArticuloRequest extends FormRequest
      */
     public function rules(): array
     {
-        return self::reglas($this->user()->id, $this->input('proveedor_id'), $this->route('articulo'));
+        return self::reglas($this->user()->id, $this->input('catalogo_id'), $this->route('articulo'));
     }
 
     /**
      * Reglas de un artículo. Las usan este Form Request y la importación CSV,
      * para que el alta individual y la masiva no se desincronicen.
      *
+     * El nombre es único por proveedor, tomado del catálogo: dos artículos del
+     * mismo proveedor no lo comparten aunque estén en catálogos distintos.
+     *
      * @return array<string, array<int, ValidationRule|string|object>>
      */
-    public static function reglas(int $usuarioId, mixed $proveedorId, ?Articulo $ignorar = null): array
+    public static function reglas(int $usuarioId, mixed $catalogoId, ?Articulo $ignorar = null): array
     {
+        $proveedorId = is_numeric($catalogoId)
+            ? Catalogo::where('user_id', $usuarioId)->whereKey((int) $catalogoId)->value('proveedor_id')
+            : null;
+
         return [
-            'proveedor_id' => ['required', 'integer', self::reglaProveedor($usuarioId)],
+            'catalogo_id' => ['required', 'integer', self::reglaCatalogo($usuarioId)],
             'nombre' => [
                 'required',
                 'string',
@@ -71,11 +79,18 @@ class ArticuloRequest extends FormRequest
     }
 
     /**
-     * El proveedor debe ser del usuario y no estar eliminado.
+     * El catálogo debe ser del usuario, y ni él ni su proveedor pueden estar
+     * eliminados.
      */
-    public static function reglaProveedor(int $usuarioId): object
+    public static function reglaCatalogo(int $usuarioId): object
     {
-        return Rule::exists('proveedores', 'id')->where('user_id', $usuarioId)->withoutTrashed();
+        return Rule::exists('catalogos', 'id')
+            ->where('user_id', $usuarioId)
+            ->withoutTrashed()
+            ->where(fn ($consulta) => $consulta->whereIn(
+                'proveedor_id',
+                fn ($proveedores) => $proveedores->select('id')->from('proveedores')->whereNull('deleted_at')
+            ));
     }
 
     /**
@@ -84,7 +99,7 @@ class ArticuloRequest extends FormRequest
     public static function mensajes(): array
     {
         return [
-            'proveedor_id.exists' => 'Selecciona uno de tus proveedores.',
+            'catalogo_id.exists' => 'Selecciona uno de tus catálogos.',
             'nombre.unique' => 'Nombre duplicado: este proveedor ya tiene un artículo con ese nombre.',
             'clave_prod_serv.exists' => 'La clave de producto/servicio no existe en el catálogo del SAT.',
             'clave_unidad.exists' => 'La clave de unidad no existe en el catálogo del SAT.',
@@ -108,7 +123,7 @@ class ArticuloRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'proveedor_id' => 'proveedor',
+            'catalogo_id' => 'catálogo',
             'nombre' => 'nombre',
             'modelo' => 'modelo',
             'clave_prod_serv' => 'clave de producto/servicio',

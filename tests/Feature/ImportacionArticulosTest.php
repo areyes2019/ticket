@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Articulo;
+use App\Models\Catalogo;
 use App\Models\Proveedor;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
@@ -8,8 +9,8 @@ use Illuminate\Http\UploadedFile;
 beforeEach(function () {
     sembrarCatalogosSat();
 
-    $this->proveedor = Proveedor::factory()->create();
-    $this->usuario = $this->proveedor->user;
+    $this->catalogo = Catalogo::factory()->conDescuento(10)->create();
+    $this->usuario = $this->catalogo->user;
 });
 
 const ENCABEZADO_CSV = "nombre,modelo,clave_prod_serv,clave_unidad,objeto_imp,precio_unitario_sin_iva\n";
@@ -22,26 +23,31 @@ function csv(string $contenido, string $nombre = 'articulos.csv'): UploadedFile
 /**
  * Sube el archivo y sigue la redirección hasta la pantalla con el reporte.
  */
-function importar(User $usuario, Proveedor $proveedor, UploadedFile $archivo)
+function importar(User $usuario, Catalogo $catalogo, UploadedFile $archivo)
 {
     return test()->actingAs($usuario)
         ->followingRedirects()
-        ->post('/articulos/importar', ['proveedor_id' => $proveedor->id, 'archivo' => $archivo]);
+        ->post('/articulos/importar', ['catalogo_id' => $catalogo->id, 'archivo' => $archivo]);
 }
 
-it('importa un archivo válido en el proveedor elegido', function () {
-    importar($this->usuario, $this->proveedor, csv(ENCABEZADO_CSV
+it('importa un archivo válido en el catálogo elegido', function () {
+    importar($this->usuario, $this->catalogo, csv(ENCABEZADO_CSV
         ."Sello redondo,R-45,44121604,H87,02,100.50\n"
         ."Almohadilla,A-1,44121600,H87,02,35\n"))
         ->assertOk()
         ->assertSee('2 artículos importados.');
 
-    expect(Articulo::where('proveedor_id', $this->proveedor->id)->where('user_id', $this->usuario->id)->count())->toBe(2)
-        ->and(Articulo::firstWhere('modelo', 'R-45')->precio_unitario_sin_iva)->toBe('100.50');
+    expect(Articulo::where('catalogo_id', $this->catalogo->id)
+        ->where('proveedor_id', $this->catalogo->proveedor_id)
+        ->where('user_id', $this->usuario->id)
+        ->count())->toBe(2)
+        ->and(Articulo::firstWhere('modelo', 'R-45'))
+        ->precio_unitario_sin_iva->toBe('100.50')
+        ->precio_con_descuento->toBe('90.45');
 });
 
 it('importa las filas válidas y reporta fila, modelo y motivo de las demás', function () {
-    importar($this->usuario, $this->proveedor, csv(ENCABEZADO_CSV
+    importar($this->usuario, $this->catalogo, csv(ENCABEZADO_CSV
         ."Sello redondo,R-45,44121604,H87,02,100\n"
         ."Sello malo,M-1,99999999,H87,02,100\n"
         ."\n"
@@ -55,7 +61,7 @@ it('importa las filas válidas y reporta fila, modelo y motivo de las demás', f
 });
 
 it('detecta un nombre repetido dentro del mismo archivo', function () {
-    importar($this->usuario, $this->proveedor, csv(ENCABEZADO_CSV
+    importar($this->usuario, $this->catalogo, csv(ENCABEZADO_CSV
         ."Sello redondo,R-45,44121604,H87,02,100\n"
         ."Sello redondo,R-46,44121604,H87,02,100\n"))
         ->assertSee('1 artículo importado.')
@@ -66,7 +72,7 @@ it('rechaza el archivo completo si faltan columnas en el encabezado', function (
     $this->actingAs($this->usuario)
         ->from('/articulos/importar')
         ->post('/articulos/importar', [
-            'proveedor_id' => $this->proveedor->id,
+            'catalogo_id' => $this->catalogo->id,
             'archivo' => csv("nombre,modelo,precio_unitario_sin_iva\nSello,R-45,100\n"),
         ])
         ->assertRedirect('/articulos/importar')
@@ -76,7 +82,7 @@ it('rechaza el archivo completo si faltan columnas en el encabezado', function (
 });
 
 it('acepta las columnas en cualquier orden y en mayúsculas', function () {
-    importar($this->usuario, $this->proveedor, csv(
+    importar($this->usuario, $this->catalogo, csv(
         "PRECIO_UNITARIO_SIN_IVA,Modelo,Nombre,objeto_imp,clave_unidad,clave_prod_serv\n"
         ."100,R-45,Sello redondo,02,H87,44121604\n"
     ))->assertSee('1 artículo importado.');
@@ -84,12 +90,12 @@ it('acepta las columnas en cualquier orden y en mayúsculas', function () {
 
 it('rechaza un archivo vacío', function () {
     $this->actingAs($this->usuario)
-        ->post('/articulos/importar', ['proveedor_id' => $this->proveedor->id, 'archivo' => csv("\n")])
+        ->post('/articulos/importar', ['catalogo_id' => $this->catalogo->id, 'archivo' => csv("\n")])
         ->assertSessionHasErrors('archivo');
 });
 
 it('completa con cero el objeto de impuesto que una hoja de cálculo dejó en un dígito', function () {
-    importar($this->usuario, $this->proveedor, csv(ENCABEZADO_CSV."Sello redondo,R-45,44121604,h87,2,100\n"))
+    importar($this->usuario, $this->catalogo, csv(ENCABEZADO_CSV."Sello redondo,R-45,44121604,h87,2,100\n"))
         ->assertSee('1 artículo importado.');
 
     expect(Articulo::sole())
@@ -98,7 +104,7 @@ it('completa con cero el objeto de impuesto que una hoja de cálculo dejó en un
 });
 
 it('nombra la columna y el valor de un objeto de impuesto inválido', function () {
-    importar($this->usuario, $this->proveedor, csv(ENCABEZADO_CSV."Sello redondo,R-45,44121604,H87,9,100\n"))
+    importar($this->usuario, $this->catalogo, csv(ENCABEZADO_CSV."Sello redondo,R-45,44121604,H87,9,100\n"))
         ->assertSee('objeto_imp &quot;09&quot; no es un valor válido (01, 02, 03, 04).', false);
 
     expect(Articulo::count())->toBe(0);
@@ -107,7 +113,7 @@ it('nombra la columna y el valor de un objeto de impuesto inválido', function (
 it('conserva acentos y símbolos de un archivo guardado en Windows-1252', function () {
     $contenido = mb_convert_encoding(ENCABEZADO_CSV."Sello redondo de Ø X 45 mm,Añil-1,44121604,H87,02,100\n", 'Windows-1252', 'UTF-8');
 
-    importar($this->usuario, $this->proveedor, csv($contenido))->assertSee('1 artículo importado.');
+    importar($this->usuario, $this->catalogo, csv($contenido))->assertSee('1 artículo importado.');
 
     expect(Articulo::sole())
         ->nombre->toBe('Sello redondo de Ø X 45 mm')
@@ -115,7 +121,7 @@ it('conserva acentos y símbolos de un archivo guardado en Windows-1252', functi
 });
 
 it('importa un archivo UTF-8 con BOM sin perder la primera columna', function () {
-    importar($this->usuario, $this->proveedor, csv("\xEF\xBB\xBF".ENCABEZADO_CSV."Sello redondo de Ø X 45 mm,R-45,44121604,H87,02,100\n"))
+    importar($this->usuario, $this->catalogo, csv("\xEF\xBB\xBF".ENCABEZADO_CSV."Sello redondo de Ø X 45 mm,R-45,44121604,H87,02,100\n"))
         ->assertSee('1 artículo importado.');
 
     expect(Articulo::sole()->nombre)->toBe('Sello redondo de Ø X 45 mm');
@@ -124,7 +130,7 @@ it('importa un archivo UTF-8 con BOM sin perder la primera columna', function ()
 it('no vuelve a importar al recargar la pantalla del reporte', function () {
     $this->actingAs($this->usuario)
         ->post('/articulos/importar', [
-            'proveedor_id' => $this->proveedor->id,
+            'catalogo_id' => $this->catalogo->id,
             'archivo' => csv(ENCABEZADO_CSV."Sello redondo,R-45,44121604,H87,02,100\n"),
         ])
         ->assertRedirect(route('articulos.importar'));
@@ -135,18 +141,20 @@ it('no vuelve a importar al recargar la pantalla del reporte', function () {
     expect(Articulo::count())->toBe(1);
 });
 
-it('rechaza un proveedor ajeno o eliminado', function () {
-    $ajeno = Proveedor::factory()->create();
-    $eliminado = Proveedor::factory()->for($this->usuario)->create();
+it('rechaza un catálogo ajeno, eliminado o de un proveedor eliminado', function () {
+    $ajeno = Catalogo::factory()->create();
+    $eliminado = Catalogo::factory()->for($this->catalogo->proveedor)->create();
     $eliminado->delete();
+    $deProveedorEliminado = Catalogo::factory()->for(Proveedor::factory()->for($this->usuario))->create();
+    $deProveedorEliminado->proveedor->delete();
 
-    foreach ([$ajeno, $eliminado] as $proveedor) {
+    foreach ([$ajeno, $eliminado, $deProveedorEliminado] as $catalogo) {
         $this->actingAs($this->usuario)
             ->post('/articulos/importar', [
-                'proveedor_id' => $proveedor->id,
+                'catalogo_id' => $catalogo->id,
                 'archivo' => csv(ENCABEZADO_CSV."Sello redondo,R-45,44121604,H87,02,100\n"),
             ])
-            ->assertSessionHasErrors('proveedor_id');
+            ->assertSessionHasErrors('catalogo_id');
     }
 
     expect(Articulo::count())->toBe(0);
@@ -155,7 +163,7 @@ it('rechaza un proveedor ajeno o eliminado', function () {
 it('exige un archivo CSV', function () {
     $this->actingAs($this->usuario)
         ->post('/articulos/importar', [
-            'proveedor_id' => $this->proveedor->id,
+            'catalogo_id' => $this->catalogo->id,
             'archivo' => UploadedFile::fake()->image('foto.png'),
         ])
         ->assertSessionHasErrors('archivo');
@@ -163,11 +171,11 @@ it('exige un archivo CSV', function () {
 
 describe('exportación', function () {
     beforeEach(function () {
-        Articulo::factory()->for($this->proveedor)->create([
+        Articulo::factory()->for($this->catalogo)->create([
             'nombre' => 'Sello redondo de Ø X 45 mm', 'modelo' => 'R-45', 'clave_prod_serv' => '44121604',
             'clave_unidad' => 'H87', 'objeto_imp' => '02', 'precio_unitario_sin_iva' => 100.5,
         ]);
-        Articulo::factory()->for($this->proveedor)->create([
+        Articulo::factory()->for($this->catalogo)->create([
             'nombre' => 'Almohadilla', 'modelo' => 'A-1', 'clave_prod_serv' => '44121600',
             'clave_unidad' => 'H87', 'objeto_imp' => '01', 'precio_unitario_sin_iva' => 35,
         ]);
@@ -187,7 +195,7 @@ describe('exportación', function () {
     });
 
     it('respeta los filtros y el orden del listado, sin paginar', function () {
-        Articulo::factory()->count(30)->for($this->proveedor)->create(['nombre' => fn () => 'Sello '.fake()->unique()->word()]);
+        Articulo::factory()->count(30)->for($this->catalogo)->create(['nombre' => fn () => 'Sello '.fake()->unique()->word()]);
 
         $contenido = $this->actingAs($this->usuario)
             ->get('/articulos/exportar?nombre=sello&orden=precio&direccion=desc&por_pagina=10')
@@ -206,7 +214,7 @@ describe('exportación', function () {
 
     it('genera un archivo que se reimporta sin errores en otro proveedor', function () {
         $contenido = $this->actingAs($this->usuario)->get('/articulos/exportar')->streamedContent();
-        $otro = Proveedor::factory()->for($this->usuario)->create();
+        $otro = Catalogo::factory()->for(Proveedor::factory()->for($this->usuario))->create();
 
         importar($this->usuario, $otro, csv($contenido))
             ->assertSee('2 artículos importados.')

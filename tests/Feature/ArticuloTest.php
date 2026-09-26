@@ -2,6 +2,7 @@
 
 use App\Enums\ObjetoImpuesto;
 use App\Models\Articulo;
+use App\Models\Catalogo;
 use App\Models\Proveedor;
 use App\Models\User;
 
@@ -13,10 +14,10 @@ beforeEach(function () {
  * @param  array<string, mixed>  $cambios
  * @return array<string, mixed>
  */
-function datosArticulo(Proveedor $proveedor, array $cambios = []): array
+function datosArticulo(Catalogo $catalogo, array $cambios = []): array
 {
     return [
-        'proveedor_id' => $proveedor->id,
+        'catalogo_id' => $catalogo->id,
         'nombre' => 'Sello redondo 45 mm',
         'modelo' => 'R-45',
         'clave_prod_serv' => '44121604',
@@ -54,53 +55,55 @@ describe('acceso', function () {
 
 describe('alta', function () {
     it('crea un artículo', function () {
-        $proveedor = Proveedor::factory()->create();
+        $catalogo = Catalogo::factory()->conDescuento(10)->create();
 
-        $this->actingAs($proveedor->user)
-            ->post('/articulos', datosArticulo($proveedor))
+        $this->actingAs($catalogo->user)
+            ->post('/articulos', datosArticulo($catalogo))
             ->assertRedirect(route('articulos.index'))
             ->assertSessionHas('exito');
 
         $articulo = Articulo::sole();
 
-        expect($articulo->user_id)->toBe($proveedor->user_id)
-            ->and($articulo->proveedor_id)->toBe($proveedor->id)
+        expect($articulo->user_id)->toBe($catalogo->user_id)
+            ->and($articulo->catalogo_id)->toBe($catalogo->id)
+            ->and($articulo->proveedor_id)->toBe($catalogo->proveedor_id)
+            ->and($articulo->precio_con_descuento)->toBe('90.00')
             ->and($articulo->objeto_imp)->toBe(ObjetoImpuesto::SiObjeto)
             ->and($articulo->precio_unitario_sin_iva)->toBe('100.00');
     });
 
     it('guarda la clave de unidad en mayúsculas', function () {
-        $proveedor = Proveedor::factory()->create();
+        $catalogo = Catalogo::factory()->create();
 
-        $this->actingAs($proveedor->user)->post('/articulos', datosArticulo($proveedor, ['clave_unidad' => ' h87 ']));
+        $this->actingAs($catalogo->user)->post('/articulos', datosArticulo($catalogo, ['clave_unidad' => ' h87 ']));
 
         expect(Articulo::sole()->clave_unidad)->toBe('H87');
     });
 
     it('no permite asignar el usuario desde el formulario', function () {
-        $proveedor = Proveedor::factory()->create();
+        $catalogo = Catalogo::factory()->create();
         $otro = User::factory()->create();
 
-        $this->actingAs($proveedor->user)->post('/articulos', datosArticulo($proveedor, ['user_id' => $otro->id]));
+        $this->actingAs($catalogo->user)->post('/articulos', datosArticulo($catalogo, ['user_id' => $otro->id]));
 
-        expect(Articulo::sole()->user_id)->toBe($proveedor->user_id);
+        expect(Articulo::sole()->user_id)->toBe($catalogo->user_id);
     });
 
     it('exige los campos obligatorios', function (string $campo) {
-        $proveedor = Proveedor::factory()->create();
+        $catalogo = Catalogo::factory()->create();
 
-        $this->actingAs($proveedor->user)
-            ->post('/articulos', datosArticulo($proveedor, [$campo => '']))
+        $this->actingAs($catalogo->user)
+            ->post('/articulos', datosArticulo($catalogo, [$campo => '']))
             ->assertSessionHasErrors($campo);
 
         expect(Articulo::count())->toBe(0);
-    })->with(['proveedor_id', 'nombre', 'modelo', 'clave_prod_serv', 'clave_unidad', 'objeto_imp', 'precio_unitario_sin_iva']);
+    })->with(['catalogo_id', 'nombre', 'modelo', 'clave_prod_serv', 'clave_unidad', 'objeto_imp', 'precio_unitario_sin_iva']);
 
     it('rechaza claves SAT que no están en el catálogo', function (string $campo, string $valor) {
-        $proveedor = Proveedor::factory()->create();
+        $catalogo = Catalogo::factory()->create();
 
-        $this->actingAs($proveedor->user)
-            ->post('/articulos', datosArticulo($proveedor, [$campo => $valor]))
+        $this->actingAs($catalogo->user)
+            ->post('/articulos', datosArticulo($catalogo, [$campo => $valor]))
             ->assertSessionHasErrors($campo);
     })->with([
         'producto/servicio' => ['clave_prod_serv', '99999999'],
@@ -109,34 +112,66 @@ describe('alta', function () {
     ]);
 
     it('rechaza un precio inválido', function (string $precio) {
-        $proveedor = Proveedor::factory()->create();
+        $catalogo = Catalogo::factory()->create();
 
-        $this->actingAs($proveedor->user)
-            ->post('/articulos', datosArticulo($proveedor, ['precio_unitario_sin_iva' => $precio]))
+        $this->actingAs($catalogo->user)
+            ->post('/articulos', datosArticulo($catalogo, ['precio_unitario_sin_iva' => $precio]))
             ->assertSessionHasErrors('precio_unitario_sin_iva');
     })->with(['0', '-5', '10.555', 'abc', '100000000']);
 
-    it('rechaza un proveedor ajeno o eliminado', function () {
+    it('rechaza un catálogo ajeno, eliminado o de un proveedor eliminado', function () {
         $usuario = User::factory()->create();
-        $ajeno = Proveedor::factory()->create();
-        $eliminado = Proveedor::factory()->for($usuario)->create();
+        $ajeno = Catalogo::factory()->create();
+        $eliminado = Catalogo::factory()->for(Proveedor::factory()->for($usuario))->create();
         $eliminado->delete();
+        $deProveedorEliminado = Catalogo::factory()->for(Proveedor::factory()->for($usuario))->create();
+        $deProveedorEliminado->proveedor->delete();
 
-        foreach ([$ajeno, $eliminado] as $proveedor) {
+        foreach ([$ajeno, $eliminado, $deProveedorEliminado] as $catalogo) {
             $this->actingAs($usuario)
-                ->post('/articulos', datosArticulo($proveedor))
-                ->assertSessionHasErrors('proveedor_id');
+                ->post('/articulos', datosArticulo($catalogo))
+                ->assertSessionHasErrors(['catalogo_id' => 'Selecciona uno de tus catálogos.']);
         }
 
         expect(Articulo::count())->toBe(0);
     });
 
-    it('avisa cuando no hay proveedores', function () {
+    it('ignora el proveedor y el precio con descuento enviados', function () {
+        $catalogo = Catalogo::factory()->conDescuento(20)->create();
+        $otroProveedor = Proveedor::factory()->for($catalogo->user)->create();
+
+        $this->actingAs($catalogo->user)->post('/articulos', datosArticulo($catalogo, [
+            'proveedor_id' => $otroProveedor->id,
+            'precio_con_descuento' => '1.00',
+        ]));
+
+        expect(Articulo::sole())
+            ->proveedor_id->toBe($catalogo->proveedor_id)
+            ->precio_con_descuento->toBe('80.00');
+    });
+
+    it('ofrece los catálogos como proveedor, catálogo y descuento', function () {
+        $catalogo = Catalogo::factory()
+            ->for(Proveedor::factory()->state(['nombre_comercial' => 'Acme']))
+            ->conDescuento(12.5)
+            ->create(['nombre' => 'Otoño']);
+        $deProveedorEliminado = Catalogo::factory()->for(Proveedor::factory()->for($catalogo->user))->create(['nombre' => 'Viejo']);
+        $deProveedorEliminado->proveedor->delete();
+
+        $this->actingAs($catalogo->user)
+            ->get('/articulos/crear')
+            ->assertOk()
+            ->assertSee('Acme — Otoño (12.5%)')
+            ->assertDontSee('Viejo')
+            ->assertSee('data-descuentos="'.e(json_encode([$catalogo->id => '12.50'])).'"', false);
+    });
+
+    it('avisa cuando no hay catálogos', function () {
         $this->actingAs(User::factory()->create())
             ->get('/articulos/crear')
             ->assertOk()
-            ->assertSee('primero necesitas un proveedor')
-            ->assertSee(route('proveedores.create'));
+            ->assertSee('primero necesitas un catálogo')
+            ->assertSee(route('catalogos.create'));
     });
 });
 
@@ -145,16 +180,25 @@ describe('nombre único por proveedor', function () {
         $articulo = Articulo::factory()->create(['nombre' => 'Sello redondo 45 mm']);
 
         $this->actingAs($articulo->user)
-            ->post('/articulos', datosArticulo($articulo->proveedor))
+            ->post('/articulos', datosArticulo($articulo->catalogo))
             ->assertSessionHasErrors(['nombre' => 'Nombre duplicado: este proveedor ya tiene un artículo con ese nombre.']);
+    });
+
+    it('rechaza un nombre repetido en otro catálogo del mismo proveedor', function () {
+        $articulo = Articulo::factory()->create(['nombre' => 'Sello redondo 45 mm']);
+        $otroCatalogo = Catalogo::factory()->for($articulo->proveedor)->create();
+
+        $this->actingAs($articulo->user)
+            ->post('/articulos', datosArticulo($otroCatalogo))
+            ->assertSessionHasErrors('nombre');
     });
 
     it('acepta el mismo nombre en otro proveedor', function () {
         $articulo = Articulo::factory()->create(['nombre' => 'Sello redondo 45 mm']);
-        $otroProveedor = Proveedor::factory()->for($articulo->user)->create();
+        $otroCatalogo = Catalogo::factory()->for(Proveedor::factory()->for($articulo->user))->create();
 
         $this->actingAs($articulo->user)
-            ->post('/articulos', datosArticulo($otroProveedor))
+            ->post('/articulos', datosArticulo($otroCatalogo))
             ->assertSessionHasNoErrors();
     });
 
@@ -163,7 +207,7 @@ describe('nombre único por proveedor', function () {
         $articulo->delete();
 
         $this->actingAs($articulo->user)
-            ->post('/articulos', datosArticulo($articulo->proveedor))
+            ->post('/articulos', datosArticulo($articulo->catalogo))
             ->assertSessionHasNoErrors();
     });
 
@@ -171,7 +215,7 @@ describe('nombre único por proveedor', function () {
         $articulo = Articulo::factory()->create(['nombre' => 'Sello redondo 45 mm']);
 
         $this->actingAs($articulo->user)
-            ->put("/articulos/{$articulo->id}", datosArticulo($articulo->proveedor, ['modelo' => 'R-46']))
+            ->put("/articulos/{$articulo->id}", datosArticulo($articulo->catalogo, ['modelo' => 'R-46']))
             ->assertSessionHasNoErrors();
 
         expect($articulo->fresh()->modelo)->toBe('R-46');
@@ -188,20 +232,23 @@ describe('edición y eliminación', function () {
             ->assertSee('Sellos de goma')
             ->assertSee('Pieza')
             ->assertSee('$116.00')
-            ->assertSee('data-tasa-iva="0.16"', false);
+            ->assertSee('data-tasa-iva="0.16"', false)
+            ->assertSee('<option value="'.$articulo->catalogo_id.'" selected>', false);
     });
 
     it('actualiza un artículo', function () {
-        $articulo = Articulo::factory()->create();
-        $otroProveedor = Proveedor::factory()->for($articulo->user)->create();
+        $articulo = Articulo::factory()->create(['precio_unitario_sin_iva' => 100]);
+        $otroCatalogo = Catalogo::factory()->for(Proveedor::factory()->for($articulo->user))->conDescuento(50)->create();
 
         $this->actingAs($articulo->user)
-            ->put("/articulos/{$articulo->id}", datosArticulo($otroProveedor, ['nombre' => 'Fechador', 'objeto_imp' => '01']))
+            ->put("/articulos/{$articulo->id}", datosArticulo($otroCatalogo, ['nombre' => 'Fechador', 'objeto_imp' => '01']))
             ->assertRedirect(route('articulos.index'));
 
         expect($articulo->fresh())
             ->nombre->toBe('Fechador')
-            ->proveedor_id->toBe($otroProveedor->id)
+            ->catalogo_id->toBe($otroCatalogo->id)
+            ->proveedor_id->toBe($otroCatalogo->proveedor_id)
+            ->precio_con_descuento->toBe('50.00')
             ->objeto_imp->toBe(ObjetoImpuesto::NoObjeto);
     });
 
@@ -249,10 +296,12 @@ describe('listado', function () {
         $this->usuario = User::factory()->create();
         $this->acme = Proveedor::factory()->for($this->usuario)->create(['nombre_comercial' => 'Acme']);
         $this->zeta = Proveedor::factory()->for($this->usuario)->create(['nombre_comercial' => 'Zeta Sellos']);
+        $this->catalogoAcme = Catalogo::factory()->for($this->acme)->create(['nombre' => 'General']);
+        $this->catalogoZeta = Catalogo::factory()->for($this->zeta)->create(['nombre' => 'Alfa']);
 
-        Articulo::factory()->for($this->zeta)->create(['nombre' => 'Almohadilla', 'modelo' => 'ZZ-1', 'precio_unitario_sin_iva' => 300]);
-        Articulo::factory()->for($this->acme)->create(['nombre' => 'Sello fechador', 'modelo' => 'AB-9', 'precio_unitario_sin_iva' => 50]);
-        Articulo::factory()->for($this->acme)->create(['nombre' => 'Sello redondo', 'modelo' => 'AB-1', 'precio_unitario_sin_iva' => 1000]);
+        Articulo::factory()->for($this->catalogoZeta)->create(['nombre' => 'Almohadilla', 'modelo' => 'ZZ-1', 'precio_unitario_sin_iva' => 300]);
+        Articulo::factory()->for($this->catalogoAcme)->create(['nombre' => 'Sello fechador', 'modelo' => 'AB-9', 'precio_unitario_sin_iva' => 50]);
+        Articulo::factory()->for($this->catalogoAcme)->create(['nombre' => 'Sello redondo', 'modelo' => 'AB-1', 'precio_unitario_sin_iva' => 1000]);
     });
 
     it('muestra solo los artículos del usuario', function (string $ruta) {
@@ -265,10 +314,11 @@ describe('listado', function () {
             ->assertDontSee('Artículo ajeno');
     })->with(['/articulos', '/articulos/buscar']);
 
-    it('muestra proveedor y precio con IVA', function () {
+    it('muestra proveedor, catálogo y precio con IVA', function () {
         $this->actingAs($this->usuario)
             ->get('/articulos')
             ->assertSee('Zeta Sellos')
+            ->assertSee('Alfa')
             ->assertSee('$348.00')
             ->assertSee('$1,160.00')
             ->assertSee('data-confirmar="¿Eliminar este artículo?"', false);
@@ -291,6 +341,7 @@ describe('listado', function () {
     })->with([
         'modelo' => ['modelo', ['Sello redondo', 'Sello fechador', 'Almohadilla']],
         'proveedor' => ['proveedor', ['Sello', 'Almohadilla']],
+        'catalogo' => ['catalogo', ['Almohadilla', 'Sello fechador']],
         'precio' => ['precio', ['Sello fechador', 'Almohadilla', 'Sello redondo']],
     ]);
 
@@ -333,7 +384,7 @@ describe('listado', function () {
     });
 
     it('pagina con las filas elegidas y conserva filtros y orden', function () {
-        Articulo::factory()->count(27)->for($this->acme)->create();
+        Articulo::factory()->count(27)->for($this->catalogoAcme)->create();
 
         $this->actingAs($this->usuario)
             ->get('/articulos?por_pagina=10&orden=modelo')
@@ -371,7 +422,7 @@ describe('listado', function () {
 
     it('trunca los textos largos y deja el texto completo en el título', function () {
         $largo = str_repeat('Sello automático de fechador ', 3);
-        Articulo::factory()->for($this->acme)->create(['nombre' => $largo]);
+        Articulo::factory()->for($this->catalogoAcme)->create(['nombre' => $largo]);
 
         $this->actingAs($this->usuario)
             ->get('/articulos')

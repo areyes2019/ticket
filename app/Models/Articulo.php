@@ -13,8 +13,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * proveedor_id es una copia del proveedor del catálogo que escribe el modelo
+ * (ver booted()); el formulario y la importación solo envían catalogo_id.
+ */
 #[Fillable([
-    'proveedor_id',
+    'catalogo_id',
     'nombre',
     'modelo',
     'clave_prod_serv',
@@ -40,7 +44,7 @@ class Articulo extends Model
     /**
      * Columnas por las que se puede ordenar el listado.
      */
-    public const ORDENES = ['nombre', 'modelo', 'proveedor', 'precio'];
+    public const ORDENES = ['nombre', 'modelo', 'proveedor', 'catalogo', 'precio'];
 
     /**
      * Filas por página que se pueden elegir en el listado.
@@ -51,6 +55,26 @@ class Articulo extends Model
      * Columnas del CSV, idénticas en importación y exportación.
      */
     public const COLUMNAS_CSV = ['nombre', 'modelo', 'clave_prod_serv', 'clave_unidad', 'objeto_imp', 'precio_unitario_sin_iva'];
+
+    /**
+     * Copia el proveedor del catálogo y calcula el precio con descuento. Es el
+     * único lugar donde se escriben, para el alta, la edición y la importación.
+     * La copia no se desincroniza porque el proveedor de un catálogo es fijo.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (Articulo $articulo) {
+            if (! $articulo->isDirty(['catalogo_id', 'precio_unitario_sin_iva'])) {
+                return;
+            }
+
+            $catalogo = $articulo->catalogo()->firstOrFail();
+
+            $articulo->proveedor_id = $catalogo->proveedor_id;
+            $articulo->precio_con_descuento = $catalogo->precioConDescuento($articulo->precio_unitario_sin_iva);
+            $articulo->setRelation('catalogo', $catalogo);
+        });
+    }
 
     /**
      * @return BelongsTo<User, $this>
@@ -69,6 +93,16 @@ class Articulo extends Model
     public function proveedor(): BelongsTo
     {
         return $this->belongsTo(Proveedor::class)->withTrashed();
+    }
+
+    /**
+     * Incluye los catálogos eliminados, igual que proveedor().
+     *
+     * @return BelongsTo<Catalogo, $this>
+     */
+    public function catalogo(): BelongsTo
+    {
+        return $this->belongsTo(Catalogo::class)->withTrashed();
     }
 
     /**
@@ -106,6 +140,12 @@ class Articulo extends Model
                     ->whereColumn('proveedores.id', 'articulos.proveedor_id'),
                 $direccion
             ),
+            'catalogo' => $consulta->orderBy(
+                Catalogo::withTrashed()
+                    ->select('nombre')
+                    ->whereColumn('catalogos.id', 'articulos.catalogo_id'),
+                $direccion
+            ),
             'precio' => $consulta->orderBy('precio_unitario_sin_iva', $direccion),
             default => $consulta->orderBy($columna, $direccion),
         };
@@ -135,6 +175,7 @@ class Articulo extends Model
         return [
             'objeto_imp' => ObjetoImpuesto::class,
             'precio_unitario_sin_iva' => 'decimal:2',
+            'precio_con_descuento' => 'decimal:2',
         ];
     }
 }
