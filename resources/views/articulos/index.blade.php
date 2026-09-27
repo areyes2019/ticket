@@ -27,7 +27,16 @@
     <x-alerta tipo="error" hidden data-busqueda-error>No se pudo realizar la búsqueda. Intenta de nuevo.</x-alerta>
 
     <x-card class="tabla-contenedor">
-        <table class="tabla" data-busqueda-tabla>
+        <table class="tabla tabla-fija" data-busqueda-tabla>
+            <colgroup>
+                <col>
+                <col>
+                <col>
+                <col>
+                <col class="col-importe">
+                <col class="col-precio">
+                <col class="col-acciones">
+            </colgroup>
             <thead>
                 @include('articulos._titulos')
                 <tr class="tabla-filtros">

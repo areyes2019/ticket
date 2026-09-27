@@ -19,7 +19,7 @@
                     <form method="POST" action="{{ route('articulos.destroy', $articulo) }}">
                         @csrf
                         @method('DELETE')
-                        <x-boton variante="secundario" icono="trash" title="Eliminar" descripcion="Eliminar {{ $articulo->nombre }}" data-confirmar="¿Eliminar este artículo?" />
+                        <x-boton variante="peligro" icono="trash" title="Eliminar" descripcion="Eliminar {{ $articulo->nombre }}" data-confirmar="¿Eliminar este artículo?" />
                     </form>
                 </div>
             </td>

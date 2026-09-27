@@ -57,6 +57,10 @@
     /* Tablas */
     --ancho-celda-truncada: 16rem;
     --alto-sugerencias: 16rem;
+    --ancho-columna-importe: 8rem;
+    --ancho-columna-precio: 9.5rem;
+    --ancho-columna-acciones: 6.5rem;
+    --lado-boton-fila: 2.25rem;
 
     /* Imágenes de artículos */
     --ancho-ficha: 52rem;
@@ -207,6 +211,17 @@ a > .icono,
 
 .boton-suave:hover {
     background: var(--color-neutro-oscuro);
+}
+
+.boton-peligro {
+    color: var(--color-error);
+    background: var(--color-superficie);
+    border-color: var(--color-error-borde);
+}
+
+.boton-peligro:hover {
+    background: var(--color-error-fondo);
+    border-color: var(--color-error);
 }
 
 .boton-bloque {
@@ -488,6 +503,48 @@ h1.tarjeta-titulo {
     flex-wrap: nowrap;
 }
 
+/* La celda de acciones mide solo lo que ocupan sus botones. */
+.tabla td:has(> .acciones) {
+    width: 1%;
+    white-space: nowrap;
+}
+
+.tabla .acciones {
+    gap: var(--espacio-1);
+}
+
+/* Botones de fila: cuadrados, del mismo tamaño y con el icono centrado. */
+.tabla .acciones .boton-icono {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--lado-boton-fila);
+    height: var(--lado-boton-fila);
+    padding: 0;
+}
+
+/* Tabla de ancho fijo: las columnas de texto se reparten el espacio libre y se
+   truncan, así la tabla nunca se sale de su tarjeta. Los anchos van en <colgroup>. */
+.tabla-fija {
+    table-layout: fixed;
+}
+
+.tabla-fija .celda-truncada {
+    max-width: 100%;
+}
+
+.tabla-fija .col-importe {
+    width: var(--ancho-columna-importe);
+}
+
+.tabla-fija .col-precio {
+    width: var(--ancho-columna-precio);
+}
+
+.tabla-fija .col-acciones {
+    width: var(--ancho-columna-acciones);
+}
+
 /* Constancia de Situación Fiscal (clientes) */
 .constancia-zona {
     margin-bottom: var(--espacio-3);
@@ -692,9 +749,13 @@ h1.tarjeta-titulo {
     gap: var(--espacio-5);
 }
 
+.ficha-columna {
+    flex: 1 1 var(--lado-foto-ficha);
+    min-width: 0;
+}
+
 .ficha-foto {
     display: flex;
-    flex: 1 1 var(--lado-foto-ficha);
     align-items: center;
     justify-content: center;
     min-width: 0;
@@ -738,8 +799,7 @@ h1.tarjeta-titulo {
 }
 
 .ficha-pie {
-    justify-content: flex-end;
-    margin: 0;
+    margin: var(--espacio-3) 0 0;
 }
 
 .imagen-articulo {
