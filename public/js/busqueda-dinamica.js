@@ -125,7 +125,19 @@
 
             evento.preventDefault();
             clearTimeout(temporizador);
-            buscar(new URL(enlace.href).searchParams);
+
+            const parametros = new URL(enlace.href).searchParams;
+
+            // Los campos marcados toman el valor del enlace (o quedan vacíos),
+            // para que la siguiente búsqueda no los contradiga; por ejemplo,
+            // un atajo de fecha borra el rango personalizado.
+            Array.from(formulario.elements).forEach(function (campo) {
+                if (campo.name && campo.hasAttribute('data-busqueda-sincronizar')) {
+                    campo.value = parametros.get(campo.name) || '';
+                }
+            });
+
+            buscar(parametros);
         });
     });
 })();

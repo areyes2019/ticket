@@ -7,6 +7,24 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
+## Tareas programadas (Windows/Laragon)
+
+El sistema borra cada día a las 03:00 (hora de México) las cotizaciones en borrador o enviadas,
+sin pagos, que llevan 30 días sin movimiento (`cotizaciones:purgar-vencidas`, ver
+`specs/011-cotizaciones.md`). En Windows no hay cron: hay que dar de alta **una sola** tarea
+programada que ejecute el scheduler de Laravel cada minuto. En una terminal de Windows
+(PowerShell o `cmd`), ajustando la ruta de PHP a la versión de Laragon instalada:
+
+```bat
+schtasks /Create /TN "ticket_factura scheduler" /SC MINUTE /MO 1 /TR "cmd /c cd /d C:\laragon\www\ticket_factura && C:\laragon\bin\php\php-8.3.30-Win32-vs16-x64\php.exe artisan schedule:run >> NUL 2>&1"
+```
+
+- Comprobar que quedó: `schtasks /Query /TN "ticket_factura scheduler"`.
+- Quitarla: `schtasks /Delete /TN "ticket_factura scheduler" /F`.
+- Sin la tarea, la caducidad no ocurre sola; el comando se puede correr a mano:
+  `php artisan cotizaciones:purgar-vencidas`.
+- `php artisan schedule:list` muestra qué está agendado y cuándo corre.
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:

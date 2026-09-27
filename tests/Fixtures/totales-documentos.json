@@ -1,0 +1,132 @@
+[
+    {
+        "caso": "una línea sin descuentos al 16%",
+        "lineas": [
+            { "cantidad": 2, "precio_unitario": "100.00", "descuento_tipo": null, "descuento_valor": null, "tasa_iva": "16" }
+        ],
+        "descuento_global_tipo": null,
+        "descuento_global_valor": null,
+        "esperado": {
+            "lineas": [{ "bruto": "200.00", "descuento": "0.00", "importe": "200.00", "iva_importe": "32.00" }],
+            "subtotal": "200.00", "total_descuento": "0.00", "base_iva_16": "200.00", "total_iva_16": "32.00", "base_iva_0": "0.00", "base_exento": "0.00", "total": "232.00"
+        }
+    },
+    {
+        "caso": "descuento de línea por porcentaje que no da centavos exactos",
+        "lineas": [
+            { "cantidad": 3, "precio_unitario": "33.33", "descuento_tipo": "porcentaje", "descuento_valor": "10", "tasa_iva": "16" }
+        ],
+        "descuento_global_tipo": null,
+        "descuento_global_valor": null,
+        "esperado": {
+            "lineas": [{ "bruto": "99.99", "descuento": "10.00", "importe": "89.99", "iva_importe": "14.40" }],
+            "subtotal": "99.99", "total_descuento": "10.00", "base_iva_16": "89.99", "total_iva_16": "14.40", "base_iva_0": "0.00", "base_exento": "0.00", "total": "104.39"
+        }
+    },
+    {
+        "caso": "descuento de línea por monto",
+        "lineas": [
+            { "cantidad": 1, "precio_unitario": "20.00", "descuento_tipo": "monto", "descuento_valor": "5.50", "tasa_iva": "16" }
+        ],
+        "descuento_global_tipo": null,
+        "descuento_global_valor": null,
+        "esperado": {
+            "lineas": [{ "bruto": "20.00", "descuento": "5.50", "importe": "14.50", "iva_importe": "2.32" }],
+            "subtotal": "20.00", "total_descuento": "5.50", "base_iva_16": "14.50", "total_iva_16": "2.32", "base_iva_0": "0.00", "base_exento": "0.00", "total": "16.82"
+        }
+    },
+    {
+        "caso": "descuento global por monto con centavo residual del prorrateo",
+        "lineas": [
+            { "cantidad": 1, "precio_unitario": "33.33", "descuento_tipo": null, "descuento_valor": null, "tasa_iva": "16" },
+            { "cantidad": 1, "precio_unitario": "33.33", "descuento_tipo": null, "descuento_valor": null, "tasa_iva": "16" },
+            { "cantidad": 1, "precio_unitario": "33.33", "descuento_tipo": null, "descuento_valor": null, "tasa_iva": "16" }
+        ],
+        "descuento_global_tipo": "monto",
+        "descuento_global_valor": "10.00",
+        "esperado": {
+            "lineas": [
+                { "bruto": "33.33", "descuento": "0.00", "importe": "29.99", "iva_importe": "4.80" },
+                { "bruto": "33.33", "descuento": "0.00", "importe": "30.00", "iva_importe": "4.80" },
+                { "bruto": "33.33", "descuento": "0.00", "importe": "30.00", "iva_importe": "4.80" }
+            ],
+            "subtotal": "99.99", "total_descuento": "10.00", "base_iva_16": "89.99", "total_iva_16": "14.40", "base_iva_0": "0.00", "base_exento": "0.00", "total": "104.39"
+        }
+    },
+    {
+        "caso": "tasas mezcladas con descuento global por porcentaje",
+        "lineas": [
+            { "cantidad": 1, "precio_unitario": "100.00", "descuento_tipo": null, "descuento_valor": null, "tasa_iva": "16" },
+            { "cantidad": 2, "precio_unitario": "50.00", "descuento_tipo": null, "descuento_valor": null, "tasa_iva": "0" },
+            { "cantidad": 1, "precio_unitario": "25.50", "descuento_tipo": null, "descuento_valor": null, "tasa_iva": "exento" }
+        ],
+        "descuento_global_tipo": "porcentaje",
+        "descuento_global_valor": "10",
+        "esperado": {
+            "lineas": [
+                { "bruto": "100.00", "descuento": "0.00", "importe": "90.00", "iva_importe": "14.40" },
+                { "bruto": "100.00", "descuento": "0.00", "importe": "90.00", "iva_importe": "0.00" },
+                { "bruto": "25.50", "descuento": "0.00", "importe": "22.95", "iva_importe": "0.00" }
+            ],
+            "subtotal": "225.50", "total_descuento": "22.55", "base_iva_16": "90.00", "total_iva_16": "14.40", "base_iva_0": "90.00", "base_exento": "22.95", "total": "217.35"
+        }
+    },
+    {
+        "caso": "descuento de línea igual al bruto deja importe 0",
+        "lineas": [
+            { "cantidad": 2, "precio_unitario": "10.00", "descuento_tipo": "monto", "descuento_valor": "20.00", "tasa_iva": "16" },
+            { "cantidad": 1, "precio_unitario": "10.00", "descuento_tipo": null, "descuento_valor": null, "tasa_iva": "16" }
+        ],
+        "descuento_global_tipo": null,
+        "descuento_global_valor": null,
+        "esperado": {
+            "lineas": [
+                { "bruto": "20.00", "descuento": "20.00", "importe": "0.00", "iva_importe": "0.00" },
+                { "bruto": "10.00", "descuento": "0.00", "importe": "10.00", "iva_importe": "1.60" }
+            ],
+            "subtotal": "30.00", "total_descuento": "20.00", "base_iva_16": "10.00", "total_iva_16": "1.60", "base_iva_0": "0.00", "base_exento": "0.00", "total": "11.60"
+        }
+    },
+    {
+        "caso": "medio centavo se redondea hacia arriba",
+        "lineas": [
+            { "cantidad": 1, "precio_unitario": "10.05", "descuento_tipo": "porcentaje", "descuento_valor": "10", "tasa_iva": "16" }
+        ],
+        "descuento_global_tipo": null,
+        "descuento_global_valor": null,
+        "esperado": {
+            "lineas": [{ "bruto": "10.05", "descuento": "1.01", "importe": "9.04", "iva_importe": "1.45" }],
+            "subtotal": "10.05", "total_descuento": "1.01", "base_iva_16": "9.04", "total_iva_16": "1.45", "base_iva_0": "0.00", "base_exento": "0.00", "total": "10.49"
+        }
+    },
+    {
+        "caso": "residual negativo del prorrateo va a la primera de las líneas empatadas",
+        "lineas": [
+            { "cantidad": 1, "precio_unitario": "0.01", "descuento_tipo": null, "descuento_valor": null, "tasa_iva": "16" },
+            { "cantidad": 1, "precio_unitario": "0.01", "descuento_tipo": null, "descuento_valor": null, "tasa_iva": "16" },
+            { "cantidad": 1, "precio_unitario": "0.01", "descuento_tipo": null, "descuento_valor": null, "tasa_iva": "16" }
+        ],
+        "descuento_global_tipo": "porcentaje",
+        "descuento_global_valor": "50",
+        "esperado": {
+            "lineas": [
+                { "bruto": "0.01", "descuento": "0.00", "importe": "0.01", "iva_importe": "0.00" },
+                { "bruto": "0.01", "descuento": "0.00", "importe": "0.00", "iva_importe": "0.00" },
+                { "bruto": "0.01", "descuento": "0.00", "importe": "0.00", "iva_importe": "0.00" }
+            ],
+            "subtotal": "0.03", "total_descuento": "0.02", "base_iva_16": "0.01", "total_iva_16": "0.00", "base_iva_0": "0.00", "base_exento": "0.00", "total": "0.01"
+        }
+    },
+    {
+        "caso": "cantidades máximas (9999 × $999,999.99)",
+        "lineas": [
+            { "cantidad": 9999, "precio_unitario": "999999.99", "descuento_tipo": null, "descuento_valor": null, "tasa_iva": "16" }
+        ],
+        "descuento_global_tipo": null,
+        "descuento_global_valor": null,
+        "esperado": {
+            "lineas": [{ "bruto": "9998999900.01", "descuento": "0.00", "importe": "9998999900.01", "iva_importe": "1599839984.00" }],
+            "subtotal": "9998999900.01", "total_descuento": "0.00", "base_iva_16": "9998999900.01", "total_iva_16": "1599839984.00", "base_iva_0": "0.00", "base_exento": "0.00", "total": "11598839884.01"
+        }
+    }
+]

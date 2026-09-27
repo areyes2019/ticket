@@ -68,6 +68,13 @@ return [
     'timezone' => 'UTC',
 
     /*
+    | Zona horaria del negocio: las fechas se guardan en UTC, pero se filtran,
+    | se muestran y se cuentan (días para caducar) en la hora de México.
+    */
+
+    'zona_negocio' => 'America/Mexico_City',
+
+    /*
     |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ObjetoImpuesto;
+use App\Enums\TasaIva;
 use App\Http\Requests\ArticuloRequest;
 use App\Http\Requests\ListadoArticulosRequest;
 use App\Models\Articulo;
@@ -12,6 +13,7 @@ use App\Models\SatClaveUnidad;
 use App\Services\Articulos\CalculadoraPrecioArticulo;
 use App\Services\Articulos\ProcesadorImagenArticulo;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -38,6 +40,34 @@ class ArticuloController extends Controller
         $articulos = $this->articulos($request)->withPath(route('articulos.index'));
 
         return view('articulos._resultados', $this->datosListado($request, $articulos));
+    }
+
+    /**
+     * Sugerencias para las líneas de un documento (cotización): artículos del
+     * usuario cuyo nombre o modelo contiene el texto, con los datos que se
+     * precargan en la línea.
+     */
+    public function sugerencias(Request $request): JsonResponse
+    {
+        $termino = $request->string('q')->trim()->toString();
+
+        if ($termino === '') {
+            return response()->json([]);
+        }
+
+        $articulos = $request->user()->articulos()
+            ->where(fn ($consulta) => $consulta->where('nombre', 'like', "%{$termino}%")->orWhere('modelo', 'like', "%{$termino}%"))
+            ->orderBy('nombre')
+            ->limit(20)
+            ->get();
+
+        return response()->json($articulos->map(fn (Articulo $articulo) => [
+            'id' => $articulo->id,
+            'nombre' => $articulo->nombre,
+            'modelo' => $articulo->modelo,
+            'precio_unitario' => $articulo->precio_unitario_sin_iva,
+            'tasa_iva' => $articulo->objeto_imp === ObjetoImpuesto::SiObjeto ? TasaIva::Dieciseis->value : TasaIva::Exento->value,
+        ])->values());
     }
 
     public function create(Request $request): View

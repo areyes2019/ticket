@@ -5,7 +5,10 @@ use App\Http\Controllers\CatalogoController;
 use App\Http\Controllers\CatalogoSatController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\ConstanciaController;
+use App\Http\Controllers\CotizacionController;
+use App\Http\Controllers\CotizacionPagoController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EnvioCotizacionController;
 use App\Http\Controllers\EstilosController;
 use App\Http\Controllers\ExportacionArticulosController;
 use App\Http\Controllers\HistorialAccesoController;
@@ -47,6 +50,7 @@ Route::middleware(['auth', AsegurarUsuarioActivo::class])->group(function () {
         ->parameters(['catalogos' => 'catalogo']);
 
     Route::get('articulos/buscar', [ArticuloController::class, 'buscar'])->name('articulos.buscar');
+    Route::get('articulos/sugerencias', [ArticuloController::class, 'sugerencias'])->name('articulos.sugerencias');
     Route::get('articulos/importar', [ImportacionArticulosController::class, 'create'])->name('articulos.importar');
     Route::post('articulos/importar', [ImportacionArticulosController::class, 'store'])->name('articulos.importar.store');
     Route::get('articulos/exportar', ExportacionArticulosController::class)->name('articulos.exportar');
@@ -57,6 +61,21 @@ Route::middleware(['auth', AsegurarUsuarioActivo::class])->group(function () {
     Route::resource('articulos', ArticuloController::class)
         ->except('show')
         ->parameters(['articulos' => 'articulo']);
+
+    Route::get('cotizaciones/buscar', [CotizacionController::class, 'buscar'])->name('cotizaciones.buscar');
+    Route::post('cotizaciones/{cotizacion}/enviar', [EnvioCotizacionController::class, 'correo'])->name('cotizaciones.enviar');
+    Route::post('cotizaciones/{cotizacion}/marcar-enviada', [EnvioCotizacionController::class, 'marcarEnviada'])->name('cotizaciones.marcar-enviada');
+    Route::get('cotizaciones/{cotizacion}/pdf', [CotizacionController::class, 'pdf'])->name('cotizaciones.pdf');
+    Route::post('cotizaciones/{cotizacion}/entregar', [CotizacionController::class, 'entregar'])->name('cotizaciones.entregar');
+    Route::post('cotizaciones/{cotizacion}/duplicar', [CotizacionController::class, 'duplicar'])->name('cotizaciones.duplicar');
+    Route::post('cotizaciones/{cotizacion}/pagos', [CotizacionPagoController::class, 'store'])->name('cotizaciones.pagos.store');
+    Route::delete('cotizaciones/{cotizacion}/pagos/{pago}', [CotizacionPagoController::class, 'destroy'])
+        ->scopeBindings()
+        ->name('cotizaciones.pagos.destroy');
+
+    // parameters(): sin él, Str::singular daría {cotizacione}.
+    Route::resource('cotizaciones', CotizacionController::class)
+        ->parameters(['cotizaciones' => 'cotizacion']);
 
     Route::get('catalogos-sat/claves-prod-serv', [CatalogoSatController::class, 'clavesProdServ'])->name('catalogos-sat.claves-prod-serv');
     Route::get('catalogos-sat/claves-unidad', [CatalogoSatController::class, 'clavesUnidad'])->name('catalogos-sat.claves-unidad');

@@ -19,6 +19,37 @@ document.addEventListener('submit', function (evento) {
     }
 });
 
+// Diálogos: <a href="#id" data-abrir-dialogo> abre el <dialog id="id"> como
+// modal y [data-cerrar-dialogo] lo cierra. Sin JavaScript el enlace funciona
+// igual, porque el CSS muestra el diálogo señalado por la URL (:target).
+// Un <dialog data-abrir-al-cargar> se abre solo (p. ej. con errores de validación).
+document.addEventListener('click', function (evento) {
+    const abrir = evento.target.closest('[data-abrir-dialogo]');
+    const cerrar = evento.target.closest('[data-cerrar-dialogo]');
+
+    if (abrir) {
+        const dialogo = document.getElementById((abrir.getAttribute('href') || '').slice(1));
+
+        if (dialogo && typeof dialogo.showModal === 'function') {
+            evento.preventDefault();
+            dialogo.showModal();
+        }
+    } else if (cerrar) {
+        const dialogo = cerrar.closest('dialog');
+
+        if (dialogo && dialogo.open) {
+            evento.preventDefault();
+            dialogo.close();
+        }
+    }
+});
+
+document.querySelectorAll('dialog[data-abrir-al-cargar]').forEach(function (dialogo) {
+    if (typeof dialogo.showModal === 'function') {
+        dialogo.showModal();
+    }
+});
+
 // Copia un texto al portapapeles. Resuelve false si el navegador no lo permite
 // (sitio sin HTTPS fuera de localhost): quien llama muestra el texto para copiarlo a mano.
 window.copiarTexto = function (texto) {
