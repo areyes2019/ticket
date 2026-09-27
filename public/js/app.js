@@ -18,3 +18,17 @@ document.addEventListener('submit', function (evento) {
         evento.preventDefault();
     }
 });
+
+// Copia un texto al portapapeles. Resuelve false si el navegador no lo permite
+// (sitio sin HTTPS fuera de localhost): quien llama muestra el texto para copiarlo a mano.
+window.copiarTexto = function (texto) {
+    if (!window.isSecureContext || !navigator.clipboard) {
+        return Promise.resolve(false);
+    }
+
+    return navigator.clipboard.writeText(texto).then(function () {
+        return true;
+    }, function () {
+        return false;
+    });
+};

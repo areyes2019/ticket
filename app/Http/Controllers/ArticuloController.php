@@ -10,9 +10,11 @@ use App\Models\Catalogo;
 use App\Models\SatClaveProdServ;
 use App\Models\SatClaveUnidad;
 use App\Services\Articulos\CalculadoraPrecioArticulo;
+use App\Services\Articulos\ProcesadorImagenArticulo;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
@@ -43,11 +45,20 @@ class ArticuloController extends Controller
         return view('articulos.crear', $this->datosFormulario($request));
     }
 
-    public function store(ArticuloRequest $request): RedirectResponse
+    /**
+     * El alta y su imagen van juntas: si la imagen no se puede guardar, no
+     * queda el artículo a medias.
+     */
+    public function store(ArticuloRequest $request, ProcesadorImagenArticulo $imagenes): RedirectResponse
     {
-        $articulo = $request->user()->articulos()->create($request->validated());
+        $articulo = DB::transaction(function () use ($request, $imagenes) {
+            $articulo = $request->user()->articulos()->create($request->datosArticulo());
+            $this->guardarImagen($request, $articulo, $imagenes);
 
-        return redirect()->route('articulos.index')->with('exito', 'Artículo creado. '.$this->precioGuardado($articulo));
+            return $articulo;
+        });
+
+        return redirect()->route('articulos.index')->with('exito', 'Artículo creado. '.$this->precioGuardado($articulo).$this->avisoImagen($request));
     }
 
     public function edit(Request $request, Articulo $articulo): View
@@ -60,11 +71,34 @@ class ArticuloController extends Controller
     /**
      * ArticuloRequest ya verificó que el artículo es del usuario.
      */
-    public function update(ArticuloRequest $request, Articulo $articulo): RedirectResponse
+    public function update(ArticuloRequest $request, Articulo $articulo, ProcesadorImagenArticulo $imagenes): RedirectResponse
     {
-        $articulo->update($request->validated());
+        $articulo->update($request->datosArticulo());
+        $this->guardarImagen($request, $articulo, $imagenes);
 
-        return redirect()->route('articulos.index')->with('exito', 'Artículo actualizado. '.$this->precioGuardado($articulo));
+        return redirect()->route('articulos.index')->with('exito', 'Artículo actualizado. '.$this->precioGuardado($articulo).$this->avisoImagen($request));
+    }
+
+    /**
+     * Una imagen nueva reemplaza a la actual aunque también se haya marcado
+     * "Quitar imagen".
+     */
+    private function guardarImagen(ArticuloRequest $request, Articulo $articulo, ProcesadorImagenArticulo $imagenes): void
+    {
+        if ($request->hasFile('imagen')) {
+            $imagenes->guardar($articulo, $request->file('imagen')->getContent());
+        } elseif ($request->boolean('quitar_imagen')) {
+            $imagenes->quitar($articulo);
+        }
+    }
+
+    private function avisoImagen(ArticuloRequest $request): string
+    {
+        return match (true) {
+            $request->hasFile('imagen') => ' Imagen actualizada.',
+            $request->boolean('quitar_imagen') => ' Imagen quitada.',
+            default => '',
+        };
     }
 
     /**

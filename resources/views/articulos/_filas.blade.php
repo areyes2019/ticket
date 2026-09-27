@@ -1,7 +1,12 @@
 <tbody id="articulos-filas" aria-live="polite">
     @forelse ($articulos as $articulo)
         <tr>
-            <td><span class="celda-truncada" title="{{ $articulo->nombre }}">{{ $articulo->nombre }}</span></td>
+            <td>
+                {{-- Abre la ficha (ficha-articulo.js); sin JavaScript lleva a la edición. Nunca lleva costo ni utilidad. --}}
+                <a href="{{ route('articulos.edit', $articulo) }}" class="celda-truncada enlace-ficha" title="{{ $articulo->nombre }}" data-ficha
+                    data-nombre="{{ $articulo->nombre }}" data-modelo="{{ $articulo->modelo }}" data-precio="${{ number_format($articulo->precio_unitario_con_iva, 2) }}"
+                    data-imagen="{{ $articulo->tiene_imagen ? route('articulos.imagen', [$articulo, 'v' => $articulo->imagen_version]) : '' }}">{{ $articulo->nombre }}</a>
+            </td>
             <td><span class="celda-truncada" title="{{ $articulo->modelo }}">{{ $articulo->modelo }}</span></td>
             <td><span class="celda-truncada" title="{{ $articulo->proveedor->nombre_comercial }}">{{ $articulo->proveedor->nombre_comercial }}</span></td>
             <td><span class="celda-truncada" title="{{ $articulo->catalogo->nombre }}">{{ $articulo->catalogo->nombre }}</span></td>

@@ -11,7 +11,7 @@
         <script src="{{ asset('js/precio-articulo.js') }}"></script>
     @endpush
 
-    <form method="POST" action="{{ $accion }}">
+    <form method="POST" action="{{ $accion }}" enctype="multipart/form-data">
         @csrf
         @isset($articulo)
             @method('PUT')
@@ -46,6 +46,15 @@
                     </div>
                 @endforeach
             </dl>
+        </x-card>
+
+        <x-card titulo="Imagen">
+            @if ($articulo?->tiene_imagen)
+                <img class="imagen-articulo" src="{{ route('articulos.imagen', [$articulo, 'v' => $articulo->imagen_version]) }}" alt="Imagen de {{ $articulo->nombre }}">
+                <x-campo nombre="quitar_imagen" etiqueta="Quitar imagen" tipo="checkbox" />
+            @endif
+            <x-campo nombre="imagen" etiqueta="{{ $articulo?->tiene_imagen ? 'Reemplazar imagen' : 'Imagen' }}" tipo="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                ayuda="JPG, PNG o WEBP de hasta 10 MB. Se guarda reducida a 1200 puntos de lado largo." />
         </x-card>
 
         <div class="acciones">

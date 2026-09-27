@@ -9,6 +9,14 @@ use Illuminate\Auth\Access\Response;
 class ArticuloPolicy
 {
     /**
+     * Solo el dueño puede ver la imagen del artículo; a los demás se les responde 404.
+     */
+    public function view(User $user, Articulo $articulo): Response
+    {
+        return $this->esDueno($user, $articulo);
+    }
+
+    /**
      * Solo el dueño puede editar el artículo; a los demás se les responde 404.
      */
     public function update(User $user, Articulo $articulo): Response

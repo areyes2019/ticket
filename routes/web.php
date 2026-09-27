@@ -9,6 +9,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EstilosController;
 use App\Http\Controllers\ExportacionArticulosController;
 use App\Http\Controllers\HistorialAccesoController;
+use App\Http\Controllers\ImagenesArticulosController;
 use App\Http\Controllers\ImportacionArticulosController;
 use App\Http\Controllers\InicioController;
 use App\Http\Controllers\ProveedorController;
@@ -49,6 +50,9 @@ Route::middleware(['auth', AsegurarUsuarioActivo::class])->group(function () {
     Route::get('articulos/importar', [ImportacionArticulosController::class, 'create'])->name('articulos.importar');
     Route::post('articulos/importar', [ImportacionArticulosController::class, 'store'])->name('articulos.importar.store');
     Route::get('articulos/exportar', ExportacionArticulosController::class)->name('articulos.exportar');
+    Route::get('articulos/imagenes', [ImagenesArticulosController::class, 'create'])->name('articulos.imagenes');
+    Route::post('articulos/imagenes', [ImagenesArticulosController::class, 'store'])->name('articulos.imagenes.store');
+    Route::get('articulos/{articulo}/imagen', [ImagenesArticulosController::class, 'show'])->withTrashed()->name('articulos.imagen');
 
     Route::resource('articulos', ArticuloController::class)
         ->except('show')

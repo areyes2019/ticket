@@ -5,7 +5,9 @@ namespace Database\Factories;
 use App\Enums\ObjetoImpuesto;
 use App\Models\Articulo;
 use App\Models\Catalogo;
+use App\Services\Articulos\ProcesadorImagenArticulo;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Http\UploadedFile;
 
 /**
  * Las claves SAT deben existir en sat_claves_prod_serv y sat_claves_unidad
@@ -36,5 +38,15 @@ class ArticuloFactory extends Factory
             'precio_proveedor' => fake()->randomFloat(2, 1, 5000),
             'utilidad_porcentaje' => null,
         ];
+    }
+
+    /**
+     * Con una imagen de 100×100 guardada en el disco privado (usar con
+     * Storage::fake('local')).
+     */
+    public function conImagen(): static
+    {
+        return $this->afterCreating(fn (Articulo $articulo) => app(ProcesadorImagenArticulo::class)
+            ->guardar($articulo, UploadedFile::fake()->image('foto.png', 100, 100)->getContent()));
     }
 }

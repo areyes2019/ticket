@@ -48,7 +48,7 @@
 
     <x-card titulo="Iconos del sistema">
         <div class="muestra">
-            @foreach (['speedometer2', 'clock-history', 'box-arrow-in-right', 'box-arrow-right', 'person-plus', 'envelope', 'key', 'eye', 'eye-slash', 'check-circle', 'x-circle', 'exclamation-triangle', 'truck', 'collection', 'people', 'plus-lg', 'search', 'pencil', 'trash', 'save', 'x-lg', 'box-seam', 'upload', 'download', 'arrow-left', 'arrow-up', 'arrow-down', 'arrow-down-up', 'check-lg'] as $icono)
+            @foreach (['speedometer2', 'clock-history', 'box-arrow-in-right', 'box-arrow-right', 'person-plus', 'envelope', 'key', 'eye', 'eye-slash', 'check-circle', 'x-circle', 'exclamation-triangle', 'truck', 'collection', 'people', 'plus-lg', 'search', 'pencil', 'trash', 'save', 'x-lg', 'box-seam', 'upload', 'download', 'arrow-left', 'arrow-up', 'arrow-down', 'arrow-down-up', 'check-lg', 'images', 'image', 'share', 'copy'] as $icono)
                 <span class="muestra-icono"><x-icono :nombre="$icono" />{{ $icono }}</span>
             @endforeach
         </div>
@@ -83,6 +83,21 @@
         </dl>
         <p class="aviso-utilidad"><x-icono nombre="exclamation-triangle" /> Más de 400%: el costo se multiplica por 11. Revisa que no sobre un cero.</p>
         <p><code>&lt;dl class="resumen-precio" data-resumen-precio&gt;</code> · <code>&lt;p class="aviso-utilidad"&gt;</code> (precio-articulo.js)</p>
+    </x-card>
+
+    <x-card titulo="Ficha de artículo">
+        <div class="ficha-cuerpo">
+            <div class="ficha-foto">
+                <p class="ficha-sin-imagen"><x-icono nombre="image" />Sin imagen</p>
+            </div>
+            <div class="ficha-datos">
+                <h2>Sello redondo de Ø X 45 mm con mango ergonómico</h2>
+                <p>Modelo <strong>R-45</strong></p>
+                <p class="ficha-precio">$261.00</p>
+                <p class="ayuda">Precio con IVA</p>
+            </div>
+        </div>
+        <p><code>&lt;dialog class="ficha"&gt;</code> con <code>.ficha-cuerpo</code>, <code>.ficha-foto</code> y <code>.ficha-datos</code> (articulos/_ficha.blade.php y ficha-articulo.js). Se ve al hacer clic en el nombre de un artículo.</p>
     </x-card>
 
     <x-card titulo="Etiquetas de estado">

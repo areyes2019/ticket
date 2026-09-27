@@ -5,6 +5,8 @@ use App\Models\Articulo;
 use App\Models\Catalogo;
 use App\Models\Proveedor;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
     sembrarCatalogosSat();
@@ -574,6 +576,89 @@ describe('listado', function () {
 
         $this->actingAs($this->usuario)
             ->get('/articulos')
-            ->assertSee('<span class="celda-truncada" title="'.e($largo).'">', false);
+            ->assertSee('class="celda-truncada enlace-ficha" title="'.e($largo).'"', false);
+    });
+});
+
+describe('imagen', function () {
+    beforeEach(function () {
+        Storage::fake('local');
+    });
+
+    it('crea un artículo con imagen', function () {
+        $catalogo = Catalogo::factory()->create();
+
+        $this->actingAs($catalogo->user)
+            ->post('/articulos', datosArticulo($catalogo, ['imagen' => UploadedFile::fake()->image('cualquiera.jpg', 300, 200)]))
+            ->assertRedirect(route('articulos.index'))
+            ->assertSessionHas('exito', fn (string $mensaje) => str_ends_with($mensaje, 'Imagen actualizada.'));
+
+        Storage::disk('local')->assertExists(Articulo::sole()->imagen_ruta);
+    });
+
+    it('rechaza una imagen dañada o demasiado pesada sin crear el artículo', function (Closure $imagen, string $mensaje) {
+        $catalogo = Catalogo::factory()->create();
+
+        $this->actingAs($catalogo->user)
+            ->post('/articulos', datosArticulo($catalogo, ['imagen' => $imagen()]))
+            ->assertSessionHasErrors(['imagen' => $mensaje]);
+
+        expect(Articulo::count())->toBe(0);
+    })->with([
+        'dañada' => [fn () => UploadedFile::fake()->createWithContent('foto.jpg', substr(UploadedFile::fake()->image('foto.jpg', 400, 400)->getContent(), 0, 200)), 'La imagen no es una imagen JPG, PNG ni WEBP legible.'],
+        'de más de 10 MB' => [fn () => UploadedFile::fake()->image('foto.jpg')->size(10241), 'La imagen pesa más de 10 MB. Vuelve a elegir una más ligera.'],
+    ]);
+
+    it('reemplaza la imagen al editar y borra la anterior', function () {
+        $articulo = Articulo::factory()->conImagen()->create();
+        $anterior = $articulo->imagen_ruta;
+
+        $this->actingAs($articulo->user)
+            ->put("/articulos/{$articulo->id}", datosArticulo($articulo->catalogo, ['imagen' => UploadedFile::fake()->image('otra.png')]))
+            ->assertRedirect(route('articulos.index'));
+
+        expect($articulo->fresh()->imagen_ruta)->not->toBeNull()->not->toBe($anterior);
+        Storage::disk('local')->assertMissing($anterior);
+    });
+
+    it('quita la imagen y borra el archivo', function () {
+        $articulo = Articulo::factory()->conImagen()->create();
+        $anterior = $articulo->imagen_ruta;
+
+        $this->actingAs($articulo->user)
+            ->put("/articulos/{$articulo->id}", datosArticulo($articulo->catalogo, ['quitar_imagen' => '1']))
+            ->assertSessionHas('exito', fn (string $mensaje) => str_ends_with($mensaje, 'Imagen quitada.'));
+
+        expect($articulo->fresh()->imagen_ruta)->toBeNull();
+        Storage::disk('local')->assertMissing($anterior);
+    });
+
+    it('no deja asignar la ruta de la imagen desde el formulario', function () {
+        $articulo = Articulo::factory()->create();
+
+        $this->actingAs($articulo->user)
+            ->put("/articulos/{$articulo->id}", datosArticulo($articulo->catalogo, ['imagen_ruta' => '../../.env']));
+
+        expect($articulo->fresh()->imagen_ruta)->toBeNull();
+    });
+
+    it('muestra la imagen actual en la edición con la URL versionada', function () {
+        $articulo = Articulo::factory()->conImagen()->create();
+
+        $this->actingAs($articulo->user)
+            ->get("/articulos/{$articulo->id}/editar")
+            ->assertSee(route('articulos.imagen', [$articulo, 'v' => $articulo->imagen_version]), false)
+            ->assertSee('Quitar imagen');
+    });
+
+    it('lleva a la ficha solo nombre, modelo, precio con IVA e imagen', function () {
+        $articulo = Articulo::factory()->conImagen()->create(['modelo' => 'R-45', 'precio_proveedor' => 100]);
+
+        $this->actingAs($articulo->user)
+            ->get('/articulos')
+            ->assertSee('data-modelo="R-45"', false)
+            ->assertSee('data-precio="$116.00"', false)
+            ->assertSee('data-imagen="'.e(route('articulos.imagen', [$articulo, 'v' => $articulo->imagen_version])).'"', false)
+            ->assertSee('id="ficha-articulo"', false);
     });
 });

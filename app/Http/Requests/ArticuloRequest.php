@@ -5,6 +5,8 @@ namespace App\Http\Requests;
 use App\Enums\ObjetoImpuesto;
 use App\Models\Articulo;
 use App\Models\Catalogo;
+use App\Rules\ImagenLegible;
+use App\Services\Articulos\ProcesadorImagenArticulo;
 use Illuminate\Auth\Access\Response;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -41,7 +43,23 @@ class ArticuloRequest extends FormRequest
      */
     public function rules(): array
     {
-        return self::reglas($this->user()->id, $this->input('catalogo_id'), $this->route('articulo'));
+        return [
+            ...self::reglas($this->user()->id, $this->input('catalogo_id'), $this->route('articulo')),
+            // La imagen solo existe en el formulario; la importación CSV no la lleva.
+            'imagen' => ['bail', 'nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:'.ProcesadorImagenArticulo::TAMANO_MAXIMO_KB, new ImagenLegible],
+            'quitar_imagen' => ['boolean'],
+        ];
+    }
+
+    /**
+     * Los datos del artículo sin los de la imagen, que no son columnas: los
+     * guarda ProcesadorImagenArticulo.
+     *
+     * @return array<string, mixed>
+     */
+    public function datosArticulo(): array
+    {
+        return $this->safe()->except(['imagen', 'quitar_imagen']);
     }
 
     /**
@@ -120,7 +138,11 @@ class ArticuloRequest extends FormRequest
      */
     public function messages(): array
     {
-        return self::mensajes();
+        return [
+            ...self::mensajes(),
+            'imagen.mimes' => 'La imagen debe ser JPG, PNG o WEBP. Vuelve a elegir la imagen.',
+            'imagen.max' => 'La imagen pesa más de 10 MB. Vuelve a elegir una más ligera.',
+        ];
     }
 
     /**
@@ -137,6 +159,7 @@ class ArticuloRequest extends FormRequest
             'objeto_imp' => 'objeto de impuesto',
             'precio_proveedor' => 'precio del proveedor',
             'utilidad_porcentaje' => 'utilidad',
+            'imagen' => 'imagen',
         ];
     }
 }

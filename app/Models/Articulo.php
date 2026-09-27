@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 /**
  * proveedor_id es una copia del proveedor del catálogo que escribe el modelo
@@ -20,6 +21,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  *
  * costo_con_descuento y precio_unitario_sin_iva también los escribe solo el
  * modelo, a partir del precio de lista y la utilidad (ver recalcularPrecio()).
+ *
+ * imagen_ruta la escribe solo ProcesadorImagenArticulo, al guardar el archivo.
  */
 #[Fillable([
     'catalogo_id',
@@ -66,6 +69,11 @@ class Articulo extends Model
      * Columnas del CSV, idénticas en importación y exportación.
      */
     public const COLUMNAS_CSV = ['nombre', 'modelo', 'clave_prod_serv', 'clave_unidad', 'objeto_imp', 'precio_proveedor', 'utilidad_porcentaje'];
+
+    /**
+     * Carpeta de las imágenes dentro del disco privado (local).
+     */
+    public const DIRECTORIO_IMAGENES = 'articulos';
 
     /**
      * Copia el proveedor del catálogo y calcula el costo y el precio de venta.
@@ -220,6 +228,28 @@ class Articulo extends Model
     protected function utilidad(): Attribute
     {
         return Attribute::get(fn (): float => CalculadoraPrecioArticulo::utilidad($this->precio_unitario_sin_iva, $this->costo_con_descuento));
+    }
+
+    /**
+     * @return Attribute<bool, never>
+     */
+    protected function tieneImagen(): Attribute
+    {
+        return Attribute::get(fn (): bool => $this->imagen_ruta !== null);
+    }
+
+    /**
+     * Parte al azar del nombre del archivo ("{id}-{version}.webp"). Va en la
+     * URL de la imagen para que un reemplazo cambie la dirección y el
+     * navegador no muestre la foto anterior guardada en su caché.
+     *
+     * @return Attribute<string|null, never>
+     */
+    protected function imagenVersion(): Attribute
+    {
+        return Attribute::get(fn (): ?string => $this->imagen_ruta === null
+            ? null
+            : Str::after(pathinfo($this->imagen_ruta, PATHINFO_FILENAME), '-'));
     }
 
     /**

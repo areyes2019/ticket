@@ -9,6 +9,7 @@
         <div class="acciones">
             <x-boton :href="route('articulos.create')" icono="plus-lg">Nuevo artículo</x-boton>
             <x-boton :href="route('articulos.importar')" variante="secundario" icono="upload">Importar CSV</x-boton>
+            <x-boton :href="route('articulos.imagenes')" variante="secundario" icono="images">Subir imágenes</x-boton>
             @include('articulos._exportar')
         </div>
     </div>
@@ -46,8 +47,11 @@
         <x-campo nombre="por_pagina" etiqueta="Filas por página" tipo="select" :opciones="array_combine(App\Models\Articulo::POR_PAGINA, App\Models\Articulo::POR_PAGINA)" :valor="$porPagina" :vacia="false" form="filtros-articulos" />
         @include('articulos._paginacion')
     </div>
+
+    @include('articulos._ficha')
 @endsection
 
 @push('scripts')
     <script src="{{ asset('js/busqueda-dinamica.js') }}"></script>
+    <script src="{{ asset('js/ficha-articulo.js') }}"></script>
 @endpush
