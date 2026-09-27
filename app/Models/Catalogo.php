@@ -15,10 +15,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Agrupa artículos de un proveedor con un mismo descuento. El proveedor es fijo
- * desde la creación (CatalogoRequest no lo acepta en la edición).
+ * Agrupa artículos de un proveedor con un mismo descuento y la utilidad que
+ * heredan los que no tienen una propia. El proveedor es fijo desde la creación
+ * (CatalogoRequest no lo acepta en la edición).
  */
-#[Fillable(['proveedor_id', 'nombre', 'descuento'])]
+#[Fillable(['proveedor_id', 'nombre', 'descuento', 'utilidad_porcentaje'])]
 class Catalogo extends Model
 {
     /** @use HasFactory<CatalogoFactory> */
@@ -31,25 +32,31 @@ class Catalogo extends Model
      */
     protected $attributes = [
         'descuento' => 0,
+        'utilidad_porcentaje' => 0,
     ];
 
     /**
-     * Al cambiar el descuento se recalcula el precio con descuento de todos sus
-     * artículos con un solo UPDATE. El literal 100.0 evita la división entera
-     * de SQLite (20 / 100 = 0).
+     * Al cambiar el descuento se recalculan todos sus artículos (cambia el
+     * costo del que parten); al cambiar solo la utilidad, los que la heredan.
+     * Se hace en PHP con la calculadora, no con un UPDATE: el techo a centavos
+     * no es portable entre MySQL y SQLite y sería otra copia de la fórmula.
      */
     protected static function booted(): void
     {
         static::updated(function (Catalogo $catalogo) {
-            if (! $catalogo->wasChanged('descuento')) {
+            $articulos = $catalogo->articulosPorRecalcular(
+                $catalogo->wasChanged('descuento'),
+                $catalogo->wasChanged('utilidad_porcentaje'),
+            );
+
+            if ($articulos === null) {
                 return;
             }
 
-            $descuento = sprintf('%.2F', (float) $catalogo->descuento);
-
-            Articulo::withTrashed()
-                ->where('catalogo_id', $catalogo->id)
-                ->update(['precio_con_descuento' => DB::raw("ROUND(precio_unitario_sin_iva * (1 - {$descuento} / 100.0), 2)")]);
+            DB::transaction(fn () => $articulos->withTrashed()->lazyById()->each(function (Articulo $articulo) use ($catalogo) {
+                $articulo->recalcularPrecio($catalogo);
+                $articulo->saveQuietly();
+            }));
         });
     }
 
@@ -98,13 +105,40 @@ class Catalogo extends Model
     }
 
     /**
-     * Precio con el descuento del catálogo, redondeado a centavos igual que el
-     * ROUND de MySQL. El redondeo previo a 6 decimales quita el ruido de punto
-     * flotante (10.05 × 0.9 = 9.044999…) antes de redondear.
+     * Cuántos artículos (no eliminados) cambiarían su precio de venta si el
+     * catálogo pasara a este descuento y esta utilidad. Es exacto: compara el
+     * precio nuevo con el guardado, así que un cambio que no mueve ningún
+     * centavo no cuenta. Alimenta la confirmación del formulario.
      */
-    public function precioConDescuento(float|string $precio): float
+    public function articulosAfectados(float|string $descuento, float|string $utilidadPorcentaje): int
     {
-        return round(round((float) $precio * (1 - (float) $this->descuento / 100), 6), 2);
+        $articulos = $this->articulosPorRecalcular(
+            round((float) $descuento, 2) !== round((float) $this->descuento, 2),
+            round((float) $utilidadPorcentaje, 2) !== round((float) $this->utilidad_porcentaje, 2),
+        );
+
+        if ($articulos === null) {
+            return 0;
+        }
+
+        return $articulos->get()
+            ->filter(fn (Articulo $articulo) => $articulo->calcularPrecio($descuento, $utilidadPorcentaje)[1] !== round((float) $articulo->precio_unitario_sin_iva, 2))
+            ->count();
+    }
+
+    /**
+     * Artículos que mueve un cambio: todos si cambia el descuento, solo los
+     * que heredan la utilidad si cambia la utilidad; null si no cambia nada.
+     *
+     * @return HasMany<Articulo, $this>|null
+     */
+    private function articulosPorRecalcular(bool $cambiaDescuento, bool $cambiaUtilidad): ?HasMany
+    {
+        return match (true) {
+            $cambiaDescuento => $this->articulos(),
+            $cambiaUtilidad => $this->articulos()->whereNull('utilidad_porcentaje'),
+            default => null,
+        };
     }
 
     /**
@@ -124,7 +158,25 @@ class Catalogo extends Model
      */
     protected function descuentoTexto(): Attribute
     {
-        return Attribute::get(fn (): string => rtrim(rtrim(number_format((float) $this->descuento, 2, '.', ''), '0'), '.').'%');
+        return Attribute::get(fn (): string => self::porcentajeTexto($this->descuento));
+    }
+
+    /**
+     * Utilidad sin ceros sobrantes: "25%", "122.5%".
+     *
+     * @return Attribute<string, never>
+     */
+    protected function utilidadTexto(): Attribute
+    {
+        return Attribute::get(fn (): string => self::porcentajeTexto($this->utilidad_porcentaje));
+    }
+
+    /**
+     * Porcentaje sin ceros sobrantes: "15%", "12.5%".
+     */
+    public static function porcentajeTexto(float|string $porcentaje): string
+    {
+        return rtrim(rtrim(number_format((float) $porcentaje, 2, '.', ''), '0'), '.').'%';
     }
 
     /**
@@ -136,6 +188,7 @@ class Catalogo extends Model
     {
         return [
             'descuento' => 'decimal:2',
+            'utilidad_porcentaje' => 'decimal:2',
         ];
     }
 }

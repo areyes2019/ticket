@@ -23,12 +23,14 @@ class CatalogoRequest extends FormRequest
     }
 
     /**
-     * Un descuento vacío es 0%.
+     * Un descuento o una utilidad vacíos son 0%.
      */
     protected function prepareForValidation(): void
     {
-        if (! $this->filled('descuento')) {
-            $this->merge(['descuento' => 0]);
+        foreach (['descuento', 'utilidad_porcentaje'] as $campo) {
+            if (! $this->filled($campo)) {
+                $this->merge([$campo => 0]);
+            }
         }
     }
 
@@ -53,6 +55,7 @@ class CatalogoRequest extends FormRequest
                     ->ignore($catalogo),
             ],
             'descuento' => ['required', 'numeric', 'between:0,100', 'decimal:0,2'],
+            'utilidad_porcentaje' => ['required', 'numeric', 'between:0,999.99', 'decimal:0,2'],
         ];
 
         if ($catalogo === null) {
@@ -76,6 +79,8 @@ class CatalogoRequest extends FormRequest
             'nombre.unique' => 'Nombre duplicado: este proveedor ya tiene un catálogo con ese nombre.',
             'descuento.between' => 'El descuento debe estar entre 0 y 100.',
             'descuento.decimal' => 'El descuento admite como máximo 2 decimales.',
+            'utilidad_porcentaje.between' => 'La utilidad debe estar entre 0 y 999.99%.',
+            'utilidad_porcentaje.decimal' => 'La utilidad admite como máximo 2 decimales.',
         ];
     }
 
@@ -88,6 +93,7 @@ class CatalogoRequest extends FormRequest
             'proveedor_id' => 'proveedor',
             'nombre' => 'nombre',
             'descuento' => 'descuento',
+            'utilidad_porcentaje' => 'utilidad',
         ];
     }
 

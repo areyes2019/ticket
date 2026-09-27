@@ -74,7 +74,10 @@ class ArticuloRequest extends FormRequest
             'clave_prod_serv' => ['required', 'string', 'exists:sat_claves_prod_serv,clave'],
             'clave_unidad' => ['required', 'string', 'exists:sat_claves_unidad,clave'],
             'objeto_imp' => ['required', Rule::enum(ObjetoImpuesto::class)],
-            'precio_unitario_sin_iva' => ['required', 'numeric', 'gt:0', 'decimal:0,2', 'max:99999999.99'],
+            // El tope asegura que el precio de venta con 999.99% de utilidad
+            // quepa en decimal(10,2).
+            'precio_proveedor' => ['required', 'numeric', 'gt:0', 'decimal:0,2', 'max:9000000'],
+            'utilidad_porcentaje' => ['nullable', 'numeric', 'between:0,999.99', 'decimal:0,2'],
         ];
     }
 
@@ -104,8 +107,11 @@ class ArticuloRequest extends FormRequest
             'clave_prod_serv.exists' => 'La clave de producto/servicio no existe en el catálogo del SAT.',
             'clave_unidad.exists' => 'La clave de unidad no existe en el catálogo del SAT.',
             'objeto_imp.enum' => 'Selecciona un objeto de impuesto del catálogo del SAT.',
-            'precio_unitario_sin_iva.gt' => 'El precio unitario sin IVA debe ser mayor a 0.',
-            'precio_unitario_sin_iva.decimal' => 'El precio unitario sin IVA admite como máximo 2 decimales.',
+            'precio_proveedor.gt' => 'El precio del proveedor debe ser mayor a 0.',
+            'precio_proveedor.decimal' => 'El precio del proveedor admite como máximo 2 decimales.',
+            'precio_proveedor.max' => 'El precio del proveedor no puede ser mayor a 9,000,000.',
+            'utilidad_porcentaje.between' => 'La utilidad debe estar entre 0 y 999.99%.',
+            'utilidad_porcentaje.decimal' => 'La utilidad admite como máximo 2 decimales.',
         ];
     }
 
@@ -129,7 +135,8 @@ class ArticuloRequest extends FormRequest
             'clave_prod_serv' => 'clave de producto/servicio',
             'clave_unidad' => 'clave de unidad',
             'objeto_imp' => 'objeto de impuesto',
-            'precio_unitario_sin_iva' => 'precio unitario sin IVA',
+            'precio_proveedor' => 'precio del proveedor',
+            'utilidad_porcentaje' => 'utilidad',
         ];
     }
 }

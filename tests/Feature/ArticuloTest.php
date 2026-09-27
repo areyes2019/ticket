@@ -23,7 +23,7 @@ function datosArticulo(Catalogo $catalogo, array $cambios = []): array
         'clave_prod_serv' => '44121604',
         'clave_unidad' => 'H87',
         'objeto_imp' => '02',
-        'precio_unitario_sin_iva' => '100.00',
+        'precio_proveedor' => '100.00',
         ...$cambios,
     ];
 }
@@ -54,22 +54,25 @@ describe('acceso', function () {
 });
 
 describe('alta', function () {
-    it('crea un artículo', function () {
-        $catalogo = Catalogo::factory()->conDescuento(10)->create();
+    it('crea un artículo con su precio de venta calculado', function () {
+        $catalogo = Catalogo::factory()->conDescuento(10)->conUtilidad(25)->create();
 
         $this->actingAs($catalogo->user)
-            ->post('/articulos', datosArticulo($catalogo))
+            ->post('/articulos', datosArticulo($catalogo, ['precio_proveedor' => '200.00']))
             ->assertRedirect(route('articulos.index'))
-            ->assertSessionHas('exito');
+            ->assertSessionHas('exito', 'Artículo creado. Precio de venta con IVA: $261.00.');
 
         $articulo = Articulo::sole();
 
         expect($articulo->user_id)->toBe($catalogo->user_id)
             ->and($articulo->catalogo_id)->toBe($catalogo->id)
             ->and($articulo->proveedor_id)->toBe($catalogo->proveedor_id)
-            ->and($articulo->precio_con_descuento)->toBe('90.00')
             ->and($articulo->objeto_imp)->toBe(ObjetoImpuesto::SiObjeto)
-            ->and($articulo->precio_unitario_sin_iva)->toBe('100.00');
+            ->and($articulo->precio_proveedor)->toBe('200.00')
+            ->and($articulo->utilidad_porcentaje)->toBeNull()
+            ->and($articulo->costo_con_descuento)->toBe('180.00')
+            ->and($articulo->precio_unitario_sin_iva)->toBe('225.00')
+            ->and($articulo->utilidad)->toBe(45.0);
     });
 
     it('guarda la clave de unidad en mayúsculas', function () {
@@ -97,7 +100,7 @@ describe('alta', function () {
             ->assertSessionHasErrors($campo);
 
         expect(Articulo::count())->toBe(0);
-    })->with(['catalogo_id', 'nombre', 'modelo', 'clave_prod_serv', 'clave_unidad', 'objeto_imp', 'precio_unitario_sin_iva']);
+    })->with(['catalogo_id', 'nombre', 'modelo', 'clave_prod_serv', 'clave_unidad', 'objeto_imp', 'precio_proveedor']);
 
     it('rechaza claves SAT que no están en el catálogo', function (string $campo, string $valor) {
         $catalogo = Catalogo::factory()->create();
@@ -111,13 +114,46 @@ describe('alta', function () {
         'objeto de impuesto' => ['objeto_imp', '05'],
     ]);
 
-    it('rechaza un precio inválido', function (string $precio) {
+    it('rechaza un precio del proveedor inválido', function (string $precio) {
         $catalogo = Catalogo::factory()->create();
 
         $this->actingAs($catalogo->user)
-            ->post('/articulos', datosArticulo($catalogo, ['precio_unitario_sin_iva' => $precio]))
-            ->assertSessionHasErrors('precio_unitario_sin_iva');
-    })->with(['0', '-5', '10.555', 'abc', '100000000']);
+            ->post('/articulos', datosArticulo($catalogo, ['precio_proveedor' => $precio]))
+            ->assertSessionHasErrors('precio_proveedor');
+    })->with(['0', '-5', '10.555', 'abc', '9000000.01']);
+
+    it('acepta el tope del precio del proveedor con la utilidad máxima', function () {
+        $catalogo = Catalogo::factory()->create();
+
+        $this->actingAs($catalogo->user)
+            ->post('/articulos', datosArticulo($catalogo, ['precio_proveedor' => '9000000', 'utilidad_porcentaje' => '999.99']))
+            ->assertSessionHasNoErrors();
+
+        expect(Articulo::sole()->precio_unitario_sin_iva)->toBe('98999100.00');
+    });
+
+    it('rechaza una utilidad inválida', function (string $utilidad) {
+        $catalogo = Catalogo::factory()->create();
+
+        $this->actingAs($catalogo->user)
+            ->post('/articulos', datosArticulo($catalogo, ['utilidad_porcentaje' => $utilidad]))
+            ->assertSessionHasErrors('utilidad_porcentaje');
+    })->with(['-1', '1000', '10.555', 'abc']);
+
+    it('acepta 0% y utilidades de tres dígitos', function (string $utilidad, string $venta) {
+        $catalogo = Catalogo::factory()->create();
+
+        $this->actingAs($catalogo->user)
+            ->post('/articulos', datosArticulo($catalogo, ['utilidad_porcentaje' => $utilidad]))
+            ->assertSessionHasNoErrors();
+
+        expect(Articulo::sole())
+            ->utilidad_porcentaje->toBe(number_format((float) $utilidad, 2, '.', ''))
+            ->precio_unitario_sin_iva->toBe($venta);
+    })->with([
+        '0%' => ['0', '100.00'],
+        '350%' => ['350', '450.00'],
+    ]);
 
     it('rechaza un catálogo ajeno, eliminado o de un proveedor eliminado', function () {
         $usuario = User::factory()->create();
@@ -136,24 +172,28 @@ describe('alta', function () {
         expect(Articulo::count())->toBe(0);
     });
 
-    it('ignora el proveedor y el precio con descuento enviados', function () {
-        $catalogo = Catalogo::factory()->conDescuento(20)->create();
+    it('ignora el proveedor y los valores calculados enviados', function () {
+        $catalogo = Catalogo::factory()->conDescuento(20)->conUtilidad(50)->create();
         $otroProveedor = Proveedor::factory()->for($catalogo->user)->create();
 
         $this->actingAs($catalogo->user)->post('/articulos', datosArticulo($catalogo, [
             'proveedor_id' => $otroProveedor->id,
-            'precio_con_descuento' => '1.00',
-        ]));
+            'costo_con_descuento' => '1.00',
+            'precio_unitario_sin_iva' => '2.00',
+            'utilidad' => '3.00',
+        ]))->assertSessionHasNoErrors();
 
         expect(Articulo::sole())
             ->proveedor_id->toBe($catalogo->proveedor_id)
-            ->precio_con_descuento->toBe('80.00');
+            ->costo_con_descuento->toBe('80.00')
+            ->precio_unitario_sin_iva->toBe('120.00');
     });
 
-    it('ofrece los catálogos como proveedor, catálogo y descuento', function () {
+    it('ofrece los catálogos con su descuento y su utilidad', function () {
         $catalogo = Catalogo::factory()
             ->for(Proveedor::factory()->state(['nombre_comercial' => 'Acme']))
             ->conDescuento(12.5)
+            ->conUtilidad(30)
             ->create(['nombre' => 'Otoño']);
         $deProveedorEliminado = Catalogo::factory()->for(Proveedor::factory()->for($catalogo->user))->create(['nombre' => 'Viejo']);
         $deProveedorEliminado->proveedor->delete();
@@ -163,7 +203,9 @@ describe('alta', function () {
             ->assertOk()
             ->assertSee('Acme — Otoño (12.5%)')
             ->assertDontSee('Viejo')
-            ->assertSee('data-descuentos="'.e(json_encode([$catalogo->id => '12.50'])).'"', false);
+            ->assertSee('data-catalogos="'.e(json_encode([$catalogo->id => ['descuento' => 12.5, 'utilidad' => 30]])).'"', false)
+            ->assertSee('data-umbral="400"', false)
+            ->assertSee('js/precio-articulo.js');
     });
 
     it('avisa cuando no hay catálogos', function () {
@@ -224,7 +266,7 @@ describe('nombre único por proveedor', function () {
 
 describe('edición y eliminación', function () {
     it('muestra el formulario precargado con la descripción de las claves', function () {
-        $articulo = Articulo::factory()->create(['clave_prod_serv' => '44121604', 'clave_unidad' => 'H87', 'precio_unitario_sin_iva' => 100]);
+        $articulo = Articulo::factory()->create(['clave_prod_serv' => '44121604', 'clave_unidad' => 'H87', 'precio_proveedor' => 100]);
 
         $this->actingAs($articulo->user)
             ->get("/articulos/{$articulo->id}/editar")
@@ -237,7 +279,7 @@ describe('edición y eliminación', function () {
     });
 
     it('actualiza un artículo', function () {
-        $articulo = Articulo::factory()->create(['precio_unitario_sin_iva' => 100]);
+        $articulo = Articulo::factory()->create(['precio_proveedor' => 100]);
         $otroCatalogo = Catalogo::factory()->for(Proveedor::factory()->for($articulo->user))->conDescuento(50)->create();
 
         $this->actingAs($articulo->user)
@@ -248,7 +290,8 @@ describe('edición y eliminación', function () {
             ->nombre->toBe('Fechador')
             ->catalogo_id->toBe($otroCatalogo->id)
             ->proveedor_id->toBe($otroCatalogo->proveedor_id)
-            ->precio_con_descuento->toBe('50.00')
+            ->costo_con_descuento->toBe('50.00')
+            ->precio_unitario_sin_iva->toBe('50.00')
             ->objeto_imp->toBe(ObjetoImpuesto::NoObjeto);
     });
 
@@ -278,9 +321,96 @@ describe('edición y eliminación', function () {
     ]);
 });
 
+describe('precio de venta', function () {
+    it('hereda la utilidad del catálogo y muestra la cadena completa', function () {
+        $articulo = Articulo::factory()->for(Catalogo::factory()->conDescuento(55)->conUtilidad(99))->create(['precio_proveedor' => '347.27']);
+
+        expect($articulo->fresh())
+            ->costo_con_descuento->toBe('156.27')
+            ->precio_unitario_sin_iva->toBe('310.98')
+            ->utilidad->toBe(154.71)
+            ->utilidad_porcentaje_efectivo->toBe('99.00');
+
+        $this->actingAs($articulo->user)
+            ->get("/articulos/{$articulo->id}/editar")
+            ->assertSee('placeholder="Hereda 99% del catálogo"', false)
+            ->assertSeeInOrder([
+                'Precio de lista del proveedor', '$347.27',
+                'Descuento del catálogo', '55%', '−$191.00',
+                'Costo', '$156.27',
+                'Utilidad', '99%', '+$154.71',
+                'Precio de venta sin IVA', '$310.98',
+                'IVA (16%)', '+$49.76',
+                'Precio de venta con IVA', '$360.74',
+            ]);
+    });
+
+    it('usa la utilidad propia sobre la del catálogo', function () {
+        $articulo = Articulo::factory()->for(Catalogo::factory()->conUtilidad(10))->create(['precio_proveedor' => 100, 'utilidad_porcentaje' => 50]);
+
+        expect($articulo->fresh())
+            ->precio_unitario_sin_iva->toBe('150.00')
+            ->utilidad_porcentaje_efectivo->toBe('50.00');
+    });
+
+    it('redondea el precio de venta hacia arriba a centavos', function (string $lista, string $utilidad, string $venta) {
+        $articulo = Articulo::factory()->create(['precio_proveedor' => $lista, 'utilidad_porcentaje' => $utilidad]);
+
+        expect($articulo->fresh()->precio_unitario_sin_iva)->toBe($venta);
+    })->with([
+        'techo' => ['100.01', '33', '133.02'],
+        'sin centavo de más' => ['15.40', '5', '16.17'],
+    ]);
+
+    it('recalcula al editar el precio de lista o la utilidad', function () {
+        $articulo = Articulo::factory()->for(Catalogo::factory()->conDescuento(10))->create(['precio_proveedor' => 100]);
+
+        $articulo->update(['precio_proveedor' => 200]);
+        expect($articulo->fresh()->precio_unitario_sin_iva)->toBe('180.00');
+
+        $articulo->update(['utilidad_porcentaje' => 25]);
+        expect($articulo->fresh()->precio_unitario_sin_iva)->toBe('225.00');
+
+        $articulo->update(['utilidad_porcentaje' => null]);
+        expect($articulo->fresh()->precio_unitario_sin_iva)->toBe('180.00');
+    });
+
+    it('conserva la utilidad propia al mover el artículo de catálogo', function () {
+        $articulo = Articulo::factory()->for(Catalogo::factory()->conUtilidad(10))->create(['precio_proveedor' => 100, 'utilidad_porcentaje' => 50]);
+        $destino = Catalogo::factory()->for($articulo->proveedor)->conDescuento(20)->conUtilidad(5)->create();
+
+        $this->actingAs($articulo->user)
+            ->put("/articulos/{$articulo->id}", datosArticulo($destino, ['nombre' => $articulo->nombre, 'utilidad_porcentaje' => '50']))
+            ->assertSessionHas('exito', 'Artículo actualizado. Precio de venta con IVA: $139.20.');
+
+        expect($articulo->fresh())
+            ->utilidad_porcentaje->toBe('50.00')
+            ->costo_con_descuento->toBe('80.00')
+            ->precio_unitario_sin_iva->toBe('120.00');
+    });
+
+    it('avisa de una utilidad alta sin impedir guardar', function () {
+        $catalogo = Catalogo::factory()->create();
+
+        $this->actingAs($catalogo->user)
+            ->post('/articulos', datosArticulo($catalogo, ['utilidad_porcentaje' => '450']))
+            ->assertSessionHasNoErrors();
+
+        $this->get('/articulos/crear')
+            ->assertSee('<p id="utilidad_porcentaje-aviso" class="aviso-utilidad" hidden>', false);
+
+        // Sin JavaScript, tras un error de validación lo pinta el servidor.
+        $this->from('/articulos/crear')
+            ->followingRedirects()
+            ->post('/articulos', datosArticulo($catalogo, ['nombre' => '', 'utilidad_porcentaje' => '450']))
+            ->assertSee('<p id="utilidad_porcentaje-aviso" class="aviso-utilidad">', false)
+            ->assertSee('<span data-factor>5.5</span>', false);
+    });
+});
+
 describe('precio con IVA', function () {
     it('calcula el 16% redondeado a centavos', function (string $sinIva, float $conIva) {
-        $articulo = Articulo::factory()->create(['precio_unitario_sin_iva' => $sinIva]);
+        $articulo = Articulo::factory()->create(['precio_proveedor' => $sinIva]);
 
         expect($articulo->fresh()->precio_unitario_con_iva)->toBe($conIva);
     })->with([
@@ -299,9 +429,9 @@ describe('listado', function () {
         $this->catalogoAcme = Catalogo::factory()->for($this->acme)->create(['nombre' => 'General']);
         $this->catalogoZeta = Catalogo::factory()->for($this->zeta)->create(['nombre' => 'Alfa']);
 
-        Articulo::factory()->for($this->catalogoZeta)->create(['nombre' => 'Almohadilla', 'modelo' => 'ZZ-1', 'precio_unitario_sin_iva' => 300]);
-        Articulo::factory()->for($this->catalogoAcme)->create(['nombre' => 'Sello fechador', 'modelo' => 'AB-9', 'precio_unitario_sin_iva' => 50]);
-        Articulo::factory()->for($this->catalogoAcme)->create(['nombre' => 'Sello redondo', 'modelo' => 'AB-1', 'precio_unitario_sin_iva' => 1000]);
+        Articulo::factory()->for($this->catalogoZeta)->create(['nombre' => 'Almohadilla', 'modelo' => 'ZZ-1', 'precio_proveedor' => 300]);
+        Articulo::factory()->for($this->catalogoAcme)->create(['nombre' => 'Sello fechador', 'modelo' => 'AB-9', 'precio_proveedor' => 50]);
+        Articulo::factory()->for($this->catalogoAcme)->create(['nombre' => 'Sello redondo', 'modelo' => 'AB-1', 'precio_proveedor' => 1000]);
     });
 
     it('muestra solo los artículos del usuario', function (string $ruta) {
@@ -314,12 +444,15 @@ describe('listado', function () {
             ->assertDontSee('Artículo ajeno');
     })->with(['/articulos', '/articulos/buscar']);
 
-    it('muestra proveedor, catálogo y precio con IVA', function () {
+    it('muestra proveedor, catálogo, costo y precio con IVA', function () {
+        $this->catalogoZeta->update(['descuento' => 10, 'utilidad_porcentaje' => 50]);
+
         $this->actingAs($this->usuario)
             ->get('/articulos')
             ->assertSee('Zeta Sellos')
             ->assertSee('Alfa')
-            ->assertSee('$348.00')
+            ->assertSeeInOrder(['Costo', 'Precio con IVA'])
+            ->assertSeeInOrder(['$270.00', '$469.80'])
             ->assertSee('$1,160.00')
             ->assertSee('data-confirmar="¿Eliminar este artículo?"', false);
     });
@@ -342,8 +475,23 @@ describe('listado', function () {
         'modelo' => ['modelo', ['Sello redondo', 'Sello fechador', 'Almohadilla']],
         'proveedor' => ['proveedor', ['Sello', 'Almohadilla']],
         'catalogo' => ['catalogo', ['Almohadilla', 'Sello fechador']],
+        'costo' => ['costo', ['Sello fechador', 'Almohadilla', 'Sello redondo']],
         'precio' => ['precio', ['Sello fechador', 'Almohadilla', 'Sello redondo']],
     ]);
+
+    it('ordena por costo y por precio de forma independiente', function () {
+        // Almohadilla: costo 150 (50% de descuento) pero precio 600 (300% de utilidad).
+        $this->catalogoZeta->update(['descuento' => 50, 'utilidad_porcentaje' => 300]);
+        Articulo::factory()->for($this->catalogoAcme)->create(['nombre' => 'Tinta', 'precio_proveedor' => 200]);
+
+        $this->actingAs($this->usuario)
+            ->get('/articulos/buscar?orden=costo', cabecerasAjax())
+            ->assertSeeInOrder(['Almohadilla', 'Tinta']);
+
+        $this->actingAs($this->usuario)
+            ->get('/articulos/buscar?orden=precio', cabecerasAjax())
+            ->assertSeeInOrder(['Tinta', 'Almohadilla']);
+    });
 
     it('ignora un orden o una dirección desconocidos', function () {
         $this->actingAs($this->usuario)

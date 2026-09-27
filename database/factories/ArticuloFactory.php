@@ -11,8 +11,8 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  * Las claves SAT deben existir en sat_claves_prod_serv y sat_claves_unidad
  * cuando la prueba valide contra el catálogo (ver sembrarCatalogosSat()).
  *
- * proveedor_id y precio_con_descuento los calcula el modelo a partir del
- * catálogo.
+ * proveedor_id, costo_con_descuento y precio_unitario_sin_iva los calcula
+ * el modelo a partir del catálogo, el precio de lista y la utilidad.
  *
  * @extends Factory<Articulo>
  */
@@ -33,7 +33,8 @@ class ArticuloFactory extends Factory
             'clave_prod_serv' => '44121600',
             'clave_unidad' => 'H87',
             'objeto_imp' => ObjetoImpuesto::SiObjeto,
-            'precio_unitario_sin_iva' => fake()->randomFloat(2, 1, 5000),
+            'precio_proveedor' => fake()->randomFloat(2, 1, 5000),
+            'utilidad_porcentaje' => null,
         ];
     }
 }

@@ -23,7 +23,18 @@ class CatalogoFactory extends Factory
             'user_id' => fn (array $atributos) => Proveedor::withTrashed()->findOrFail($atributos['proveedor_id'])->user_id,
             'nombre' => fake()->unique()->words(2, true),
             'descuento' => 0,
+            'utilidad_porcentaje' => 0,
         ];
+    }
+
+    /**
+     * Indicate the catalog's profit percentage (markup over cost).
+     */
+    public function conUtilidad(float $utilidad): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'utilidad_porcentaje' => $utilidad,
+        ]);
     }
 
     /**

@@ -39,7 +39,7 @@ class ImportadorArticulosCsv
 
             $datos = $this->normalizar($this->combinar($encabezado, $celdas));
             $validador = Validator::make(
-                [...$datos, 'catalogo_id' => $catalogo->id],
+                [...$datos, 'catalogo_id' => $catalogo->id, 'utilidad_porcentaje' => $datos['utilidad_porcentaje'] === '' ? null : $datos['utilidad_porcentaje']],
                 ArticuloRequest::reglas($usuario->id, $catalogo->id),
                 $this->mensajes($datos),
                 array_combine(Articulo::COLUMNAS_CSV, Articulo::COLUMNAS_CSV),
@@ -152,6 +152,7 @@ class ImportadorArticulosCsv
         $datos['clave_unidad'] = mb_strtoupper($datos['clave_unidad']);
 
         // Excel y Google Sheets leen "02" como número y lo guardan como "2".
+        // Una utilidad vacía hereda la del catálogo destino (se vuelve null al validar).
         if (preg_match('/^\d$/', $datos['objeto_imp'])) {
             $datos['objeto_imp'] = '0'.$datos['objeto_imp'];
         }

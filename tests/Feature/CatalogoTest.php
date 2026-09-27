@@ -249,67 +249,142 @@ describe('edición y eliminación', function () {
     ]);
 });
 
-describe('precio con descuento', function () {
-    it('lo calcula al crear el artículo, redondeado a centavos', function (string $descuento, string $precio, string $esperado) {
-        $catalogo = Catalogo::factory()->create(['descuento' => $descuento]);
+describe('utilidad', function () {
+    beforeEach(function () {
+        $this->proveedor = Proveedor::factory()->create();
+        $this->usuario = $this->proveedor->user;
+    });
 
-        $articulo = Articulo::factory()->for($catalogo)->create(['precio_unitario_sin_iva' => $precio]);
+    it('guarda la utilidad y la toma como 0% si se deja vacía', function (array $utilidad, string $esperada) {
+        $this->actingAs($this->usuario)
+            ->post('/catalogos', ['proveedor_id' => $this->proveedor->id, 'nombre' => 'General', ...$utilidad])
+            ->assertSessionHasNoErrors();
 
-        expect($articulo->fresh()->precio_con_descuento)->toBe($esperado);
+        expect(Catalogo::sole()->utilidad_porcentaje)->toBe($esperada);
     })->with([
-        'sin descuento' => ['0', '100.00', '100.00'],
-        '15%' => ['15', '100.00', '85.00'],
-        'empate hacia arriba' => ['10', '10.05', '9.05'],
-        'decimales en el descuento' => ['12.5', '99.99', '87.49'],
-        '100%' => ['100', '50.00', '0.00'],
+        'capturada' => [['utilidad_porcentaje' => '122.5'], '122.50'],
+        'vacía' => [['utilidad_porcentaje' => ''], '0.00'],
+        'ausente' => [[], '0.00'],
     ]);
 
-    it('lo recalcula al cambiar el precio del artículo', function () {
-        $articulo = Articulo::factory()->for(Catalogo::factory()->conDescuento(10))->create(['precio_unitario_sin_iva' => 100]);
+    it('rechaza una utilidad inválida', function (string $utilidad) {
+        $this->actingAs($this->usuario)
+            ->post('/catalogos', ['proveedor_id' => $this->proveedor->id, 'nombre' => 'General', 'utilidad_porcentaje' => $utilidad])
+            ->assertSessionHasErrors('utilidad_porcentaje');
+    })->with(['-1', '1000', '10.555', 'abc']);
 
-        $articulo->update(['precio_unitario_sin_iva' => 200]);
+    it('muestra la utilidad en el listado y el aviso de utilidad alta en el formulario', function () {
+        $catalogo = Catalogo::factory()->for($this->proveedor)->conDescuento(10)->conUtilidad(122.5)->create(['nombre' => 'Otoño']);
 
-        expect($articulo->fresh()->precio_con_descuento)->toBe('180.00');
-    });
+        $this->actingAs($this->usuario)
+            ->get('/catalogos')
+            ->assertSeeInOrder(['Descuento', 'Utilidad', 'Otoño', '10%', '122.5%']);
 
-    it('lo recalcula en bloque al cambiar el descuento del catálogo', function () {
-        $catalogo = Catalogo::factory()->create();
-        $articulos = collect(['100.00', '10.05', '99.99', '0.01'])
-            ->map(fn (string $precio) => Articulo::factory()->for($catalogo)->create(['precio_unitario_sin_iva' => $precio]));
-        $articulos->last()->delete();
-        $otro = Articulo::factory()->create(['precio_unitario_sin_iva' => 100]);
-
-        $this->actingAs($catalogo->user)
-            ->put("/catalogos/{$catalogo->id}", ['nombre' => $catalogo->nombre, 'descuento' => '10']);
-
-        // El recálculo en bloque (SQL) debe dar lo mismo que el cálculo por fila (PHP).
-        $catalogo->refresh();
-
-        foreach ($articulos as $articulo) {
-            $guardado = Articulo::withTrashed()->find($articulo->id);
-
-            expect($guardado->precio_con_descuento)
-                ->toBe(number_format($catalogo->precioConDescuento($guardado->precio_unitario_sin_iva), 2, '.', ''));
-        }
-
-        expect(Articulo::find($articulos[1]->id)->precio_con_descuento)->toBe('9.05')
-            ->and($otro->fresh()->precio_con_descuento)->toBe('100.00');
-    });
-
-    it('no recalcula si el descuento no cambia', function () {
-        $catalogo = Catalogo::factory()->conDescuento(10)->create();
-        $articulo = Articulo::factory()->for($catalogo)->create(['precio_unitario_sin_iva' => 100]);
-        DB::table('articulos')->where('id', $articulo->id)->update(['precio_con_descuento' => 1]);
-
-        $catalogo->update(['nombre' => 'Renombrado']);
-
-        expect($articulo->fresh()->precio_con_descuento)->toBe('1.00');
+        $this->get("/catalogos/{$catalogo->id}/editar")
+            ->assertSee('data-umbral="400"', false)
+            ->assertSee('<p id="utilidad_porcentaje-aviso" class="aviso-utilidad" hidden>', false)
+            ->assertSee('js/precio-articulo.js');
     });
 });
 
-describe('migración de datos', function () {
+describe('recálculo de precios', function () {
+    beforeEach(function () {
+        $this->catalogo = Catalogo::factory()->conDescuento(10)->conUtilidad(25)->create();
+        $this->hereda = Articulo::factory()->for($this->catalogo)->create(['precio_proveedor' => 200]);
+        $this->propia = Articulo::factory()->for($this->catalogo)->create(['precio_proveedor' => 200, 'utilidad_porcentaje' => 50]);
+        $this->eliminado = Articulo::factory()->for($this->catalogo)->create(['precio_proveedor' => 200]);
+        $this->eliminado->delete();
+        $this->otro = Articulo::factory()->for(Catalogo::factory()->conDescuento(10)->conUtilidad(25))->create(['precio_proveedor' => 200]);
+    });
+
+    it('recalcula todos los artículos al cambiar el descuento', function () {
+        $this->catalogo->update(['descuento' => 20]);
+
+        expect($this->hereda->fresh())->costo_con_descuento->toBe('160.00')->precio_unitario_sin_iva->toBe('200.00')
+            ->and($this->propia->fresh())->costo_con_descuento->toBe('160.00')->precio_unitario_sin_iva->toBe('240.00')
+            ->and(Articulo::withTrashed()->find($this->eliminado->id)->precio_unitario_sin_iva)->toBe('200.00')
+            ->and($this->otro->fresh()->precio_unitario_sin_iva)->toBe('225.00');
+    });
+
+    it('recalcula solo los que heredan al cambiar la utilidad', function () {
+        $this->catalogo->update(['utilidad_porcentaje' => 30]);
+
+        expect($this->hereda->fresh()->precio_unitario_sin_iva)->toBe('234.00')
+            ->and($this->propia->fresh()->precio_unitario_sin_iva)->toBe('270.00')
+            ->and($this->otro->fresh()->precio_unitario_sin_iva)->toBe('225.00');
+    });
+
+    it('no recalcula si no cambian descuento ni utilidad', function () {
+        DB::table('articulos')->where('id', $this->hereda->id)->update(['precio_unitario_sin_iva' => 1]);
+
+        $this->catalogo->update(['nombre' => 'Renombrado', 'descuento' => '10.00']);
+
+        expect($this->hereda->fresh()->precio_unitario_sin_iva)->toBe('1.00');
+    });
+
+    it('cuenta exactamente los artículos cuyo precio cambiaría', function (string $descuento, string $utilidad, int $esperados) {
+        expect($this->catalogo->articulosAfectados($descuento, $utilidad))->toBe($esperados);
+    })->with([
+        'descuento: todos, sin eliminados' => ['20', '25', 2],
+        'utilidad: solo los que heredan' => ['10', '30', 1],
+        'ambos' => ['20', '30', 2],
+        'sin cambio' => ['10.00', '25', 0],
+    ]);
+
+    it('no cuenta un cambio que no mueve ningún centavo', function () {
+        // 0.01 × 1.5 y 0.01 × 1.6 suben al mismo centavo: 0.02.
+        $catalogo = Catalogo::factory()->conUtilidad(50)->create();
+        Articulo::factory()->for($catalogo)->create(['precio_proveedor' => '0.01']);
+
+        expect($catalogo->articulosAfectados('0', '60'))->toBe(0)
+            ->and($catalogo->articulosAfectados('0', '150'))->toBe(1);
+    });
+
+    it('pide confirmación antes de recalcular y no guarda nada', function () {
+        $this->actingAs($this->catalogo->user)
+            ->put("/catalogos/{$this->catalogo->id}", ['nombre' => 'Nuevo nombre', 'descuento' => '10', 'utilidad_porcentaje' => '30'])
+            ->assertRedirect(route('catalogos.edit', $this->catalogo))
+            ->assertSessionHas('confirmar_recalculo', 1);
+
+        expect($this->catalogo->fresh())->nombre->not->toBe('Nuevo nombre')->utilidad_porcentaje->toBe('25.00')
+            ->and($this->hereda->fresh()->precio_unitario_sin_iva)->toBe('225.00');
+
+        $this->get("/catalogos/{$this->catalogo->id}/editar")
+            ->assertSee('Se recalculará el precio de venta de')
+            ->assertSee('<strong>1</strong>', false)
+            ->assertSee('value="Nuevo nombre"', false)
+            ->assertSee('value="30"', false)
+            ->assertSee('name="confirmar" value="1"', false)
+            ->assertSee('Confirmar y guardar')
+            ->assertSee('bi-check-lg', false)
+            ->assertDontSee('>Guardar</button>', false);
+    });
+
+    it('guarda y recalcula al confirmar', function () {
+        $this->actingAs($this->catalogo->user)
+            ->put("/catalogos/{$this->catalogo->id}", ['nombre' => $this->catalogo->nombre, 'descuento' => '20', 'utilidad_porcentaje' => '25', 'confirmar' => '1'])
+            ->assertRedirect(route('catalogos.index'))
+            ->assertSessionHas('exito', 'Catálogo actualizado. Se recalculó el precio de 2 artículos.');
+
+        expect($this->catalogo->fresh()->descuento)->toBe('20.00')
+            ->and($this->hereda->fresh()->precio_unitario_sin_iva)->toBe('200.00');
+    });
+
+    it('guarda directo si ningún precio cambia', function () {
+        $this->actingAs($this->catalogo->user)
+            ->put("/catalogos/{$this->catalogo->id}", ['nombre' => 'Renombrado', 'descuento' => '10', 'utilidad_porcentaje' => '25'])
+            ->assertRedirect(route('catalogos.index'))
+            ->assertSessionHas('exito', 'Catálogo actualizado.');
+
+        expect($this->catalogo->fresh()->nombre)->toBe('Renombrado');
+    });
+});
+
+describe('migraciones de datos', function () {
     it('pasa los artículos existentes a un catálogo "General" de su proveedor', function () {
+        $precios = require database_path('migrations/2026_09_26_120000_add_precio_proveedor_y_utilidad.php');
         $migracion = require database_path('migrations/2026_09_26_100001_add_catalogo_to_articulos_table.php');
+        $precios->down();
         $migracion->down();
 
         $usuario = User::factory()->create();
@@ -335,16 +410,46 @@ describe('migración de datos', function () {
             ->and(Catalogo::withTrashed()->where('proveedor_id', $sinArticulos->id)->exists())->toBeFalse();
 
         foreach ([$conArticulos, $eliminado] as $proveedor) {
-            $general = Catalogo::where('proveedor_id', $proveedor->id)->sole();
+            $general = DB::table('catalogos')->where('proveedor_id', $proveedor->id)->sole();
 
             expect($general)
                 ->nombre->toBe('General')
-                ->descuento->toBe('0.00')
-                ->user_id->toBe($usuario->id);
+                ->user_id->toBe($usuario->id)
+                ->and((float) $general->descuento)->toBe(0.0);
         }
 
         expect(DB::table('articulos')->whereNull('catalogo_id')->count())->toBe(0)
             ->and(DB::table('articulos')->count())->toBe(3)
-            ->and(Articulo::withTrashed()->pluck('precio_con_descuento')->unique()->all())->toBe(['123.45']);
+            ->and(DB::table('articulos')->pluck('precio_con_descuento')->map(fn ($precio) => (float) $precio)->unique()->all())->toBe([123.45]);
+
+        $precios->up();
+    });
+
+    it('toma el precio actual como precio de lista y recalcula la cadena', function () {
+        $migracion = require database_path('migrations/2026_09_26_120000_add_precio_proveedor_y_utilidad.php');
+        $catalogo = Catalogo::factory()->conDescuento(55)->create();
+        $vivo = Articulo::factory()->for($catalogo)->create(['precio_proveedor' => '347.27']);
+        $borrado = Articulo::factory()->for($catalogo)->create(['precio_proveedor' => '100.00', 'utilidad_porcentaje' => 20]);
+        $borrado->delete();
+
+        $migracion->down();
+
+        expect(Schema::hasColumns('articulos', ['precio_proveedor', 'utilidad_porcentaje', 'costo_con_descuento']))->toBeFalse()
+            ->and(Schema::hasColumn('catalogos', 'utilidad_porcentaje'))->toBeFalse()
+            ->and((float) DB::table('articulos')->where('id', $vivo->id)->value('precio_unitario_sin_iva'))->toBe(347.27)
+            ->and((float) DB::table('articulos')->where('id', $vivo->id)->value('precio_con_descuento'))->toBe(156.27);
+
+        $migracion->up();
+
+        expect(Catalogo::find($catalogo->id)->utilidad_porcentaje)->toBe('0.00')
+            ->and(Articulo::find($vivo->id))
+            ->precio_proveedor->toBe('347.27')
+            ->utilidad_porcentaje->toBeNull()
+            ->costo_con_descuento->toBe('156.27')
+            ->precio_unitario_sin_iva->toBe('156.27')
+            ->and(Articulo::withTrashed()->find($borrado->id))
+            ->precio_proveedor->toBe('100.00')
+            ->utilidad_porcentaje->toBeNull()
+            ->precio_unitario_sin_iva->toBe('45.00');
     });
 });

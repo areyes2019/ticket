@@ -575,12 +575,36 @@ h1.tarjeta-titulo {
     flex: 1;
 }
 
-.precio-con-iva {
+.aviso-utilidad {
     margin: calc(-1 * var(--espacio-2)) 0 var(--espacio-4);
+    color: var(--color-advertencia);
+}
+
+/* Cadena de cálculo del precio (precio-articulo.js) */
+.resumen-precio {
+    margin: 0 0 var(--espacio-4);
+    padding: var(--espacio-3);
+    background: var(--color-superficie-suave);
+    border: 1px solid var(--color-borde);
+    border-radius: var(--radio);
+}
+
+.resumen-precio div {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--espacio-3);
+    padding: var(--espacio-1) 0;
     color: var(--color-texto-suave);
 }
 
-.precio-con-iva output {
+.resumen-precio dd {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+
+.resumen-precio .resumen-total {
+    border-top: 1px solid var(--color-borde);
     font-weight: 600;
     color: var(--color-texto);
 }

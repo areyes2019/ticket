@@ -1,0 +1,146 @@
+[
+    {
+        "descripcion": "ejemplo de la cadena",
+        "precio_proveedor": "200.00",
+        "descuento": "10",
+        "utilidad_porcentaje": "25",
+        "costo": "180.00",
+        "precio_venta": "225.00",
+        "utilidad": "45.00"
+    },
+    {
+        "descripcion": "markup 25% sobre costo 100",
+        "precio_proveedor": "100.00",
+        "descuento": "0",
+        "utilidad_porcentaje": "25",
+        "costo": "100.00",
+        "precio_venta": "125.00",
+        "utilidad": "25.00"
+    },
+    {
+        "descripcion": "techo: no redondea hacia abajo",
+        "precio_proveedor": "100.01",
+        "descuento": "0",
+        "utilidad_porcentaje": "33",
+        "costo": "100.01",
+        "precio_venta": "133.02",
+        "utilidad": "33.01"
+    },
+    {
+        "descripcion": "ruido al escalar a centavos",
+        "precio_proveedor": "15.40",
+        "descuento": "0",
+        "utilidad_porcentaje": "5",
+        "costo": "15.40",
+        "precio_venta": "16.17",
+        "utilidad": "0.77"
+    },
+    {
+        "descripcion": "empate del descuento (008)",
+        "precio_proveedor": "10.05",
+        "descuento": "10",
+        "utilidad_porcentaje": "0",
+        "costo": "9.05",
+        "precio_venta": "9.05",
+        "utilidad": "0.00"
+    },
+    {
+        "descripcion": "decimales en el descuento",
+        "precio_proveedor": "99.99",
+        "descuento": "12.5",
+        "utilidad_porcentaje": "0",
+        "costo": "87.49",
+        "precio_venta": "87.49",
+        "utilidad": "0.00"
+    },
+    {
+        "descripcion": "descuento del 100%",
+        "precio_proveedor": "50.00",
+        "descuento": "100",
+        "utilidad_porcentaje": "40",
+        "costo": "0.00",
+        "precio_venta": "0.00",
+        "utilidad": "0.00"
+    },
+    {
+        "descripcion": "vender a costo (0%)",
+        "precio_proveedor": "180.00",
+        "descuento": "10",
+        "utilidad_porcentaje": "0",
+        "costo": "162.00",
+        "precio_venta": "162.00",
+        "utilidad": "0.00"
+    },
+    {
+        "descripcion": "tres dígitos",
+        "precio_proveedor": "130.00",
+        "descuento": "0",
+        "utilidad_porcentaje": "350",
+        "costo": "130.00",
+        "precio_venta": "585.00",
+        "utilidad": "455.00"
+    },
+    {
+        "descripcion": "máximo 999.99%",
+        "precio_proveedor": "12.34",
+        "descuento": "0",
+        "utilidad_porcentaje": "999.99",
+        "costo": "12.34",
+        "precio_venta": "135.74",
+        "utilidad": "123.40"
+    },
+    {
+        "descripcion": "aceptación: Colop 55% y 99%",
+        "precio_proveedor": "347.27",
+        "descuento": "55",
+        "utilidad_porcentaje": "99",
+        "costo": "156.27",
+        "precio_venta": "310.98",
+        "utilidad": "154.71"
+    },
+    {
+        "descripcion": "costo no redondo",
+        "precio_proveedor": "123.45",
+        "descuento": "33.33",
+        "utilidad_porcentaje": "17.5",
+        "costo": "82.30",
+        "precio_venta": "96.71",
+        "utilidad": "14.41"
+    },
+    {
+        "descripcion": "un centavo",
+        "precio_proveedor": "0.01",
+        "descuento": "0",
+        "utilidad_porcentaje": "50",
+        "costo": "0.01",
+        "precio_venta": "0.02",
+        "utilidad": "0.01"
+    },
+    {
+        "descripcion": "tope de precio de lista",
+        "precio_proveedor": "9000000.00",
+        "descuento": "0",
+        "utilidad_porcentaje": "999.99",
+        "costo": "9000000.00",
+        "precio_venta": "98999100.00",
+        "utilidad": "89999100.00"
+    },
+    {
+        "descripcion": "descuento y utilidad con decimales",
+        "precio_proveedor": "1234.56",
+        "descuento": "7.25",
+        "utilidad_porcentaje": "42.42",
+        "costo": "1145.05",
+        "precio_venta": "1630.79",
+        "utilidad": "485.74"
+    },
+    {
+        "descripcion": "0.07 escalado",
+        "precio_proveedor": "0.07",
+        "descuento": "0",
+        "utilidad_porcentaje": "0",
+        "costo": "0.07",
+        "precio_venta": "0.07",
+        "utilidad": "0.00"
+    }
+]

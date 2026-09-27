@@ -48,7 +48,7 @@
 
     <x-card titulo="Iconos del sistema">
         <div class="muestra">
-            @foreach (['speedometer2', 'clock-history', 'box-arrow-in-right', 'box-arrow-right', 'person-plus', 'envelope', 'key', 'eye', 'eye-slash', 'check-circle', 'x-circle', 'exclamation-triangle', 'truck', 'collection', 'people', 'plus-lg', 'search', 'pencil', 'trash', 'save', 'x-lg', 'box-seam', 'upload', 'download', 'arrow-left', 'arrow-up', 'arrow-down', 'arrow-down-up'] as $icono)
+            @foreach (['speedometer2', 'clock-history', 'box-arrow-in-right', 'box-arrow-right', 'person-plus', 'envelope', 'key', 'eye', 'eye-slash', 'check-circle', 'x-circle', 'exclamation-triangle', 'truck', 'collection', 'people', 'plus-lg', 'search', 'pencil', 'trash', 'save', 'x-lg', 'box-seam', 'upload', 'download', 'arrow-left', 'arrow-up', 'arrow-down', 'arrow-down-up', 'check-lg'] as $icono)
                 <span class="muestra-icono"><x-icono :nombre="$icono" />{{ $icono }}</span>
             @endforeach
         </div>
@@ -69,6 +69,20 @@
             </tbody>
         </table>
         <p><code>&lt;span class="celda-truncada" title="texto completo"&gt;texto completo&lt;/span&gt;</code></p>
+    </x-card>
+
+    <x-card titulo="Resumen de precio y aviso de utilidad">
+        <dl class="resumen-precio">
+            <div><dt>Precio de lista del proveedor</dt><dd><output>$200.00</output></dd></div>
+            <div><dt>Descuento del catálogo (10%)</dt><dd><output>−$20.00</output></dd></div>
+            <div class="resumen-total"><dt>Costo</dt><dd><output>$180.00</output></dd></div>
+            <div><dt>Utilidad (25%)</dt><dd><output>+$45.00</output></dd></div>
+            <div class="resumen-total"><dt>Precio de venta sin IVA</dt><dd><output>$225.00</output></dd></div>
+            <div><dt>IVA (16%)</dt><dd><output>+$36.00</output></dd></div>
+            <div class="resumen-total"><dt>Precio de venta con IVA</dt><dd><output>$261.00</output></dd></div>
+        </dl>
+        <p class="aviso-utilidad"><x-icono nombre="exclamation-triangle" /> Más de 400%: el costo se multiplica por 11. Revisa que no sobre un cero.</p>
+        <p><code>&lt;dl class="resumen-precio" data-resumen-precio&gt;</code> · <code>&lt;p class="aviso-utilidad"&gt;</code> (precio-articulo.js)</p>
     </x-card>
 
     <x-card titulo="Etiquetas de estado">

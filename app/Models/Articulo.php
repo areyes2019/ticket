@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ObjetoImpuesto;
+use App\Services\Articulos\CalculadoraPrecioArticulo;
 use Database\Factories\ArticuloFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -16,6 +17,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 /**
  * proveedor_id es una copia del proveedor del catálogo que escribe el modelo
  * (ver booted()); el formulario y la importación solo envían catalogo_id.
+ *
+ * costo_con_descuento y precio_unitario_sin_iva también los escribe solo el
+ * modelo, a partir del precio de lista y la utilidad (ver recalcularPrecio()).
  */
 #[Fillable([
     'catalogo_id',
@@ -24,7 +28,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'clave_prod_serv',
     'clave_unidad',
     'objeto_imp',
-    'precio_unitario_sin_iva',
+    'precio_proveedor',
+    'utilidad_porcentaje',
 ])]
 class Articulo extends Model
 {
@@ -37,6 +42,12 @@ class Articulo extends Model
     public const TASA_IVA = 0.16;
 
     /**
+     * Porcentaje de utilidad a partir del cual el formulario avisa (sin
+     * bloquear) que puede haber un cero de más. Único lugar donde se define.
+     */
+    public const UMBRAL_UTILIDAD_ALTA = 400;
+
+    /**
      * Columnas que se pueden filtrar desde el listado.
      */
     public const FILTROS = ['nombre', 'modelo'];
@@ -44,7 +55,7 @@ class Articulo extends Model
     /**
      * Columnas por las que se puede ordenar el listado.
      */
-    public const ORDENES = ['nombre', 'modelo', 'proveedor', 'catalogo', 'precio'];
+    public const ORDENES = ['nombre', 'modelo', 'proveedor', 'catalogo', 'costo', 'precio'];
 
     /**
      * Filas por página que se pueden elegir en el listado.
@@ -54,26 +65,53 @@ class Articulo extends Model
     /**
      * Columnas del CSV, idénticas en importación y exportación.
      */
-    public const COLUMNAS_CSV = ['nombre', 'modelo', 'clave_prod_serv', 'clave_unidad', 'objeto_imp', 'precio_unitario_sin_iva'];
+    public const COLUMNAS_CSV = ['nombre', 'modelo', 'clave_prod_serv', 'clave_unidad', 'objeto_imp', 'precio_proveedor', 'utilidad_porcentaje'];
 
     /**
-     * Copia el proveedor del catálogo y calcula el precio con descuento. Es el
-     * único lugar donde se escriben, para el alta, la edición y la importación.
-     * La copia no se desincroniza porque el proveedor de un catálogo es fijo.
+     * Copia el proveedor del catálogo y calcula el costo y el precio de venta.
+     * Es el único lugar donde se escriben, para el alta, la edición y la
+     * importación. La copia no se desincroniza porque el proveedor de un
+     * catálogo es fijo.
      */
     protected static function booted(): void
     {
         static::saving(function (Articulo $articulo) {
-            if (! $articulo->isDirty(['catalogo_id', 'precio_unitario_sin_iva'])) {
+            if (! $articulo->isDirty(['catalogo_id', 'precio_proveedor', 'utilidad_porcentaje'])) {
                 return;
             }
 
+            // Consulta nueva: la relación cargada puede ser la del catálogo anterior.
             $catalogo = $articulo->catalogo()->firstOrFail();
 
             $articulo->proveedor_id = $catalogo->proveedor_id;
-            $articulo->precio_con_descuento = $catalogo->precioConDescuento($articulo->precio_unitario_sin_iva);
             $articulo->setRelation('catalogo', $catalogo);
+            $articulo->recalcularPrecio($catalogo);
         });
+    }
+
+    /**
+     * Escribe costo y precio de venta con el descuento y la utilidad del
+     * catálogo (salvo que el artículo tenga utilidad propia). No guarda.
+     */
+    public function recalcularPrecio(Catalogo $catalogo): void
+    {
+        [$costo, $venta] = $this->calcularPrecio($catalogo->descuento, $catalogo->utilidad_porcentaje);
+
+        $this->costo_con_descuento = $costo;
+        $this->precio_unitario_sin_iva = $venta;
+    }
+
+    /**
+     * Costo y precio de venta con un descuento y una utilidad de catálogo
+     * dados, sin tocar el artículo; lo usa también el conteo de impacto.
+     *
+     * @return array{0: float, 1: float}
+     */
+    public function calcularPrecio(float|string $descuento, float|string $utilidadCatalogo): array
+    {
+        $costo = CalculadoraPrecioArticulo::costoConDescuento($this->precio_proveedor, $descuento);
+
+        return [$costo, CalculadoraPrecioArticulo::precioVentaSinIva($costo, $this->utilidad_porcentaje ?? $utilidadCatalogo)];
     }
 
     /**
@@ -146,6 +184,7 @@ class Articulo extends Model
                     ->whereColumn('catalogos.id', 'articulos.catalogo_id'),
                 $direccion
             ),
+            'costo' => $consulta->orderBy('costo_con_descuento', $direccion),
             'precio' => $consulta->orderBy('precio_unitario_sin_iva', $direccion),
             default => $consulta->orderBy($columna, $direccion),
         };
@@ -160,9 +199,27 @@ class Articulo extends Model
      */
     protected function precioUnitarioConIva(): Attribute
     {
-        // El redondeo previo a 6 decimales quita el ruido de punto flotante
-        // (100 × 1.16 = 116.00000000000001) antes de redondear a centavos.
-        return Attribute::get(fn (): float => round(round((float) $this->precio_unitario_sin_iva * (1 + self::TASA_IVA), 6), 2));
+        return Attribute::get(fn (): float => CalculadoraPrecioArticulo::precioConIva($this->precio_unitario_sin_iva, self::TASA_IVA));
+    }
+
+    /**
+     * Porcentaje que realmente se aplicó: el propio o el del catálogo.
+     *
+     * @return Attribute<string, never>
+     */
+    protected function utilidadPorcentajeEfectivo(): Attribute
+    {
+        return Attribute::get(fn (): string => $this->utilidad_porcentaje ?? $this->catalogo->utilidad_porcentaje);
+    }
+
+    /**
+     * Utilidad en pesos por pieza, sin IVA. No se guarda.
+     *
+     * @return Attribute<float, never>
+     */
+    protected function utilidad(): Attribute
+    {
+        return Attribute::get(fn (): float => CalculadoraPrecioArticulo::utilidad($this->precio_unitario_sin_iva, $this->costo_con_descuento));
     }
 
     /**
@@ -174,8 +231,10 @@ class Articulo extends Model
     {
         return [
             'objeto_imp' => ObjetoImpuesto::class,
+            'precio_proveedor' => 'decimal:2',
+            'utilidad_porcentaje' => 'decimal:2',
+            'costo_con_descuento' => 'decimal:2',
             'precio_unitario_sin_iva' => 'decimal:2',
-            'precio_con_descuento' => 'decimal:2',
         ];
     }
 }

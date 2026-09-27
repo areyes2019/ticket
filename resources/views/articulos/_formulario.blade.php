@@ -8,8 +8,7 @@
 @else
     @push('scripts')
         <script src="{{ asset('js/autocompletar.js') }}"></script>
-        <script src="{{ asset('js/precio-con-iva.js') }}"></script>
-        <script src="{{ asset('js/precio-con-descuento.js') }}"></script>
+        <script src="{{ asset('js/precio-articulo.js') }}"></script>
     @endpush
 
     <form method="POST" action="{{ $accion }}">
@@ -30,16 +29,23 @@
                 :ayuda="$descripcionUnidad ?? 'Escribe la clave o el nombre de la unidad, por ejemplo H87 o pieza.'"
                 data-autocompletar="{{ route('catalogos-sat.claves-unidad') }}" />
             <x-campo nombre="objeto_imp" etiqueta="Objeto de impuesto" tipo="select" :opciones="$objetosImpuesto" :valor="$articulo?->objeto_imp?->value" vacia="Selecciona un objeto de impuesto" required />
-            <x-campo nombre="precio_unitario_sin_iva" etiqueta="Precio unitario sin IVA" tipo="number" step="0.01" min="0.01" inputmode="decimal" :valor="$articulo?->precio_unitario_sin_iva" required />
-            <p class="precio-con-iva">
-                Precio con IVA ({{ App\Models\Articulo::TASA_IVA * 100 }}%):
-                <output for="precio_unitario_sin_iva" data-precio-con-iva data-tasa-iva="{{ App\Models\Articulo::TASA_IVA }}">{{ $articulo ? '$'.number_format($articulo->precio_unitario_con_iva, 2) : '—' }}</output>
-            </p>
-            <p class="precio-con-iva">
-                Precio con descuento del catálogo (sin IVA):
-                <output for="precio_unitario_sin_iva catalogo_id" data-precio-con-descuento data-precio="precio_unitario_sin_iva" data-catalogo="catalogo_id"
-                    data-descuentos="{{ json_encode($descuentos, JSON_FORCE_OBJECT) }}">{{ $articulo ? '$'.number_format((float) $articulo->precio_con_descuento, 2) : '—' }}</output>
-            </p>
+            <x-campo nombre="precio_proveedor" etiqueta="Precio de lista del proveedor (sin IVA)" tipo="number" step="0.01" min="0.01" max="9000000" inputmode="decimal"
+                :valor="$articulo?->precio_proveedor" required ayuda="Antes del descuento del catálogo." />
+            <x-campo nombre="utilidad_porcentaje" etiqueta="Utilidad (%)" tipo="number" step="0.01" min="0" max="999.99" inputmode="decimal"
+                :valor="$articulo?->utilidad_porcentaje" :placeholder="$placeholderUtilidad" ayuda="Déjalo vacío para usar la del catálogo."
+                data-aviso-utilidad="utilidad_porcentaje-aviso" data-umbral="{{ App\Models\Articulo::UMBRAL_UTILIDAD_ALTA }}" />
+            @include('articulos._aviso-utilidad', ['campo' => 'utilidad_porcentaje', 'valor' => $articulo?->utilidad_porcentaje])
+
+            {{-- Cadena de cálculo. En edición la pinta el servidor con lo guardado; precio-articulo.js la recalcula en vivo. --}}
+            <dl class="resumen-precio" data-resumen-precio data-precio="precio_proveedor" data-utilidad="utilidad_porcentaje" data-catalogo="catalogo_id"
+                data-tasa-iva="{{ App\Models\Articulo::TASA_IVA }}" data-catalogos="{{ json_encode($preciosCatalogo, JSON_FORCE_OBJECT) }}">
+                @foreach ($resumen as $renglon)
+                    <div @class(['resumen-total' => $renglon['total'] ?? false])>
+                        <dt>{{ $renglon['etiqueta'] }}@isset($renglon['porcentaje']) (<span data-porcentaje="{{ $renglon['clave'] }}">{{ $renglon['porcentaje'] }}</span>)@endisset</dt>
+                        <dd><output data-valor="{{ $renglon['clave'] }}">{{ $renglon['valor'] }}</output></dd>
+                    </div>
+                @endforeach
+            </dl>
         </x-card>
 
         <div class="acciones">
