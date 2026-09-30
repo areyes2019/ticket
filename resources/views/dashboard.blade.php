@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'Dashboard · '.config('app.name'))
-@section('contenido-clase', 'contenido-ancho')
+@section('contenido-clase', 'contenido-bandeja')
 
 @section('content')
     @if (session('status'))

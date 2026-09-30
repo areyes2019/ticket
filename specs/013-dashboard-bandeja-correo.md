@@ -59,8 +59,10 @@ ficticios, solo para ver cómo queda.
 
 ### `dashboard.blade.php`
 
-- Usa `@section('contenido-clase', 'contenido-ancho')`. Si la bandeja necesita más ancho que
-  `72rem`, se agrega una clase propia (`contenido-bandeja`) en lugar de cambiar `contenido-ancho`.
+- Usa `@section('contenido-clase', 'contenido-bandeja')`: la bandeja ocupa **toda la pantalla
+  debajo del menú**, a lo ancho y a lo alto, sin márgenes ni ancho máximo. El alto se ajusta solo
+  aunque la barra del menú ocupe varias líneas (la página es una columna flexible del alto de la
+  ventana; `body:has(.contenido-bandeja)` en `app.css`, sin tocar el layout).
 - Arriba se mantiene el aviso de sesión (`session('status')` con `<x-alerta tipo="exito">`).
 - Debajo, un aviso discreto: **"Bandeja de demostración: los correos son de ejemplo."**
 - Luego la bandeja, armada con los componentes de abajo.
@@ -162,8 +164,8 @@ botones no hacen nada. Es aceptable por tratarse de una demostración.
 
 - **Escritorio (≥1024px):**
   - tres columnas, con carpetas de ancho fijo (~14rem), lista (~22rem) y visor con el resto,
-  - la lista y el visor tienen su propio scroll vertical, y la bandeja ocupa el alto visible de la
-    pantalla debajo de la barra superior.
+  - la lista y el visor tienen su propio scroll vertical, y la bandeja ocupa todo el ancho y el
+    alto de la pantalla debajo de la barra superior (en todos los tamaños).
 - **Tableta (768–1023px):** dos columnas, lista y visor. Las carpetas pasan a un botón "Carpetas"
   (`bi-list`) que las despliega.
 - **Celular (<768px):**

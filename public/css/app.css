@@ -70,8 +70,7 @@
     /* Bandeja de correo del dashboard */
     --ancho-bandeja-carpetas: 14rem;
     --ancho-bandeja-lista: 22rem;
-    --alto-bandeja: calc(100vh - 12rem);
-    --alto-minimo-bandeja: 32rem;
+    --alto-minimo-bandeja: 24rem;
     --lado-avatar: 2.5rem;
     --color-etiqueta-clientes: #2563eb;
     --color-etiqueta-proveedores: #d97706;
@@ -1016,8 +1015,35 @@ dialog.dialogo:target:not([open]) {
 /* Bandeja de correo de demostración del dashboard (bandeja-correo.js).
    Escritorio: carpetas, lista y visor. Tableta: lista y visor, con las carpetas
    desplegables. Celular: una columna a la vez. */
+
+/* La bandeja ocupa todo el ancho y el alto de la pantalla bajo el menú: la
+   página se vuelve una columna flexible del alto de la ventana y el contenido
+   toma el espacio que deja la barra (que puede ocupar varias líneas). */
+body:has(.contenido-bandeja) {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+}
+
+.contenido-bandeja {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    width: 100%;
+    max-width: none;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.contenido-bandeja > .alerta {
+    margin: var(--espacio-3) var(--espacio-4) 0;
+}
+
 .bandeja-demo {
-    margin: 0 0 var(--espacio-3);
+    margin: 0;
+    padding: var(--espacio-2) var(--espacio-4);
     color: var(--color-texto-suave);
     font-size: var(--texto-pequeno);
 }
@@ -1032,11 +1058,12 @@ dialog.dialogo:target:not([open]) {
 .bandeja {
     display: grid;
     grid-template-columns: var(--ancho-bandeja-carpetas) var(--ancho-bandeja-lista) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    flex: 1;
     position: relative;
-    height: var(--alto-bandeja);
     min-height: var(--alto-minimo-bandeja);
     background: var(--color-superficie);
-    border: 1px solid var(--color-borde);
+    border-top: 1px solid var(--color-borde);
 }
 
 .bandeja-carpetas,
