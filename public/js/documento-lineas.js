@@ -1,8 +1,9 @@
-// Tabla de líneas de un documento (cotización hoy, factura después).
+// Tabla de líneas de un documento (cotización o factura).
 //
 // Se activa en un formulario con data-documento-lineas y data-sugerencias="<url>".
 // Agrega artículos con el buscador (la URL responde JSON
-// [{ id, nombre, modelo, precio_unitario, tasa_iva }]), agrega líneas libres,
+// [{ id, nombre, modelo, precio_unitario, tasa_iva }]), agrega líneas libres
+// (salvo con data-sin-lineas-libres),
 // quita líneas, avisa cuando un artículo ya está en el documento y muestra los
 // totales en vivo con TotalesDocumento. Los totales son informativos: los que
 // cuentan los calcula el servidor al guardar.
@@ -304,18 +305,23 @@
     }
 
     // Arranque: sin JavaScript la tabla trae filas vacías para capturar líneas
-    // libres; con él se quitan y aparecen el buscador y los botones.
+    // libres; con él se quitan y aparecen el buscador y los botones. Un
+    // documento sin líneas libres (factura) no trae filas vacías ni el botón.
     cuerpo.querySelectorAll('tr[data-linea-vacia]').forEach(function (fila) {
         fila.remove();
     });
     filas().forEach(prepararFila);
     formulario.querySelector('[data-controles-lineas]').hidden = false;
 
-    formulario.querySelector('[data-agregar-linea-libre]').addEventListener('click', function () {
-        const fila = nuevaFila({ cantidad: 1, tasa_iva: '16' });
+    const agregarLineaLibre = formulario.querySelector('[data-agregar-linea-libre]');
 
-        campo(fila, 'descripcion').focus();
-    });
+    if (agregarLineaLibre && !formulario.hasAttribute('data-sin-lineas-libres')) {
+        agregarLineaLibre.addEventListener('click', function () {
+            const fila = nuevaFila({ cantidad: 1, tasa_iva: '16' });
+
+            campo(fila, 'descripcion').focus();
+        });
+    }
 
     cuerpo.addEventListener('click', function (evento) {
         const boton = evento.target.closest('[data-quitar-linea]');

@@ -53,6 +53,14 @@ class Cliente extends Model
     }
 
     /**
+     * @return HasMany<Factura, $this>
+     */
+    public function facturas(): HasMany
+    {
+        return $this->hasMany(Factura::class);
+    }
+
+    /**
      * Aplica los filtros del listado (coincidencia parcial, combinados con Y).
      * Los filtros vacíos se ignoran.
      *

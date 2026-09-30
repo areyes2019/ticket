@@ -19,12 +19,15 @@ function cotizacionParaPagos(User $user, EstadoCotizacion $estado = EstadoCotiza
 }
 
 /**
+ * La fecha va en la zona del negocio (la que valida "no futura"); se escribe
+ * literal porque los datasets llaman a esta función antes de que exista config().
+ *
  * @param  array<string, mixed>  $cambios
  * @return array<string, mixed>
  */
 function datosPago(string $tipo, array $cambios = []): array
 {
-    return ['tipo' => $tipo, 'fecha_pago' => today()->toDateString(), 'forma_pago' => '03', ...$cambios];
+    return ['tipo' => $tipo, 'fecha_pago' => today('America/Mexico_City')->toDateString(), 'forma_pago' => '03', ...$cambios];
 }
 
 beforeEach(function () {

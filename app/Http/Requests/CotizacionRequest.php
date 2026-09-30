@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Enums\TasaIva;
 use App\Enums\TipoDescuento;
 use App\Models\Cotizacion;
+use App\Models\Factura;
 use App\Services\Documentos\CalculadoraTotalesDocumento;
 use Closure;
 use Illuminate\Auth\Access\Response;
@@ -190,13 +191,13 @@ class CotizacionRequest extends FormRequest
 
     /**
      * El artículo debe ser del usuario y no estar eliminado; en la edición se
-     * acepta uno eliminado después de guardarse en esta cotización.
+     * acepta uno eliminado después de guardarse en este documento.
      */
-    private function reglaArticulo(int $usuarioId): object
+    protected function reglaArticulo(int $usuarioId): object
     {
-        $cotizacion = $this->route('cotizacion');
-        $yaGuardados = $cotizacion instanceof Cotizacion
-            ? $cotizacion->lineas()->whereNotNull('articulo_id')->pluck('articulo_id')->all()
+        $documento = $this->documento();
+        $yaGuardados = $documento
+            ? $documento->lineas()->whereNotNull('articulo_id')->pluck('articulo_id')->all()
             : [];
 
         return Rule::exists('articulos', 'id')
@@ -205,9 +206,19 @@ class CotizacionRequest extends FormRequest
     }
 
     /**
+     * Documento que se edita (null en el alta). FacturaRequest lo redefine.
+     */
+    protected function documento(): Cotizacion|Factura|null
+    {
+        $cotizacion = $this->route('cotizacion');
+
+        return $cotizacion instanceof Cotizacion ? $cotizacion : null;
+    }
+
+    /**
      * Porcentaje hasta 100; monto hasta el importe bruto de la línea.
      */
-    private function reglaDescuentoLinea(): Closure
+    protected function reglaDescuentoLinea(): Closure
     {
         return function (string $atributo, mixed $valor, Closure $fallar) {
             $indice = (int) explode('.', $atributo)[1];

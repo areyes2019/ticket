@@ -1,5 +1,9 @@
 <?php
 
+use App\Models\Articulo;
+use App\Models\Catalogo;
+use App\Models\Proveedor;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -73,4 +77,47 @@ function sembrarCatalogosSat(): void
         ['clave' => 'E48', 'nombre' => 'Unidad de servicio'],
         ['clave' => 'KGM', 'nombre' => 'Kilogramo'],
     ]);
+}
+
+/**
+ * Respuesta de éxito de facturapi.io con los nombres y formatos reales vistos
+ * en el sandbox: cfdi_version numérico y stamp.date en hora de México sin zona.
+ *
+ * @return array<string, mixed>
+ */
+function respuestaTimbrado(array $cambios = []): array
+{
+    return [
+        'id' => '64f0c0ffee0000000000abcd',
+        'uuid' => '5E2D6AFF-2DD7-43D1-83D3-14C1ACA396D9',
+        'series' => 'A',
+        'folio_number' => 123,
+        'status' => 'valid',
+        'cancellation_status' => 'none',
+        'cfdi_version' => 4,
+        'total' => 116,
+        'verification_url' => 'https://verificacfdi.facturaelectronica.sat.gob.mx/default.aspx?id=5E2D6AFF',
+        'stamp' => [
+            'signature' => 'SELLO-CFDI',
+            'sat_signature' => 'SELLO-SAT',
+            'sat_cert_number' => '00001000000504465028',
+            'date' => '2026-09-28T06:30:00',
+            'complement_string' => '||1.1|5E2D6AFF|2026-09-28T06:30:00|SELLO|00001000000504465028||',
+        ],
+        ...$cambios,
+    ];
+}
+
+/**
+ * Artículo de un catálogo propio del usuario, listo para una línea de factura.
+ *
+ * @param  array<string, mixed>  $atributos
+ */
+function articuloFacturable(User $user, array $atributos = []): Articulo
+{
+    $catalogo = Catalogo::factory()->conDescuento(10)->conUtilidad(50)
+        ->for(Proveedor::factory()->for($user))
+        ->create(['user_id' => $user->id]);
+
+    return Articulo::factory()->for($catalogo)->create(['user_id' => $user->id, 'precio_proveedor' => '100.00', ...$atributos]);
 }

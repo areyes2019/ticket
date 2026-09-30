@@ -19,6 +19,28 @@ document.addEventListener('submit', function (evento) {
     }
 });
 
+// Un botón con data-enviar-una-vez se deshabilita al enviar su formulario, para
+// que un doble clic no repita la acción (p. ej. timbrar). Se registra después
+// de la confirmación: si esta se rechazó, el botón queda como estaba.
+document.addEventListener('submit', function (evento) {
+    const boton = evento.submitter;
+
+    if (!evento.defaultPrevented && boton && boton.hasAttribute('data-enviar-una-vez')) {
+        setTimeout(function () {
+            boton.disabled = true;
+        }, 0);
+    }
+});
+
+// Al volver con "Atrás" el navegador restaura la página tal cual: se reactivan.
+window.addEventListener('pageshow', function (evento) {
+    if (evento.persisted) {
+        document.querySelectorAll('[data-enviar-una-vez]').forEach(function (boton) {
+            boton.disabled = false;
+        });
+    }
+});
+
 // Diálogos: <a href="#id" data-abrir-dialogo> abre el <dialog id="id"> como
 // modal y [data-cerrar-dialogo] lo cierra. Sin JavaScript el enlace funciona
 // igual, porque el CSS muestra el diálogo señalado por la URL (:target).

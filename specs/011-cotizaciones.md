@@ -501,6 +501,10 @@ Función pura `calcularTotalesDocumento(lineas, descuentoGlobal)` con la misma c
 
 ### Compartir por WhatsApp (`public/js/compartir-cotizacion.js`)
 
+> Desde [012](012-facturacion.md) este script es `public/js/compartir-pdf.js` (botón
+> `data-compartir-pdf`, etiqueta `data-estado-documento`), compartido con facturas. El
+> comportamiento de la cotización descrito aquí no cambió.
+
 - El botón `data-compartir-cotizacion` trae la URL del PDF, la de `marcar-enviada`, el nombre del
   archivo, el teléfono del cliente y un texto resumen ("Cotización COT-0012 por $1,148.40").
 - Descarga el PDF con `fetch` (mismo origen, viaja la cookie de sesión) y, si

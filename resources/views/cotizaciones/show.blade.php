@@ -18,12 +18,12 @@
     <div class="encabezado">
         <h1>
             Cotización {{ $cotizacion->folio_formateado }}
-            <span @class(['etiqueta', $cotizacion->estado->claseEtiqueta()]) data-estado-cotizacion>{{ $cotizacion->estado->etiqueta() }}</span>
+            <span @class(['etiqueta', $cotizacion->estado->claseEtiqueta()]) data-estado-documento>{{ $cotizacion->estado->etiqueta() }}</span>
         </h1>
         <x-boton :href="route('cotizaciones.index')" variante="secundario" icono="arrow-left">Listado</x-boton>
     </div>
 
-    @include('cotizaciones._mensajes')
+    @include('documentos._mensajes')
 
     @foreach (['envio', 'pago'] as $bolsa)
         @if ($errors->{$bolsa}->any())
@@ -53,7 +53,7 @@
 
         <x-boton href="#dialogo-envio" variante="secundario" icono="envelope" data-abrir-dialogo>Enviar por correo</x-boton>
         <x-boton tipo="button" variante="secundario" icono="whatsapp" hidden
-            data-compartir-cotizacion
+            data-compartir-pdf
             data-pdf="{{ route('cotizaciones.pdf', $cotizacion) }}"
             data-marcar="{{ route('cotizaciones.marcar-enviada', $cotizacion) }}"
             data-archivo="cotizacion-{{ $cotizacion->folio_formateado }}.pdf"
@@ -237,5 +237,5 @@
 @endsection
 
 @push('scripts')
-    <script src="{{ asset('js/compartir-cotizacion.js') }}"></script>
+    <script src="{{ asset('js/compartir-pdf.js') }}"></script>
 @endpush

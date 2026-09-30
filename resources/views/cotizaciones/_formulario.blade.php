@@ -1,4 +1,4 @@
-@include('cotizaciones._mensajes')
+@include('documentos._mensajes')
 
 @if ($cotizacion?->estado === App\Enums\EstadoCotizacion::Enviada)
     <x-alerta tipo="advertencia">Esta cotización ya se envió. Al guardar regresa a borrador y tendrás que reenviarla para que el cliente vea los cambios.</x-alerta>
@@ -45,10 +45,10 @@
                 </thead>
                 <tbody data-lineas>
                     @foreach ($lineas as $i => $linea)
-                        @include('cotizaciones._linea', ['i' => $i, 'linea' => $linea])
+                        @include('documentos._linea', ['i' => $i, 'linea' => $linea])
                     @endforeach
                     @for ($extra = count($lineas); $extra < count($lineas) + 3; $extra++)
-                        @include('cotizaciones._linea', ['i' => $extra, 'linea' => [], 'vacia' => true])
+                        @include('documentos._linea', ['i' => $extra, 'linea' => [], 'vacia' => true])
                     @endfor
                 </tbody>
             </table>
@@ -56,7 +56,7 @@
         <p class="ayuda" data-sin-lineas hidden>Agrega artículos con el buscador o una línea libre.</p>
 
         <template id="plantilla-linea">
-            @include('cotizaciones._linea', ['i' => '__i__', 'linea' => []])
+            @include('documentos._linea', ['i' => '__i__', 'linea' => []])
         </template>
     </x-card>
 
@@ -81,19 +81,7 @@
     </div>
 </form>
 
-{{-- Aviso de artículo duplicado (documento-lineas.js). --}}
-<dialog id="aviso-duplicado" class="ficha dialogo" aria-labelledby="aviso-duplicado-titulo">
-    <form method="dialog">
-        <h2 id="aviso-duplicado-titulo">Este artículo ya está en la cotización</h2>
-        <p>Línea <strong data-duplicado-numero></strong>: <span data-duplicado-descripcion></span> · Modelo <span data-duplicado-modelo></span> · Cantidad actual <strong data-duplicado-cantidad></strong></p>
-        <x-campo nombre="cantidad_a_sumar" etiqueta="Cantidad a sumar" tipo="number" valor="1" min="1" step="1" inputmode="numeric" data-duplicado-sumar />
-
-        <div class="acciones">
-            <x-boton value="sumar" icono="plus-lg">Sumar a la línea existente</x-boton>
-            <x-boton value="cancelar" variante="secundario" icono="x-lg">Cancelar</x-boton>
-        </div>
-    </form>
-</dialog>
+@include('documentos._aviso-duplicado', ['documento' => 'la cotización'])
 
 @push('scripts')
     <script src="{{ asset('js/totales-documento.js') }}"></script>

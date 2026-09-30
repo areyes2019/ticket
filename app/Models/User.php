@@ -89,6 +89,14 @@ class User extends Authenticatable
     }
 
     /**
+     * @return HasMany<Factura, $this>
+     */
+    public function facturas(): HasMany
+    {
+        return $this->hasMany(Factura::class);
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>

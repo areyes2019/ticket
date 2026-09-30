@@ -9,7 +9,7 @@
         <x-boton :href="route('cotizaciones.create')" icono="plus-lg">Nueva cotización</x-boton>
     </div>
 
-    @include('cotizaciones._mensajes')
+    @include('documentos._mensajes')
 
     {{-- Los filtros de columna se asocian con form="filtros-cotizaciones". Las fechas y el periodo
          toman el valor de los atajos al pulsarlos (data-busqueda-sincronizar). --}}

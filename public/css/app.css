@@ -867,6 +867,43 @@ h1.tarjeta-titulo {
     background: var(--color-exito-fondo);
 }
 
+/* Facturas (borrador comparte la etiqueta de la cotización) */
+.etiqueta-pendiente {
+    color: var(--color-advertencia);
+    background: var(--color-advertencia-fondo);
+}
+
+.etiqueta-timbrada {
+    color: var(--color-exito);
+    background: var(--color-exito-fondo);
+}
+
+.etiqueta-cancelada {
+    color: var(--color-error);
+    background: var(--color-error-fondo);
+}
+
+.texto-uuid {
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    font-size: var(--texto-mini);
+}
+
+.texto-sello {
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    font-size: var(--texto-mini);
+    overflow-wrap: anywhere;
+}
+
+.compartir-pdf {
+    display: inline-flex;
+    flex-direction: column;
+    gap: var(--espacio-1);
+}
+
+.compartir-pdf[hidden] {
+    display: none;
+}
+
 h1 .etiqueta {
     font-size: var(--texto-pequeno);
     font-weight: 500;

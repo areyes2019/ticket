@@ -453,7 +453,7 @@ describe('detalle y PDF', function () {
             ->assertSee('Pago total')
             ->assertDontSee('Registrar saldo')
             ->assertDontSee('Marcar como entregado')
-            ->assertSee('data-compartir-cotizacion', false);
+            ->assertSee('data-compartir-pdf', false);
     });
 
     it('genera el PDF con el folio en el nombre', function () {

@@ -4,13 +4,16 @@ use App\Http\Controllers\ArticuloController;
 use App\Http\Controllers\CatalogoController;
 use App\Http\Controllers\CatalogoSatController;
 use App\Http\Controllers\ClienteController;
+use App\Http\Controllers\ComplementoPagoController;
 use App\Http\Controllers\ConstanciaController;
 use App\Http\Controllers\CotizacionController;
 use App\Http\Controllers\CotizacionPagoController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EnvioCotizacionController;
+use App\Http\Controllers\EnvioFacturaController;
 use App\Http\Controllers\EstilosController;
 use App\Http\Controllers\ExportacionArticulosController;
+use App\Http\Controllers\FacturaController;
 use App\Http\Controllers\HistorialAccesoController;
 use App\Http\Controllers\ImagenesArticulosController;
 use App\Http\Controllers\ImportacionArticulosController;
@@ -76,6 +79,17 @@ Route::middleware(['auth', AsegurarUsuarioActivo::class])->group(function () {
     // parameters(): sin él, Str::singular daría {cotizacione}.
     Route::resource('cotizaciones', CotizacionController::class)
         ->parameters(['cotizaciones' => 'cotizacion']);
+
+    Route::get('facturas/buscar', [FacturaController::class, 'buscar'])->name('facturas.buscar');
+    Route::post('facturas/{factura}/timbrar', [FacturaController::class, 'timbrar'])->name('facturas.timbrar');
+    Route::post('facturas/{factura}/cancelar', [FacturaController::class, 'cancelar'])->name('facturas.cancelar');
+    Route::get('facturas/{factura}/xml', [FacturaController::class, 'xml'])->name('facturas.xml');
+    Route::get('facturas/{factura}/pdf', [FacturaController::class, 'pdf'])->name('facturas.pdf');
+    Route::post('facturas/{factura}/enviar', [EnvioFacturaController::class, 'correo'])->name('facturas.enviar');
+    Route::post('facturas/{factura}/complemento-pago', [ComplementoPagoController::class, 'store'])->name('facturas.complemento-pago');
+
+    Route::resource('facturas', FacturaController::class)
+        ->parameters(['facturas' => 'factura']);
 
     Route::get('catalogos-sat/claves-prod-serv', [CatalogoSatController::class, 'clavesProdServ'])->name('catalogos-sat.claves-prod-serv');
     Route::get('catalogos-sat/claves-unidad', [CatalogoSatController::class, 'clavesUnidad'])->name('catalogos-sat.claves-unidad');
