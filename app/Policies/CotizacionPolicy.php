@@ -26,9 +26,11 @@ class CotizacionPolicy
             return $dueno;
         }
 
-        return $cotizacion->esEditable()
-            ? Response::allow()
-            : Response::deny('Una cotización '.mb_strtolower($cotizacion->estado->etiqueta()).' ya no se puede editar.');
+        return match (true) {
+            $cotizacion->esEditable() => Response::allow(),
+            $cotizacion->estaFacturada() => Response::deny('Una cotización facturada no se puede modificar.'),
+            default => Response::deny('Una cotización '.mb_strtolower($cotizacion->estado->etiqueta()).' ya no se puede editar.'),
+        };
     }
 
     public function delete(User $user, Cotizacion $cotizacion): Response
@@ -40,6 +42,7 @@ class CotizacionPolicy
         }
 
         return match (true) {
+            $cotizacion->estaFacturada() => Response::deny('Una cotización facturada no se puede eliminar.'),
             ! $cotizacion->esEditable() => Response::deny('Una cotización '.mb_strtolower($cotizacion->estado->etiqueta()).' no se puede eliminar.'),
             $cotizacion->tienePagos() => Response::deny('La cotización tiene pagos registrados: elimínalos antes de borrarla.'),
             default => Response::allow(),
@@ -47,7 +50,7 @@ class CotizacionPolicy
     }
 
     /**
-     * Enviar, compartir, pagar, entregar, duplicar y descargar el PDF: las
+     * Enviar, compartir, pagar, entregar, duplicar, facturar y descargar el PDF: las
      * reglas de estado de cada acción las revisa su controlador.
      */
     public function operar(User $user, Cotizacion $cotizacion): Response

@@ -29,6 +29,28 @@ it('envía el correo con el PDF adjunto y marca la cotización como enviada', fu
     expect($this->cotizacion->fresh()->estado)->toBe(EstadoCotizacion::Enviada);
 });
 
+it('regresa a la bandeja con la misma cotización abierta cuando se envía desde ahí', function () {
+    Mail::fake();
+
+    $bandeja = route('cotizaciones.index', ['estado' => 'borrador', 'cotizacion' => $this->cotizacion->id]);
+
+    $this->actingAs($this->user)->from($bandeja)->post("/cotizaciones/{$this->cotizacion->id}/enviar", [
+        'destinatarios_texto' => 'cliente@ejemplo.mx',
+        'origen' => 'bandeja',
+    ])->assertRedirect($bandeja)->assertSessionHas('exito');
+
+    expect($this->cotizacion->fresh()->estado)->toBe(EstadoCotizacion::Enviada);
+});
+
+it('no regresa a una página ajena a la bandeja', function (string $anterior) {
+    Mail::fake();
+
+    $this->actingAs($this->user)->from($anterior)->post("/cotizaciones/{$this->cotizacion->id}/enviar", [
+        'destinatarios_texto' => 'cliente@ejemplo.mx',
+        'origen' => 'bandeja',
+    ])->assertRedirect(route('cotizaciones.index', ['cotizacion' => $this->cotizacion->id]));
+})->with(['https://otro-sitio.example/cotizaciones?x=1', 'http://ticket_factura.test/clientes']);
+
 it('adjunta el PDF generado al vuelo', function () {
     $correo = new CotizacionMail($this->cotizacion);
     $adjunto = $correo->attachments()[0];

@@ -68,6 +68,7 @@ Route::middleware(['auth', AsegurarUsuarioActivo::class])->group(function () {
     Route::get('cotizaciones/buscar', [CotizacionController::class, 'buscar'])->name('cotizaciones.buscar');
     Route::post('cotizaciones/{cotizacion}/enviar', [EnvioCotizacionController::class, 'correo'])->name('cotizaciones.enviar');
     Route::post('cotizaciones/{cotizacion}/marcar-enviada', [EnvioCotizacionController::class, 'marcarEnviada'])->name('cotizaciones.marcar-enviada');
+    Route::get('cotizaciones/{cotizacion}/vista-previa', [CotizacionController::class, 'vistaPrevia'])->name('cotizaciones.vista-previa');
     Route::get('cotizaciones/{cotizacion}/pdf', [CotizacionController::class, 'pdf'])->name('cotizaciones.pdf');
     Route::post('cotizaciones/{cotizacion}/entregar', [CotizacionController::class, 'entregar'])->name('cotizaciones.entregar');
     Route::post('cotizaciones/{cotizacion}/duplicar', [CotizacionController::class, 'duplicar'])->name('cotizaciones.duplicar');
@@ -81,6 +82,7 @@ Route::middleware(['auth', AsegurarUsuarioActivo::class])->group(function () {
         ->parameters(['cotizaciones' => 'cotizacion']);
 
     Route::get('facturas/buscar', [FacturaController::class, 'buscar'])->name('facturas.buscar');
+    Route::get('facturas/cotizaciones', [FacturaController::class, 'cotizaciones'])->name('facturas.cotizaciones');
     Route::post('facturas/{factura}/timbrar', [FacturaController::class, 'timbrar'])->name('facturas.timbrar');
     Route::post('facturas/{factura}/cancelar', [FacturaController::class, 'cancelar'])->name('facturas.cancelar');
     Route::get('facturas/{factura}/xml', [FacturaController::class, 'xml'])->name('facturas.xml');

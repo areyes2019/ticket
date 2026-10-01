@@ -6,7 +6,11 @@
 @section('content')
     <div class="encabezado">
         <h1>Facturas</h1>
-        <x-boton :href="route('facturas.create')" icono="plus-lg">Nueva factura</x-boton>
+        <div class="acciones">
+            {{-- Sin JavaScript lleva a la página de cotizaciones por facturar; con él abre la ventana. --}}
+            <x-boton :href="route('facturas.cotizaciones')" variante="secundario" icono="file-earmark-arrow-down" data-abrir-elegir-cotizacion>Desde cotización</x-boton>
+            <x-boton :href="route('facturas.create')" icono="plus-lg">Nueva factura</x-boton>
+        </div>
     </div>
 
     @include('documentos._mensajes')
@@ -50,9 +54,23 @@
     </x-card>
 
     @include('facturas._paginacion')
+
+    <dialog id="dialogo-cotizaciones" class="ficha dialogo" aria-labelledby="dialogo-cotizaciones-titulo"
+        data-elegir-cotizacion="{{ route('facturas.cotizaciones') }}">
+        <h2 id="dialogo-cotizaciones-titulo">Facturar una cotización</h2>
+        <form method="GET" action="{{ route('facturas.cotizaciones') }}" data-elegir-cotizacion-buscador>
+            <x-campo nombre="q" id="elegir-cotizacion-q" etiqueta="Buscar cotización" tipo="search" placeholder="Folio, cliente o RFC" autocomplete="off" />
+        </form>
+        <x-alerta tipo="error" hidden data-elegir-cotizacion-error>No se pudieron cargar las cotizaciones. Intenta de nuevo.</x-alerta>
+        <div data-elegir-cotizacion-lista aria-live="polite"></div>
+        <div class="acciones">
+            <x-boton href="#" variante="secundario" icono="x-lg" data-cerrar-dialogo>Cerrar</x-boton>
+        </div>
+    </dialog>
 @endsection
 
 @push('scripts')
     <script src="{{ asset('js/busqueda-dinamica.js') }}"></script>
     <script src="{{ asset('js/compartir-pdf.js') }}"></script>
+    <script src="{{ asset('js/elegir-cotizacion.js') }}"></script>
 @endpush

@@ -3,20 +3,22 @@
 namespace App\Http\Requests;
 
 use App\Enums\EstadoCotizacion;
+use App\Models\Cotizacion;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Http\FormRequest;
-use Throwable;
 
 /**
- * Parámetros del listado de cotizaciones, compartidos por el listado y la
- * búsqueda dinámica.
+ * Parámetros de la bandeja de cotizaciones, compartidos por la página y la
+ * búsqueda dinámica: carpeta (periodo), etiqueta (estado, "por caducar",
+ * "facturadas" o "por facturar"),
+ * texto de búsqueda y cotización abierta.
  *
- * No rechaza nada: un valor inválido se ignora. Las fechas son días
+ * No rechaza nada: un valor inválido se ignora. Los periodos son días
  * calendario completos en la zona del negocio.
  */
 class ListadoCotizacionesRequest extends FormRequest
 {
-    public const PERIODOS = ['hoy' => 'Hoy', 'semana' => 'Esta semana', 'mes' => 'Este mes'];
+    public const PERIODOS = ['hoy' => 'Hoy', 'semana' => 'Esta semana', 'mes' => 'Este mes', 'todas' => 'Todas'];
 
     public const PERIODO_DEFECTO = 'mes';
 
@@ -31,20 +33,57 @@ class ListadoCotizacionesRequest extends FormRequest
     }
 
     /**
-     * Filtros de texto tal como se escribieron (para volver a pintarlos).
+     * Etiquetas de la bandeja: los estados, "Por caducar", "Facturadas" y
+     * "Por facturar".
      *
-     * @return array{cliente: string, rfc: string, folio: string, estado: string}
+     * @return array<string, string>
      */
-    public function campos(): array
+    public static function etiquetas(): array
+    {
+        return [
+            ...EstadoCotizacion::opciones(),
+            Cotizacion::POR_CADUCAR => 'Por caducar',
+            Cotizacion::FACTURADAS => 'Facturadas',
+            Cotizacion::POR_FACTURAR => 'Por facturar',
+        ];
+    }
+
+    /**
+     * Carpeta activa; "Este mes" si no hay una válida.
+     */
+    public function periodo(): string
+    {
+        $periodo = $this->string('periodo')->toString();
+
+        return array_key_exists($periodo, self::PERIODOS) ? $periodo : self::PERIODO_DEFECTO;
+    }
+
+    /**
+     * Etiqueta activa, o '' si no hay.
+     */
+    public function estado(): string
     {
         $estado = $this->string('estado')->toString();
 
-        return [
-            'cliente' => $this->string('cliente')->trim()->toString(),
-            'rfc' => $this->string('rfc')->trim()->upper()->replaceMatches('/\s+/', '')->toString(),
-            'folio' => $this->string('folio')->trim()->toString(),
-            'estado' => EstadoCotizacion::tryFrom($estado) ? $estado : '',
-        ];
+        return array_key_exists($estado, self::etiquetas()) ? $estado : '';
+    }
+
+    /**
+     * Texto del buscador tal como se escribió (para volver a pintarlo).
+     */
+    public function texto(): string
+    {
+        return $this->string('q')->trim()->toString();
+    }
+
+    /**
+     * Cotización pedida en la URL (?cotizacion=15), si el valor es un número.
+     */
+    public function abierta(): ?int
+    {
+        $id = $this->string('cotizacion')->toString();
+
+        return ctype_digit($id) ? (int) $id : null;
     }
 
     /**
@@ -54,97 +93,55 @@ class ListadoCotizacionesRequest extends FormRequest
      */
     public function filtros(): array
     {
-        [$desde, $hasta] = $this->rango();
+        [$desde, $hasta] = self::rango($this->periodo());
 
         return [
-            ...$this->campos(),
+            'texto' => $this->texto(),
             'folio' => $this->folio(),
+            'estado' => $this->estado(),
             'desde' => $desde,
             'hasta' => $hasta,
         ];
     }
 
     /**
-     * "12", "0012" o "COT-0012" → 12; otro texto no filtra.
+     * "12", "0012" o "COT-0012" → 12; otro texto no es un folio.
      */
     public function folio(): ?int
     {
-        $folio = $this->campos()['folio'];
-
-        return preg_match('/^(?:COT-?)?0*(\d{1,9})$/i', $folio, $coincidencia) === 1 ? (int) $coincidencia[1] : null;
+        return preg_match('/^(?:COT-?)?0*(\d{1,9})$/i', $this->texto(), $coincidencia) === 1 ? (int) $coincidencia[1] : null;
     }
 
     /**
-     * Atajo activo: ninguno si hay un rango personalizado (las fechas mandan),
-     * el pedido, o "Este mes" si no hay nada.
-     */
-    public function periodo(): ?string
-    {
-        if ($this->fecha('fecha_desde') || $this->fecha('fecha_hasta')) {
-            return null;
-        }
-
-        $periodo = $this->string('periodo')->toString();
-
-        return array_key_exists($periodo, self::PERIODOS) ? $periodo : self::PERIODO_DEFECTO;
-    }
-
-    public function fechaDesde(): ?CarbonImmutable
-    {
-        return $this->periodo() === null ? $this->fecha('fecha_desde') : null;
-    }
-
-    public function fechaHasta(): ?CarbonImmutable
-    {
-        return $this->periodo() === null ? $this->fecha('fecha_hasta') : null;
-    }
-
-    /**
-     * Inicio y fin (inclusive) del rango, en la zona del negocio.
+     * Inicio y fin (inclusive) de un periodo, en la zona del negocio. "Todas"
+     * no tiene límite.
      *
      * @return array{0: CarbonImmutable|null, 1: CarbonImmutable|null}
      */
-    public function rango(): array
+    public static function rango(string $periodo): array
     {
         $hoy = CarbonImmutable::now(config('app.zona_negocio'));
 
-        return match ($this->periodo()) {
+        return match ($periodo) {
             'hoy' => [$hoy->startOfDay(), $hoy->endOfDay()],
             'semana' => [$hoy->startOfWeek(), $hoy->endOfWeek()],
             'mes' => [$hoy->startOfMonth(), $hoy->endOfMonth()],
-            default => [$this->fechaDesde()?->startOfDay(), $this->fechaHasta()?->endOfDay()],
+            default => [null, null],
         };
     }
 
     /**
-     * Parámetros no vacíos, para armar enlaces.
+     * Parámetros no vacíos, para armar enlaces. Sin la cotización abierta:
+     * cambiar de carpeta o etiqueta abre la primera de la lista nueva.
      *
      * @return array<string, string>
      */
     public function parametros(): array
     {
         return array_filter([
-            ...$this->campos(),
-            'periodo' => $this->periodo() === self::PERIODO_DEFECTO ? '' : (string) $this->periodo(),
-            'fecha_desde' => (string) $this->fechaDesde()?->toDateString(),
-            'fecha_hasta' => (string) $this->fechaHasta()?->toDateString(),
+            'q' => $this->texto(),
+            'estado' => $this->estado(),
+            'periodo' => $this->periodo() === self::PERIODO_DEFECTO ? '' : $this->periodo(),
         ], fn (string $valor) => $valor !== '');
-    }
-
-    private function fecha(string $campo): ?CarbonImmutable
-    {
-        $valor = $this->string($campo)->trim()->toString();
-
-        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $valor) !== 1) {
-            return null;
-        }
-
-        try {
-            $fecha = CarbonImmutable::createFromFormat('!Y-m-d', $valor, config('app.zona_negocio'));
-        } catch (Throwable) {
-            return null;
-        }
-
-        return $fecha && $fecha->toDateString() === $valor ? $fecha : null;
     }
 }

@@ -16,7 +16,8 @@ class EnvioCotizacionController extends Controller
 {
     /**
      * Envía el correo con el PDF adjunto (síncrono) y marca la cotización como
-     * enviada. Si el correo falla, el estado no cambia.
+     * enviada. Si el correo falla, el estado no cambia. Enviada desde la
+     * bandeja, regresa a ella con la misma cotización abierta.
      */
     public function correo(EnviarCotizacionRequest $request, Cotizacion $cotizacion): RedirectResponse
     {
@@ -32,7 +33,18 @@ class EnvioCotizacionController extends Controller
 
         $cotizacion->marcarEnviada();
 
-        return redirect()->route('cotizaciones.show', $cotizacion)
+        $destino = route('cotizaciones.show', $cotizacion);
+
+        if ($request->input('origen') === 'bandeja') {
+            // La página anterior conserva carpeta, etiqueta y búsqueda; solo se
+            // acepta si es la bandeja misma.
+            $anterior = url()->previous();
+            $destino = str_starts_with($anterior, route('cotizaciones.index').'?')
+                ? $anterior
+                : route('cotizaciones.index', ['cotizacion' => $cotizacion->id]);
+        }
+
+        return redirect()->to($destino)
             ->with('exito', 'Cotización enviada a '.implode(', ', $destinatarios).'.');
     }
 

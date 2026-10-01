@@ -93,6 +93,7 @@ describe('acceso', function () {
         ['PUT', '/cotizaciones/{id}'],
         ['DELETE', '/cotizaciones/{id}'],
         ['GET', '/cotizaciones/{id}/pdf'],
+        ['GET', '/cotizaciones/{id}/vista-previa'],
         ['POST', '/cotizaciones/{id}/enviar'],
         ['POST', '/cotizaciones/{id}/marcar-enviada'],
         ['POST', '/cotizaciones/{id}/pagos'],
@@ -357,7 +358,7 @@ describe('entregar y duplicar', function () {
         $original->lineas()->update(['costo_unitario' => '20.00']);
         $original->pagos()->create(['tipo' => 'pago_total', 'fecha_pago' => today(), 'monto' => '174.00', 'forma_pago' => '03']);
 
-        $this->actingAs($this->user)->post("/cotizaciones/{$original->id}/duplicar");
+        $this->actingAs($this->user)->post("/cotizaciones/{$original->id}/duplicar", ['cliente_id' => $this->cliente->id]);
 
         $copia = Cotizacion::whereKeyNot($original->id)->sole();
 
@@ -373,7 +374,7 @@ describe('entregar y duplicar', function () {
     });
 });
 
-describe('listado', function () {
+describe('bandeja', function () {
     it('muestra solo las cotizaciones propias del mes actual por defecto', function () {
         $propia = Cotizacion::factory()->for($this->cliente)->conLinea()->create(['user_id' => $this->user->id]);
         $vieja = Cotizacion::factory()->for($this->cliente)->create(['user_id' => $this->user->id, 'created_at' => now()->subMonths(2)]);
@@ -381,63 +382,159 @@ describe('listado', function () {
 
         $this->actingAs($this->user)->get('/cotizaciones')
             ->assertOk()
+            ->assertSee('Nueva cotización')
             ->assertSee($propia->folio_formateado)
             ->assertDontSee($vieja->folio_formateado)
-            ->assertSee('aria-current="true"', false)
-            ->assertSee('Este mes');
+            ->assertSeeInOrder(['bandeja-opcion-activa', 'Este mes'], false);
+
+        $this->actingAs($this->user)->get('/cotizaciones?periodo=todas')
+            ->assertSee($propia->folio_formateado)
+            ->assertSee($vieja->folio_formateado);
 
         expect($ajena->user_id)->not->toBe($this->user->id);
     });
 
-    it('filtra por cliente, RFC, folio y estado combinados', function () {
-        $otroCliente = Cliente::factory()->for($this->user)->create(['razon_social' => 'PAPELERIA LUNA', 'rfc' => 'PLU010101AB1']);
-        $a = Cotizacion::factory()->for($this->cliente)->create(['user_id' => $this->user->id]);
-        $b = Cotizacion::factory()->for($otroCliente)->enEstado(EstadoCotizacion::Enviada)->create(['user_id' => $this->user->id]);
+    it('muestra las carpetas con su contador y las etiquetas de estado', function () {
+        $this->travelTo(CarbonImmutable::parse('2026-09-30 12:00', 'America/Mexico_City'));
 
-        $ver = fn (string $consulta) => $this->actingAs($this->user)->get('/cotizaciones?'.$consulta);
+        Cotizacion::factory()->for($this->cliente)->create(['user_id' => $this->user->id, 'created_at' => now()]);
+        Cotizacion::factory()->for($this->cliente)->create(['user_id' => $this->user->id, 'created_at' => now()->subDays(20)]);
+        Cotizacion::factory()->for($this->cliente)->create(['user_id' => $this->user->id, 'created_at' => now()->subMonths(3)]);
+        Cotizacion::factory()->create(['created_at' => now()]);
 
-        $ver('cliente=luna')->assertSee($b->folio_formateado)->assertDontSee($a->folio_formateado);
-        $ver('rfc=plu010')->assertSee($b->folio_formateado)->assertDontSee($a->folio_formateado);
-        $ver('folio=COT-000'.$a->folio)->assertSee($a->folio_formateado)->assertDontSee($b->folio_formateado);
-        $ver('folio='.$b->folio)->assertSee($b->folio_formateado)->assertDontSee($a->folio_formateado);
-        $ver('estado=enviada&cliente=luna')->assertSee($b->folio_formateado);
-        $ver('estado=borrador&cliente=luna')->assertDontSee($b->folio_formateado)->assertSee('Ninguna cotización coincide');
+        $respuesta = $this->actingAs($this->user)->get('/cotizaciones')->assertOk();
+
+        expect($respuesta->viewData('contadores'))->toBe(['hoy' => 1, 'semana' => 1, 'mes' => 2, 'todas' => 3]);
+
+        $respuesta->assertSeeInOrder(['Hoy', 'Esta semana', 'Este mes', 'Todas', 'Etiquetas', 'Borrador', 'Enviada', 'Pagada', 'Entregada', 'Por caducar']);
     });
 
-    it('filtra por atajo y por rango en la hora de México', function () {
+    it('filtra por periodo en la hora de México', function () {
         $this->travelTo(CarbonImmutable::parse('2026-09-15 12:00', 'America/Mexico_City'));
 
         // 23:30 del 31 de agosto en México es 1 de septiembre en UTC.
         $finDeAgosto = Cotizacion::factory()->for($this->cliente)->create(['user_id' => $this->user->id, 'created_at' => CarbonImmutable::parse('2026-08-31 23:30', 'America/Mexico_City')->utc()]);
+        $haceUnaSemana = Cotizacion::factory()->for($this->cliente)->create(['user_id' => $this->user->id, 'created_at' => now()->subWeek()]);
         $hoy = Cotizacion::factory()->for($this->cliente)->create(['user_id' => $this->user->id, 'created_at' => now()]);
 
         $ver = fn (string $consulta) => $this->actingAs($this->user)->get('/cotizaciones?'.$consulta);
 
-        $ver('')->assertSee($hoy->folio_formateado)->assertDontSee($finDeAgosto->folio_formateado);
-        $ver('periodo=hoy')->assertSee($hoy->folio_formateado)->assertDontSee($finDeAgosto->folio_formateado);
-        $ver('fecha_desde=2026-08-31&fecha_hasta=2026-08-31')->assertSee($finDeAgosto->folio_formateado)->assertDontSee($hoy->folio_formateado);
-        $ver('periodo=hoy&fecha_desde=2026-08-01')->assertSee($finDeAgosto->folio_formateado);
+        $ver('')->assertSee($hoy->folio_formateado)->assertSee($haceUnaSemana->folio_formateado)->assertDontSee($finDeAgosto->folio_formateado);
+        $ver('periodo=hoy')->assertSee($hoy->folio_formateado)->assertDontSee($haceUnaSemana->folio_formateado);
+        $ver('periodo=semana')->assertSee($hoy->folio_formateado)->assertDontSee($haceUnaSemana->folio_formateado);
+        $ver('periodo=todas')->assertSee($finDeAgosto->folio_formateado);
+        $ver('periodo=inventado')->assertSee($haceUnaSemana->folio_formateado)->assertDontSee($finDeAgosto->folio_formateado);
+    });
 
+    it('combina el periodo con la etiqueta de estado', function () {
+        $enviada = Cotizacion::factory()->for($this->cliente)->enEstado(EstadoCotizacion::Enviada)->create(['user_id' => $this->user->id]);
+        $borrador = Cotizacion::factory()->for($this->cliente)->create(['user_id' => $this->user->id]);
+        $enviadaVieja = Cotizacion::factory()->for($this->cliente)->enEstado(EstadoCotizacion::Enviada)->create(['user_id' => $this->user->id, 'created_at' => now()->subMonths(2)]);
+
+        $this->actingAs($this->user)->get('/cotizaciones?estado=enviada')
+            ->assertSee($enviada->folio_formateado)
+            ->assertDontSee($borrador->folio_formateado)
+            ->assertDontSee($enviadaVieja->folio_formateado);
+
+        $this->actingAs($this->user)->get('/cotizaciones?estado=enviada&periodo=todas')
+            ->assertSee($enviadaVieja->folio_formateado)
+            ->assertDontSee($borrador->folio_formateado);
+
+        $this->actingAs($this->user)->get('/cotizaciones?estado=producto_entregado')
+            ->assertSee('Sin cotizaciones');
+    });
+
+    it('enlaza la etiqueta activa a quitarla', function () {
+        $this->actingAs($this->user)->get('/cotizaciones?estado=pagada&periodo=hoy')
+            ->assertSee('href="'.e(route('cotizaciones.index', ['periodo' => 'hoy'])).'"', false)
+            ->assertSee('href="'.e(route('cotizaciones.index', ['estado' => 'borrador', 'periodo' => 'hoy'])).'"', false);
+    });
+
+    it('filtra las que están por caducar', function () {
+        $this->travelTo(CarbonImmutable::parse('2026-09-30 12:00', 'America/Mexico_City'));
+
+        $hace = fn (int $dias) => ['user_id' => $this->user->id, 'created_at' => now()->subDays($dias), 'updated_at' => now()->subDays($dias)];
+        $porCaducar = Cotizacion::factory()->for($this->cliente)->create($hace(23));
+        $aTiempo = Cotizacion::factory()->for($this->cliente)->create($hace(22));
+        $pagada = Cotizacion::factory()->for($this->cliente)->enEstado(EstadoCotizacion::Pagada)->create($hace(25));
+
+        expect($porCaducar->mostrarAvisoCaducidad())->toBeTrue()
+            ->and($aTiempo->mostrarAvisoCaducidad())->toBeFalse()
+            ->and(Cotizacion::porCaducar()->pluck('id')->all())->toBe([$porCaducar->id]);
+
+        $this->actingAs($this->user)->get('/cotizaciones?estado=por_caducar&periodo=todas')
+            ->assertSee($porCaducar->folio_formateado)
+            ->assertSee('Se elimina en 7 días')
+            ->assertDontSee($aTiempo->folio_formateado)
+            ->assertDontSee($pagada->folio_formateado);
+    });
+
+    it('busca por folio, cliente o RFC', function () {
+        $otroCliente = Cliente::factory()->for($this->user)->create(['razon_social' => 'PAPELERIA LUNA', 'nombre_comercial' => 'La Lunita', 'rfc' => 'PLU010101AB1']);
+        $a = Cotizacion::factory()->for($this->cliente)->create(['user_id' => $this->user->id]);
+        $b = Cotizacion::factory()->for($otroCliente)->create(['user_id' => $this->user->id]);
+
+        $ver = fn (string $texto) => $this->actingAs($this->user)->get('/cotizaciones?'.http_build_query(['q' => $texto]));
+
+        $ver('luna')->assertSee($b->folio_formateado)->assertDontSee($a->folio_formateado);
+        $ver('lunita')->assertSee($b->folio_formateado)->assertDontSee($a->folio_formateado);
+        $ver('plu 010')->assertSee($b->folio_formateado)->assertDontSee($a->folio_formateado);
+        $ver('COT-000'.$a->folio)->assertSee($a->folio_formateado)->assertDontSee($b->folio_formateado);
+        // Un número solo también busca en el RFC, que puede contener ese dígito.
+        $ver((string) $b->folio)->assertSee($b->folio_formateado);
+        $ver('nadie')->assertSee('Sin cotizaciones')->assertSee('Selecciona una cotización');
+    });
+
+    it('abre la primera de la lista como hoja en HTML', function () {
+        $vieja = Cotizacion::factory()->for($this->cliente)->conLinea()->create(['user_id' => $this->user->id, 'created_at' => now()->subMinute()]);
+        $nueva = Cotizacion::factory()->for($this->cliente)->conLinea(2)->create(['user_id' => $this->user->id]);
+
+        $this->actingAs($this->user)->get('/cotizaciones')
+            ->assertOk()
+            ->assertSee('data-vista-previa-de="'.$nueva->id.'"', false)
+            ->assertSee('Cotización '.$nueva->folio_formateado)
+            ->assertSee('Sello de prueba')
+            ->assertSee('$232.00')
+            ->assertSee(route('cotizaciones.pdf', [$nueva, 'descargar' => 1]), false)
+            ->assertSee(route('cotizaciones.enviar', $nueva), false)
+            ->assertSee(route('cotizaciones.vista-previa', $vieja), false);
+    });
+
+    it('abre la cotización pedida en la URL e ignora una ajena', function () {
+        $vieja = Cotizacion::factory()->for($this->cliente)->conLinea()->create(['user_id' => $this->user->id, 'created_at' => now()->subMinute()]);
+        $nueva = Cotizacion::factory()->for($this->cliente)->conLinea()->create(['user_id' => $this->user->id]);
+        $ajena = Cotizacion::factory()->conLinea()->create();
+
+        $this->actingAs($this->user)->get('/cotizaciones?cotizacion='.$vieja->id)
+            ->assertSee('data-vista-previa-de="'.$vieja->id.'"', false);
+
+        $this->actingAs($this->user)->get('/cotizaciones?cotizacion='.$ajena->id)
+            ->assertSee('data-vista-previa-de="'.$nueva->id.'"', false)
+            ->assertDontSee('data-vista-previa-de="'.$ajena->id.'"', false);
+    });
+
+    it('devuelve la vista previa sin la página alrededor', function () {
+        $cotizacion = Cotizacion::factory()->for($this->cliente)->conLinea()->create(['user_id' => $this->user->id]);
+
+        $this->actingAs($this->user)->get("/cotizaciones/{$cotizacion->id}/vista-previa", cabecerasAjax())
+            ->assertOk()
+            ->assertSee('Sello de prueba')
+            ->assertSee('Enviar')
+            ->assertSee('Descargar')
+            ->assertSee('name="origen" value="bandeja"', false)
+            ->assertDontSee('<html', false);
     });
 
     it('devuelve el fragmento de la búsqueda dinámica', function () {
         $cotizacion = Cotizacion::factory()->for($this->cliente)->create(['user_id' => $this->user->id]);
 
-        $this->actingAs($this->user)->get('/cotizaciones/buscar', cabecerasAjax())
+        $this->actingAs($this->user)->get('/cotizaciones/buscar?periodo=todas', cabecerasAjax())
             ->assertOk()
+            ->assertSee('id="bandeja-carpetas"', false)
             ->assertSee('id="cotizaciones-filas"', false)
-            ->assertSee('id="cotizaciones-atajos"', false)
+            ->assertSee('id="cotizaciones-paginacion"', false)
             ->assertSee($cotizacion->folio_formateado)
             ->assertDontSee('<html', false);
-    });
-
-    it('muestra la papelera solo si se puede eliminar', function () {
-        $borrador = Cotizacion::factory()->for($this->cliente)->create(['user_id' => $this->user->id]);
-        $pagada = Cotizacion::factory()->for($this->cliente)->enEstado(EstadoCotizacion::Pagada)->create(['user_id' => $this->user->id]);
-
-        $this->actingAs($this->user)->get('/cotizaciones')
-            ->assertSee('Eliminar '.$borrador->folio_formateado)
-            ->assertDontSee('Eliminar '.$pagada->folio_formateado);
     });
 });
 

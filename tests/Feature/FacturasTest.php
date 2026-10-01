@@ -434,7 +434,9 @@ describe('corrección, borrado e inmutabilidad', function () {
         $this->actingAs($this->user)->get("/facturas/{$factura->id}")
             ->assertOk()
             ->assertSee($rfcOriginal)
-            ->assertDontSee('OTRA RAZON');
+            // La ventana "Duplicar" lista los clientes vivos; el receptor no cambia.
+            ->assertDontSee('<dd>OTRA RAZON</dd>', false)
+            ->assertDontSee('<dd>XAXX010101000</dd>', false);
 
         expect($factura->fresh()->receptor()['rfc'])->toBe($rfcOriginal);
     });

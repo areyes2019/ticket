@@ -8,14 +8,20 @@
         <x-alerta tipo="exito">{{ session('status') }}</x-alerta>
     @endif
 
-    <p class="bandeja-demo"><x-icono nombre="info-circle" />Bandeja de demostración: los correos son de ejemplo.</p>
-
     @php
         $carpetaInicial = 'entrada';
         $primero = collect($correos)->firstWhere('carpeta', $carpetaInicial);
     @endphp
 
-    <div class="bandeja" data-bandeja>
+    <div class="bandeja bandeja-plegable bandeja-carpetas-ocultas" data-bandeja>
+        {{-- Barra lateral (solo escritorio): la hamburguesa pliega y despliega las carpetas. --}}
+        <div class="bandeja-riel">
+            <button type="button" class="bandeja-riel-boton" aria-label="Carpetas" title="Carpetas"
+                    aria-controls="bandeja-carpetas" aria-expanded="false" data-mostrar-carpetas>
+                <x-icono nombre="list" />
+            </button>
+        </div>
+
         <x-bandeja.carpetas :carpetas="$carpetas" :etiquetas="$etiquetas" :activa="$carpetaInicial" />
 
         <section class="bandeja-lista" aria-label="Lista de correos">
@@ -47,5 +53,5 @@
 @endsection
 
 @push('scripts')
-    <script src="{{ asset('js/bandeja-correo.js') }}"></script>
+    <script src="{{ asset('js/bandeja-correo.js') }}?v={{ filemtime(public_path('js/bandeja-correo.js')) }}"></script>
 @endpush

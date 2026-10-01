@@ -1,7 +1,4 @@
-{{-- Respuesta de la búsqueda dinámica: el <table> solo sirve para que el navegador interprete el <tbody>. --}}
-<table>
-    @include('cotizaciones._filas')
-</table>
-
+{{-- Respuesta de la búsqueda dinámica: cada pieza reemplaza a la de la página con el mismo id. --}}
+@include('cotizaciones._carpetas')
+@include('cotizaciones._filas')
 @include('cotizaciones._paginacion')
-@include('cotizaciones._atajos')

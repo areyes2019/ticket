@@ -8,6 +8,31 @@
     <x-alerta tipo="advertencia">Todavía no tienes clientes. <a href="{{ route('clientes.create') }}">Registra uno</a> para poder facturar.</x-alerta>
 @endif
 
+@if ($cotizacionOrigen)
+    <p class="ayuda">Factura a partir de la cotización <a href="{{ route('cotizaciones.show', $cotizacionOrigen) }}">{{ $cotizacionOrigen->folio_formateado }}</a>. Revisa los datos fiscales antes de timbrar.</p>
+@endif
+
+@if ($facturaOrigen)
+    <p class="ayuda">Copia de la factura <a href="{{ route('facturas.show', $facturaOrigen) }}">{{ $facturaOrigen->folioVisible() }}</a>. Revisa el cliente y los datos fiscales antes de timbrar.</p>
+@endif
+
+@if ($avisosPrecio !== [])
+    <x-alerta tipo="advertencia" data-aviso-precios>
+        <p>Estos precios cambiaron en el catálogo desde la cotización. La factura conserva el precio cotizado:</p>
+        <ul>
+            @foreach ($avisosPrecio as $aviso)
+                <li>{{ $aviso }}</li>
+            @endforeach
+        </ul>
+    </x-alerta>
+@endif
+
+@if ($lineasOmitidas !== [])
+    <x-alerta tipo="advertencia" data-lineas-omitidas>
+        Se {{ count($lineasOmitidas) === 1 ? 'omitió 1 línea' : 'omitieron '.count($lineasOmitidas).' líneas' }} porque su artículo ya no existe: {{ implode(', ', $lineasOmitidas) }}.
+    </x-alerta>
+@endif
+
 <noscript>
     <x-alerta tipo="advertencia">Para agregar artículos a la factura se necesita JavaScript. Sin él solo se pueden corregir las líneas ya capturadas.</x-alerta>
 </noscript>
@@ -16,13 +41,21 @@
     @csrf
     @isset($factura)
         @method('PUT')
+    @else
+        {{-- De dónde sale la factura nueva; en la corrección no cambia. --}}
+        @if (old('cotizacion_id', $cotizacionOrigen?->id))
+            <input type="hidden" name="cotizacion_id" value="{{ old('cotizacion_id', $cotizacionOrigen?->id) }}">
+        @endif
+        @if (old('duplicada_de_id', $facturaOrigen?->id))
+            <input type="hidden" name="duplicada_de_id" value="{{ old('duplicada_de_id', $facturaOrigen?->id) }}">
+        @endif
     @endisset
 
     <x-card titulo="Cliente y datos fiscales">
-        <x-campo nombre="cliente_id" etiqueta="Cliente" tipo="select" :opciones="$clientes" :valor="$factura?->cliente_id" vacia="Selecciona un cliente" required />
-        <x-campo nombre="uso_cfdi" etiqueta="Uso de CFDI" tipo="select" :opciones="$usosCfdi" :valor="$factura?->uso_cfdi?->value ?? App\Enums\UsoCfdi::GastosEnGeneral->value" vacia="Selecciona el uso de CFDI" required />
-        <x-campo nombre="metodo_pago" etiqueta="Método de pago" tipo="select" :opciones="$metodosPago" :valor="$factura?->metodo_pago?->value ?? App\Enums\MetodoPago::UnaExhibicion->value" vacia="Selecciona el método de pago" required data-metodo-pago />
-        <x-campo nombre="forma_pago" etiqueta="Forma de pago" tipo="select" :opciones="$formasPago" :valor="$factura?->forma_pago?->value" vacia="Selecciona la forma de pago" required
+        <x-campo nombre="cliente_id" etiqueta="Cliente" tipo="select" :opciones="$clientes" :valor="$cabecera['cliente_id']" vacia="Selecciona un cliente" required />
+        <x-campo nombre="uso_cfdi" etiqueta="Uso de CFDI" tipo="select" :opciones="$usosCfdi" :valor="$cabecera['uso_cfdi']" vacia="Selecciona el uso de CFDI" required />
+        <x-campo nombre="metodo_pago" etiqueta="Método de pago" tipo="select" :opciones="$metodosPago" :valor="$cabecera['metodo_pago']" vacia="Selecciona el método de pago" required data-metodo-pago />
+        <x-campo nombre="forma_pago" etiqueta="Forma de pago" tipo="select" :opciones="$formasPago" :valor="$cabecera['forma_pago']" vacia="Selecciona la forma de pago" required
             ayuda="Con PPD (pago diferido) la forma de pago es 99 – Por definir." data-forma-pago />
     </x-card>
 
@@ -65,8 +98,8 @@
 
     <x-card titulo="Totales">
         <div class="descuento-global">
-            <x-campo nombre="descuento_global_tipo" etiqueta="Descuento global" tipo="select" :opciones="$tiposDescuento" :valor="$factura?->descuento_global_tipo?->value" vacia="Sin descuento" />
-            <x-campo nombre="descuento_global_valor" etiqueta="Valor del descuento" tipo="number" :valor="$factura?->descuento_global_valor" min="0" step="0.01" inputmode="decimal" />
+            <x-campo nombre="descuento_global_tipo" etiqueta="Descuento global" tipo="select" :opciones="$tiposDescuento" :valor="$cabecera['descuento_global_tipo']" vacia="Sin descuento" />
+            <x-campo nombre="descuento_global_valor" etiqueta="Valor del descuento" tipo="number" :valor="$cabecera['descuento_global_valor']" min="0" step="0.01" inputmode="decimal" />
         </div>
 
         <dl class="resumen-precio" data-resumen-totales>

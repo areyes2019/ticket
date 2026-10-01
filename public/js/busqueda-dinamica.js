@@ -55,6 +55,9 @@
                     const consulta = parametros.toString();
                     history.replaceState(null, '', formulario.action + (consulta ? '?' + consulta : ''));
 
+                    // Para scripts de la página que dependen de los resultados.
+                    formulario.dispatchEvent(new CustomEvent('busqueda:actualizada', { bubbles: true }));
+
                     if (alertaError) {
                         alertaError.hidden = true;
                     }

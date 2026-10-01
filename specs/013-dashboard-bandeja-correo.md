@@ -64,7 +64,6 @@ ficticios, solo para ver cómo queda.
   aunque la barra del menú ocupe varias líneas (la página es una columna flexible del alto de la
   ventana; `body:has(.contenido-bandeja)` en `app.css`, sin tocar el layout).
 - Arriba se mantiene el aviso de sesión (`session('status')` con `<x-alerta tipo="exito">`).
-- Debajo, un aviso discreto: **"Bandeja de demostración: los correos son de ejemplo."**
 - Luego la bandeja, armada con los componentes de abajo.
 
 ### Componentes (`resources/views/components/bandeja/`)
@@ -164,10 +163,13 @@ botones no hacen nada. Es aceptable por tratarse de una demostración.
 
 - **Escritorio (≥1024px):**
   - tres columnas, con carpetas de ancho fijo (~14rem), lista (~22rem) y visor con el resto,
+  - a la izquierda, una barra gris angosta (`.bandeja-riel`) con la hamburguesa (`bi-list`) arriba,
+  - la columna de carpetas empieza oculta (clase `bandeja-carpetas-ocultas` en `.bandeja-plegable`);
+    la hamburguesa la desliza desde la izquierda y otro clic la vuelve a plegar,
   - la lista y el visor tienen su propio scroll vertical, y la bandeja ocupa todo el ancho y el
     alto de la pantalla debajo de la barra superior (en todos los tamaños).
-- **Tableta (768–1023px):** dos columnas, lista y visor. Las carpetas pasan a un botón "Carpetas"
-  (`bi-list`) que las despliega.
+- **Tableta (768–1023px):** dos columnas, lista y visor. Las carpetas pasan a un botón de solo icono
+  (`bi-list`, etiqueta accesible "Carpetas") que las despliega.
 - **Celular (<768px):**
   - una columna a la vez, con el botón "Carpetas" arriba de la lista,
   - tocar un correo muestra el visor a pantalla completa con un botón "Volver" (`bi-arrow-left`)
@@ -179,8 +181,8 @@ botones no hacen nada. Es aceptable por tratarse de una demostración.
 
 `tests/Feature/DashboardTest.php`, prueba básica:
 
-1. Con sesión iniciada, `/dashboard` responde 200 y muestra la bandeja: el aviso "Bandeja de
-   demostración", la carpeta "Bandeja de entrada" y el asunto de al menos un correo de
+1. Con sesión iniciada, `/dashboard` responde 200 y muestra la bandeja (sin el aviso "Bandeja de
+   demostración"): la carpeta "Bandeja de entrada" y el asunto de al menos un correo de
    `BandejaCorreoDemo`, tomado de la clase y no escrito a mano en la prueba.
 2. Sin sesión, `/dashboard` redirige al login.
 

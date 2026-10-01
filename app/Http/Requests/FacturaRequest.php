@@ -49,6 +49,10 @@ class FacturaRequest extends CotizacionRequest
             'uso_cfdi' => ['required', Rule::in(array_map(fn (UsoCfdi $uso) => $uso->value, UsoCfdi::deFactura()))],
             'metodo_pago' => ['required', Rule::enum(MetodoPago::class)],
             'forma_pago' => ['required', Rule::enum(FormaPago::class), $this->reglaFormaPago()],
+            // El origen solo se fija en el alta. Si la cotización se puede
+            // facturar lo decide store con la fila bloqueada, no aquí.
+            'cotizacion_id' => ['nullable', 'integer', 'prohibits:duplicada_de_id', Rule::exists('cotizaciones', 'id')->where('user_id', $this->user()->id)],
+            'duplicada_de_id' => ['nullable', 'integer', Rule::exists('facturas', 'id')->where('user_id', $this->user()->id)],
         ];
     }
 
@@ -86,6 +90,23 @@ class FacturaRequest extends CotizacionRequest
     public function datosFactura(): array
     {
         return $this->safe()->only(['cliente_id', 'uso_cfdi', 'forma_pago', 'metodo_pago', 'descuento_global_tipo', 'descuento_global_valor']);
+    }
+
+    /**
+     * De qué documento sale una factura nueva; en la corrección se ignora.
+     *
+     * @return array{cotizacion_id: int|null, duplicada_de_id: int|null}
+     */
+    public function origen(): array
+    {
+        if ($this->documento() !== null) {
+            return ['cotizacion_id' => null, 'duplicada_de_id' => null];
+        }
+
+        return [
+            'cotizacion_id' => $this->safe()['cotizacion_id'] ?? null,
+            'duplicada_de_id' => $this->safe()['duplicada_de_id'] ?? null,
+        ];
     }
 
     /**
@@ -138,6 +159,8 @@ class FacturaRequest extends CotizacionRequest
             'lineas.max' => 'Una factura admite como máximo '.self::MAX_LINEAS.' líneas.',
             'lineas.*.articulo_id.required' => 'La línea :position no tiene artículo: agrega los artículos con el buscador.',
             'uso_cfdi.in' => 'Selecciona un uso de CFDI válido para una factura.',
+            'cotizacion_id.exists' => 'La cotización de origen no existe.',
+            'duplicada_de_id.exists' => 'La factura de origen no existe.',
         ];
     }
 

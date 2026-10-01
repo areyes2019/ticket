@@ -1,59 +1,52 @@
 @extends('layouts.app')
 
 @section('title', 'Cotizaciones · '.config('app.name'))
-@section('contenido-clase', 'contenido-ancho')
+@section('contenido-clase', 'contenido-bandeja')
 
 @section('content')
-    <div class="encabezado">
-        <h1>Cotizaciones</h1>
-        <x-boton :href="route('cotizaciones.create')" icono="plus-lg">Nueva cotización</x-boton>
-    </div>
+    <h1 class="solo-lectores">Cotizaciones</h1>
 
     @include('documentos._mensajes')
 
-    {{-- Los filtros de columna se asocian con form="filtros-cotizaciones". Las fechas y el periodo
-         toman el valor de los atajos al pulsarlos (data-busqueda-sincronizar). --}}
-    <form id="filtros-cotizaciones" method="GET" action="{{ route('cotizaciones.index') }}" class="buscador" data-busqueda-dinamica="{{ route('cotizaciones.buscar') }}">
-        @include('cotizaciones._atajos')
-        <input type="hidden" name="periodo" value="{{ $parametros['periodo'] ?? '' }}" data-busqueda-sincronizar>
-        <x-campo nombre="fecha_desde" etiqueta="Desde" tipo="date" :valor="$fechaDesde" data-busqueda-sincronizar />
-        <x-campo nombre="fecha_hasta" etiqueta="Hasta" tipo="date" :valor="$fechaHasta" data-busqueda-sincronizar />
-        {{-- La búsqueda es dinámica; el botón solo existe como respaldo cuando no hay JavaScript. --}}
-        <noscript><x-boton icono="search">Buscar</x-boton></noscript>
-        <x-boton :href="route('cotizaciones.index')" variante="secundario" icono="x-lg">Limpiar</x-boton>
-    </form>
+    @if ($errors->envio->any())
+        <x-alerta tipo="error">
+            @foreach ($errors->envio->all() as $error)
+                <p>{{ $error }}</p>
+            @endforeach
+        </x-alerta>
+    @endif
 
     <x-alerta tipo="error" hidden data-busqueda-error>No se pudo realizar la búsqueda. Intenta de nuevo.</x-alerta>
+    <x-alerta tipo="error" hidden data-vista-previa-error>No se pudo abrir la cotización. Intenta de nuevo.</x-alerta>
 
-    <x-card class="tabla-contenedor">
-        <table class="tabla" data-busqueda-tabla>
-            <thead>
-                <tr>
-                    <th>Folio</th>
-                    <th>Cliente</th>
-                    <th>RFC</th>
-                    <th>Estado</th>
-                    <th class="numero">Total</th>
-                    <th>Fecha</th>
-                    <th>Acciones</th>
-                </tr>
-                <tr class="tabla-filtros">
-                    <th><x-campo nombre="folio" etiqueta="Filtrar por folio" tipo="search" :valor="$campos['folio']" form="filtros-cotizaciones" autocomplete="off" /></th>
-                    <th><x-campo nombre="cliente" etiqueta="Filtrar por cliente" tipo="search" :valor="$campos['cliente']" form="filtros-cotizaciones" autocomplete="off" /></th>
-                    <th><x-campo nombre="rfc" etiqueta="Filtrar por RFC" tipo="search" :valor="$campos['rfc']" form="filtros-cotizaciones" autocomplete="off" /></th>
-                    <th><x-campo nombre="estado" etiqueta="Filtrar por estado" tipo="select" :opciones="App\Enums\EstadoCotizacion::opciones()" :valor="$campos['estado']" vacia="Todos" form="filtros-cotizaciones" /></th>
-                    <th></th>
-                    <th></th>
-                    <th></th>
-                </tr>
-            </thead>
+    {{-- Carpeta y etiqueta viajan ocultas: los enlaces de la izquierda las
+         cambian (data-busqueda-sincronizar). El buscador se asocia con form="…". --}}
+    <form id="filtros-cotizaciones" method="GET" action="{{ route('cotizaciones.index') }}" data-busqueda-dinamica="{{ route('cotizaciones.buscar') }}" hidden>
+        <input type="hidden" name="periodo" value="{{ $parametros['periodo'] ?? '' }}" data-busqueda-sincronizar>
+        <input type="hidden" name="estado" value="{{ $estado }}" data-busqueda-sincronizar>
+    </form>
+
+    <div class="bandeja" data-bandeja-cotizaciones>
+        @include('cotizaciones._carpetas')
+
+        <section class="bandeja-lista" aria-label="Lista de cotizaciones" data-busqueda-tabla>
+            <x-bandeja.encabezado-lista texto="Buscar por folio, cliente o RFC" nombre="q" :valor="$texto" formulario="filtros-cotizaciones" />
+
             @include('cotizaciones._filas')
-        </table>
-    </x-card>
+            @include('cotizaciones._paginacion')
+        </section>
 
-    @include('cotizaciones._paginacion')
+        <section class="bandeja-visor bandeja-visor-documento" aria-label="Cotización abierta" data-visor-cotizacion>
+            @if ($abierta)
+                @include('cotizaciones._vista-previa', ['cotizacion' => $abierta])
+            @else
+                <p class="bandeja-sin-seleccion"><x-icono nombre="file-earmark-text" />Selecciona una cotización</p>
+            @endif
+        </section>
+    </div>
 @endsection
 
 @push('scripts')
     <script src="{{ asset('js/busqueda-dinamica.js') }}"></script>
+    <script src="{{ asset('js/bandeja-cotizaciones.js') }}"></script>
 @endpush

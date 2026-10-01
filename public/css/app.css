@@ -69,9 +69,11 @@
 
     /* Bandeja de correo del dashboard */
     --ancho-bandeja-carpetas: 14rem;
+    --ancho-bandeja-riel: 2.75rem;
     --ancho-bandeja-lista: 22rem;
     --alto-minimo-bandeja: 24rem;
     --lado-avatar: 2.5rem;
+    --ancho-hoja: 52rem;
     --color-etiqueta-clientes: #2563eb;
     --color-etiqueta-proveedores: #d97706;
     --color-etiqueta-facturas: #16a34a;
@@ -867,6 +869,47 @@ h1.tarjeta-titulo {
     background: var(--color-exito-fondo);
 }
 
+/* Marcas de facturación de la cotización (no son estados) */
+.etiqueta-facturada {
+    color: var(--color-texto-invertido);
+    background: var(--color-etiqueta-facturas);
+}
+
+.etiqueta-por-facturar {
+    color: var(--color-primario-oscuro);
+    background: var(--color-menu);
+    border: 1px dashed var(--color-primario-oscuro);
+}
+
+.lista-cotizaciones-facturables {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 22rem;
+    overflow-y: auto;
+}
+
+.lista-cotizaciones-facturables a {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--espacio-1) var(--espacio-3);
+    align-items: baseline;
+    padding: var(--espacio-2) var(--espacio-3);
+    border-bottom: 1px solid var(--color-borde);
+    color: inherit;
+    text-decoration: none;
+}
+
+.lista-cotizaciones-facturables a:hover,
+.lista-cotizaciones-facturables a:focus-visible {
+    background: var(--color-neutro);
+}
+
+.lista-cotizaciones-facturables .total {
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+}
+
 /* Facturas (borrador comparte la etiqueta de la cotización) */
 .etiqueta-pendiente {
     color: var(--color-advertencia);
@@ -1017,6 +1060,49 @@ h1 .etiqueta {
     margin-bottom: var(--espacio-4);
 }
 
+/* Detalle con la hoja: botones apilados a la izquierda, hoja y pagos a la derecha. */
+.detalle-documento {
+    display: grid;
+    grid-template-columns: 13rem minmax(0, 1fr);
+    align-items: start;
+    gap: var(--espacio-4);
+}
+
+.detalle-acciones {
+    display: flex;
+    flex-direction: column;
+    gap: var(--espacio-2);
+    padding: var(--espacio-3);
+    background: var(--color-superficie-suave);
+    border: 1px solid var(--color-borde);
+    border-radius: var(--radio);
+}
+
+.detalle-acciones > .boton,
+.detalle-acciones form,
+.detalle-acciones form > .boton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    margin: 0;
+}
+
+.detalle-acciones > .boton[hidden] {
+    display: none;
+}
+
+.detalle-principal .hoja {
+    max-width: none;
+    margin: 0 0 var(--espacio-2);
+}
+
+@media (max-width: 767px) {
+    .detalle-documento {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
 .datos {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
@@ -1078,14 +1164,6 @@ body:has(.contenido-bandeja) {
     margin: var(--espacio-3) var(--espacio-4) 0;
 }
 
-.bandeja-demo {
-    margin: 0;
-    padding: var(--espacio-2) var(--espacio-4);
-    color: var(--color-texto-suave);
-    font-size: var(--texto-pequeno);
-}
-
-.bandeja-demo > .icono,
 .bandeja-vacia > .icono,
 .bandeja-sin-seleccion > .icono,
 .dialogo h2 > .icono {
@@ -1469,6 +1547,246 @@ body:has(.contenido-bandeja) {
     resize: vertical;
 }
 
+/* Bandeja de cotizaciones (bandeja-cotizaciones.js). Reutiliza la bandeja de
+   correo; aquí solo lo que cambia: carpetas y filas son enlaces, y el visor
+   muestra la cotización como una hoja de papel. */
+a.bandeja-opcion,
+a.bandeja-abrir {
+    text-decoration: none;
+}
+
+.bandeja-color-estado {
+    border: 1px solid currentColor;
+}
+
+.bandeja-filas-lista {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.bandeja-filas-lista .bandeja-abrir {
+    padding-left: var(--espacio-3);
+}
+
+.bandeja-fila-total {
+    flex: none;
+    font-size: var(--texto-pequeno);
+    font-weight: 600;
+}
+
+.bandeja-paginacion:has(.paginacion) {
+    padding: var(--espacio-2) var(--espacio-3);
+    font-size: var(--texto-pequeno);
+    border-top: 1px solid var(--color-borde);
+}
+
+.bandeja-visor-documento {
+    background: var(--color-fondo);
+}
+
+/* Las acciones comparten ancho y margen con la hoja para quedar alineadas con ella. */
+.bandeja-visor-documento .bandeja-acciones {
+    max-width: var(--ancho-hoja);
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.bandeja-abrir-detalle {
+    margin-left: auto;
+}
+
+.bandeja-documento-estado {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--espacio-2);
+    max-width: var(--ancho-hoja);
+    margin: 0 auto var(--espacio-3);
+}
+
+/* Hoja de la cotización: el contenido del PDF en HTML (visor y detalle). */
+.hoja {
+    max-width: var(--ancho-hoja);
+    margin: 0 auto var(--espacio-4);
+    padding: var(--espacio-6);
+    font-size: var(--texto-pequeno);
+    background: var(--color-superficie);
+    border: 1px solid var(--color-borde);
+}
+
+.hoja-encabezado {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--espacio-2) var(--espacio-4);
+    margin-bottom: var(--espacio-4);
+    padding-bottom: var(--espacio-2);
+    border-bottom: 2px solid var(--color-marca);
+}
+
+.hoja-encabezado p {
+    margin: 0;
+}
+
+.hoja-negocio {
+    font-size: var(--texto-titulo);
+    font-weight: 700;
+    color: var(--color-marca);
+    overflow-wrap: anywhere;
+}
+
+.hoja-folio {
+    text-align: right;
+}
+
+.hoja-suave,
+.hoja-cliente dt {
+    color: var(--color-texto-suave);
+}
+
+.hoja-cliente {
+    margin: 0 0 var(--espacio-4);
+}
+
+.hoja-cliente div {
+    display: flex;
+    gap: var(--espacio-3);
+    padding: 0.125rem 0;
+}
+
+.hoja-cliente dt {
+    flex: none;
+    width: 5rem;
+}
+
+.hoja-cliente dd {
+    margin: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.hoja-lineas {
+    overflow-x: auto;
+}
+
+.hoja-lineas table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.hoja-lineas th {
+    font-weight: 600;
+    text-align: left;
+    background: var(--color-fondo);
+}
+
+.hoja-lineas th,
+.hoja-lineas td {
+    padding: var(--espacio-2);
+    vertical-align: top;
+    border-bottom: 1px solid var(--color-borde);
+}
+
+.hoja-lineas .numero {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.hoja-totales {
+    width: max-content;
+    max-width: 100%;
+    margin: var(--espacio-3) 0 0 auto;
+}
+
+.hoja-totales div {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--espacio-6);
+    padding: 0.125rem 0;
+}
+
+.hoja-totales dd {
+    margin: 0;
+    white-space: nowrap;
+}
+
+.hoja-totales .hoja-total {
+    margin-top: var(--espacio-1);
+    padding-top: var(--espacio-1);
+    font-size: var(--texto-subtitulo);
+    font-weight: 700;
+    border-top: 1px solid var(--color-texto);
+}
+
+.hoja-saldo {
+    font-weight: 700;
+}
+
+/* Barra lateral del dashboard con la hamburguesa; solo existe en escritorio. */
+.bandeja-riel {
+    display: none;
+}
+
+/* Escritorio: en el dashboard la hamburguesa de la barra lateral pliega la
+   columna de carpetas hacia la izquierda para dar más espacio a la lista y al visor. */
+@media (min-width: 1024px) {
+    .bandeja-plegable {
+        grid-template-columns: var(--ancho-bandeja-riel) var(--ancho-bandeja-carpetas) var(--ancho-bandeja-lista) minmax(0, 1fr);
+        transition: grid-template-columns 0.25s ease;
+    }
+
+    .bandeja-riel {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding-top: var(--espacio-2);
+        background: var(--color-neutro);
+        border-right: 1px solid var(--color-borde);
+    }
+
+    .bandeja-riel-boton {
+        padding: var(--espacio-1) var(--espacio-2);
+        font-size: 1.5rem;
+        line-height: 1;
+        color: var(--color-texto);
+        background: none;
+        border: 0;
+        cursor: pointer;
+    }
+
+    .bandeja-riel-boton:hover,
+    .bandeja-riel-boton[aria-expanded="true"] {
+        background: var(--color-neutro-oscuro);
+    }
+
+    .bandeja-riel-boton > .icono {
+        font-size: inherit;
+    }
+
+    .bandeja-plegable .bandeja-carpetas {
+        overflow-x: hidden;
+        transition: padding 0.25s ease, border-width 0.25s ease, visibility 0s;
+    }
+
+    /* El contenido conserva su ancho mientras la columna se cierra: se recorta, no se encima. */
+    .bandeja-plegable .bandeja-carpetas > * {
+        min-width: calc(var(--ancho-bandeja-carpetas) - 2 * var(--espacio-3));
+    }
+
+    .bandeja-carpetas-ocultas {
+        grid-template-columns: var(--ancho-bandeja-riel) 0 var(--ancho-bandeja-lista) minmax(0, 1fr);
+    }
+
+    .bandeja-carpetas-ocultas .bandeja-carpetas {
+        padding-right: 0;
+        padding-left: 0;
+        border-right-width: 0;
+        visibility: hidden;
+        transition: padding 0.25s ease, border-width 0.25s ease, visibility 0s 0.25s;
+    }
+}
+
 /* Tableta: las carpetas se despliegan sobre la lista con el botón "Carpetas". */
 @media (max-width: 1023px) {
     .bandeja {
@@ -1504,6 +1822,10 @@ body:has(.contenido-bandeja) {
 
     .bandeja-visor {
         display: none;
+        padding: var(--espacio-4);
+    }
+
+    .hoja {
         padding: var(--espacio-4);
     }
 

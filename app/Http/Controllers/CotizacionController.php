@@ -7,6 +7,7 @@ use App\Enums\FormaPago;
 use App\Enums\TasaIva;
 use App\Enums\TipoDescuento;
 use App\Http\Requests\CotizacionRequest;
+use App\Http\Requests\DuplicarCotizacionRequest;
 use App\Http\Requests\ListadoCotizacionesRequest;
 use App\Models\Articulo;
 use App\Models\Cotizacion;
@@ -24,22 +25,43 @@ use Illuminate\View\View;
 class CotizacionController extends Controller
 {
     /**
-     * Página completa del listado, con filtros y página de la URL.
+     * Bandeja: carpetas (periodos), lista y la vista previa de la cotización
+     * pedida en la URL o, si no hay, de la primera de la lista.
      */
     public function index(ListadoCotizacionesRequest $request): View
     {
-        return view('cotizaciones.index', $this->datosListado($request, $this->cotizaciones($request)));
+        $cotizaciones = $this->cotizaciones($request);
+
+        $abierta = $request->abierta() === null ? null : $request->user()->cotizaciones()->find($request->abierta());
+        $abierta ??= $cotizaciones->first();
+        $abierta?->load(['cliente', 'lineas', 'pagos', 'facturaVigente']);
+
+        return view('cotizaciones.index', [
+            ...$this->datosListado($request, $cotizaciones),
+            'abierta' => $abierta,
+        ]);
     }
 
     /**
-     * Solo filas y paginación, para la búsqueda dinámica (AJAX). Los enlaces
-     * de página apuntan al listado completo.
+     * Solo carpetas, filas y paginación, para la búsqueda dinámica (AJAX). Los
+     * enlaces de página apuntan a la bandeja completa.
      */
     public function buscar(ListadoCotizacionesRequest $request): View
     {
         $cotizaciones = $this->cotizaciones($request)->withPath(route('cotizaciones.index'));
 
         return view('cotizaciones._resultados', $this->datosListado($request, $cotizaciones));
+    }
+
+    /**
+     * La hoja de la cotización en HTML con sus acciones, para el visor de la
+     * bandeja (AJAX).
+     */
+    public function vistaPrevia(Cotizacion $cotizacion): View
+    {
+        Gate::authorize('view', $cotizacion);
+
+        return view('cotizaciones._vista-previa', ['cotizacion' => $cotizacion->load(['cliente', 'lineas', 'pagos', 'facturaVigente'])]);
     }
 
     public function create(Request $request): View
@@ -71,12 +93,14 @@ class CotizacionController extends Controller
     {
         Gate::authorize('view', $cotizacion);
 
-        $cotizacion->load(['cliente', 'lineas', 'pagos']);
+        $cotizacion->load(['cliente', 'lineas.articulo', 'pagos', 'facturaVigente', 'duplicadaDe']);
 
         return view('cotizaciones.show', [
             'cotizacion' => $cotizacion,
             'formasPago' => FormaPago::opciones(),
             'hoy' => now(config('app.zona_negocio'))->toDateString(),
+            'clientes' => $cotizacion->user->clientes()->orderBy('razon_social')->get()
+                ->mapWithKeys(fn ($cliente) => [$cliente->id => $cliente->razon_social.' — '.$cliente->rfc])->all(),
         ]);
     }
 
@@ -164,17 +188,18 @@ class CotizacionController extends Controller
     }
 
     /**
-     * Copia en borrador con folio nuevo, mismo cliente, descuento global y
-     * líneas (con su costo original), sin pagos.
+     * Copia en borrador para el cliente elegido, con folio nuevo, descuento
+     * global y líneas (con su costo original), sin pagos ni factura. Se puede
+     * duplicar en cualquier estado.
      */
-    public function duplicar(Request $request, Cotizacion $cotizacion): RedirectResponse
+    public function duplicar(DuplicarCotizacionRequest $request, Cotizacion $cotizacion): RedirectResponse
     {
-        Gate::authorize('operar', $cotizacion);
-
         $copia = DB::transaction(function () use ($request, $cotizacion) {
-            $copia = $cotizacion->replicate(['folio', 'estado', 'created_at', 'updated_at']);
+            $copia = $cotizacion->replicate(['folio', 'estado', 'duplicada_de_id', 'created_at', 'updated_at']);
             $copia->folio = $this->siguienteFolio($request->user());
             $copia->estado = EstadoCotizacion::Borrador;
+            $copia->cliente_id = $request->integer('cliente_id');
+            $copia->duplicada_de_id = $cotizacion->id;
             $copia->save();
 
             $copia->lineas()->createMany($cotizacion->lineas->map(
@@ -185,7 +210,7 @@ class CotizacionController extends Controller
         });
 
         return redirect()->route('cotizaciones.show', $copia)
-            ->with('exito', "Se creó {$copia->folio_formateado} como copia de {$cotizacion->folio_formateado}.");
+            ->with('exito', "Se creó {$copia->folio_formateado} como copia de {$cotizacion->folio_formateado} para {$copia->cliente->razon_social}.");
     }
 
     /**
@@ -238,6 +263,7 @@ class CotizacionController extends Controller
             ->with('cliente')
             ->withCount('pagos')
             ->withSum('pagos', 'monto')
+            ->withExists('facturaVigente')
             ->filtrar($request->filtros())
             ->orderByDesc('created_at')
             ->orderByDesc('id')
@@ -253,13 +279,41 @@ class CotizacionController extends Controller
     {
         return [
             'cotizaciones' => $cotizaciones,
-            'campos' => $request->campos(),
             'periodo' => $request->periodo(),
-            'fechaDesde' => $request->fechaDesde()?->toDateString(),
-            'fechaHasta' => $request->fechaHasta()?->toDateString(),
+            'estado' => $request->estado(),
+            'texto' => $request->texto(),
             'parametros' => $request->parametros(),
-            'hayFiltros' => array_filter($request->campos()) !== [],
+            'contadores' => $this->contadores($request->user()),
         ];
+    }
+
+    /**
+     * Cuántas cotizaciones tiene cada carpeta, sin etiqueta ni búsqueda, en
+     * una sola consulta.
+     *
+     * @return array<string, int>
+     */
+    private function contadores(User $user): array
+    {
+        $columnas = [];
+        $valores = [];
+
+        foreach (array_keys(ListadoCotizacionesRequest::PERIODOS) as $periodo) {
+            [$desde, $hasta] = ListadoCotizacionesRequest::rango($periodo);
+
+            if ($desde === null) {
+                $columnas[] = "count(*) as {$periodo}";
+
+                continue;
+            }
+
+            $columnas[] = "coalesce(sum(case when created_at between ? and ? then 1 else 0 end), 0) as {$periodo}";
+            array_push($valores, $desde->utc(), $hasta->utc());
+        }
+
+        $fila = $user->cotizaciones()->toBase()->selectRaw(implode(', ', $columnas), $valores)->first();
+
+        return array_map('intval', (array) $fila);
     }
 
     /**

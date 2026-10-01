@@ -56,8 +56,8 @@ it('calcula la fecha de caducidad y avisa desde 7 días antes', function () {
         ->and($cotizacion->mostrarAvisoCaducidad())->toBeTrue()
         ->and($cotizacion->textoCaducidad())->toBe('Se elimina en 7 días');
 
-    // Rango amplio: 23 días después la cotización puede ya no ser "de este mes".
-    $this->actingAs($this->user)->get('/cotizaciones?fecha_desde=2000-01-01')->assertSee('Se elimina en 7 días');
+    // Carpeta "Todas": 23 días después la cotización puede ya no ser "de este mes".
+    $this->actingAs($this->user)->get('/cotizaciones?periodo=todas')->assertSee('Se elimina en 7 días');
     $this->actingAs($this->user)->get("/cotizaciones/{$cotizacion->id}")->assertSee('Se eliminará automáticamente');
 
     $this->travel(7)->days();

@@ -408,6 +408,10 @@ Todas extienden `layouts/app.blade.php` y usan los componentes de 003 (`x-card`,
 
 ### `cotizaciones/index.blade.php` — listado
 
+> Desde [014](014-cotizaciones-bandeja.md) el listado es una bandeja de tres columnas (carpetas por
+> periodo, etiquetas por estado, lista y vista previa en HTML). Se retiraron la tabla, los filtros por
+> columna, el rango de fechas y el botón de eliminar del listado. Lo que sigue es la versión original.
+
 - Tabla: folio, cliente (razón social; nombre comercial debajo si existe), estado (etiqueta con
   color por estado), total, fecha (zona del negocio) y acciones (ver, eliminar).
 - Una fila de filtros bajo los títulos: cliente, RFC, folio y estado (`select`), dentro del
@@ -440,6 +444,10 @@ Todas extienden `layouts/app.blade.php` y usan los componentes de 003 (`x-card`,
 - Una plantilla `<template id="plantilla-linea">` con una fila vacía para el script.
 
 ### `cotizaciones/show.blade.php` — detalle
+
+> Desde [014](014-cotizaciones-bandeja.md) el documento (cliente, líneas y totales) se dibuja con
+> `<x-cotizaciones.hoja>`, la misma pieza del visor de la bandeja. Las acciones y los pagos no
+> cambiaron.
 
 - Encabezado: folio, estado, cliente, fechas, y el documento (líneas y totales) igual que en el PDF.
 - **Historial de pagos**: fecha, tipo, forma de pago y monto; total pagado y saldo pendiente. El
@@ -519,6 +527,9 @@ Función pura `calcularTotalesDocumento(lineas, descuentoGlobal)` con la misma c
   aparezca, como `autocompletar.js`.
 
 ### Búsqueda dinámica del listado
+
+> Desde [014](014-cotizaciones-bandeja.md) los atajos son las carpetas de la bandeja y sincronizan
+> `periodo` y `estado`. `busqueda-dinamica.js` dispara `busqueda:actualizada` al terminar.
 
 Reutiliza `busqueda-dinamica.js`: formulario `data-busqueda-dinamica` apuntando a
 `cotizaciones.buscar`, y los atajos de fecha como `data-busqueda-enlace`. Extensión mínima y

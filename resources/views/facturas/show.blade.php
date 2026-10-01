@@ -85,6 +85,8 @@
             <x-boton href="#dialogo-complemento" variante="secundario" icono="cash-stack" data-abrir-dialogo>{{ $complemento ? 'Reintentar complemento de pago' : 'Registrar complemento de pago' }}</x-boton>
         @endif
 
+        <x-boton href="#dialogo-duplicar" variante="secundario" icono="copy" data-abrir-dialogo>Duplicar</x-boton>
+
         @can('delete', $factura)
             <form method="POST" action="{{ route('facturas.destroy', $factura) }}">
                 @csrf
@@ -105,6 +107,12 @@
             <div><dt>Forma de pago</dt><dd>{{ $factura->forma_pago->value }} – {{ $factura->forma_pago->descripcion() }}</dd></div>
             <div><dt>Moneda / tipo</dt><dd>{{ App\Models\Factura::MONEDA }} · Ingreso</dd></div>
             <div><dt>Creada</dt><dd>{{ $factura->created_at->setTimezone($zona)->format('d/m/Y H:i') }}</dd></div>
+            @if ($factura->cotizacion)
+                <div><dt>Origen</dt><dd><a href="{{ route('cotizaciones.show', $factura->cotizacion) }}">{{ $factura->cotizacion->folio_formateado }}</a></dd></div>
+            @endif
+            @if ($factura->duplicadaDe)
+                <div><dt>Duplicada de</dt><dd><a href="{{ route('facturas.show', $factura->duplicadaDe) }}">{{ $factura->duplicadaDe->folioVisible() }}</a></dd></div>
+            @endif
             @if ($factura->motivo_cancelacion)
                 <div><dt>Motivo de cancelación</dt><dd>{{ $factura->motivo_cancelacion->value }} – {{ $factura->motivo_cancelacion->descripcion() }}</dd></div>
                 @if ($factura->sustituta)
@@ -199,6 +207,15 @@
     @endif
 
     {{-- Diálogos. Sin JavaScript se muestran con el enlace (#id) gracias a :target. --}}
+    @include('documentos._dialogo-duplicar', [
+        'titulo' => 'Duplicar '.$factura->folioVisible(),
+        'accion' => route('facturas.create'),
+        'metodo' => 'GET',
+        'ocultos' => ['duplicar' => $factura->id],
+        'clienteActual' => $factura->cliente_id,
+        'ayuda' => 'Se abre el formulario de una factura nueva con las mismas líneas, para revisarla antes de timbrar.',
+    ])
+
     @if ($factura->puedeEnviarse())
         <dialog id="dialogo-envio" class="ficha dialogo" aria-labelledby="dialogo-envio-titulo" @if ($errors->envio->any()) data-abrir-al-cargar @endif>
             <form method="POST" action="{{ route('facturas.enviar', $factura) }}">

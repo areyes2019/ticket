@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\EstadoCotizacion;
+use App\Enums\EstadoFactura;
 use App\Enums\TipoDescuento;
 use App\Enums\TipoPago;
 use App\Services\Documentos\CalculadoraTotalesDocumento;
@@ -16,11 +17,17 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Collection;
 
 /**
  * folio y estado no son asignables: el folio lo pone CotizacionController al
  * crear (con el contador del usuario) y el estado solo cambia por las
- * acciones del ciclo (enviar, pagar, entregar, editar).
+ * acciones del ciclo (enviar, pagar, entregar, editar). duplicada_de_id lo
+ * pone solo CotizacionController::duplicar.
+ *
+ * "Facturada" no es un estado: es tener una factura vigente (no cancelada)
+ * vinculada por facturas.cotizacion_id.
  *
  * Los totales los escribe solo aplicarTotales(), con la calculadora.
  */
@@ -56,6 +63,25 @@ class Cotizacion extends Model
      * Días antes del borrado automático en que se empieza a avisar.
      */
     public const DIAS_AVISO_CADUCIDAD = 7;
+
+    /**
+     * Valor del filtro de estado que pide las que ya muestran el aviso de
+     * caducidad (scope porCaducar).
+     */
+    public const POR_CADUCAR = 'por_caducar';
+
+    /**
+     * Valores del filtro de estado que piden las que tienen factura vigente y
+     * las que se pueden facturar y todavía no la tienen.
+     */
+    public const FACTURADAS = 'facturadas';
+
+    public const POR_FACTURAR = 'por_facturar';
+
+    /**
+     * Estados en los que una cotización se puede facturar.
+     */
+    public const ESTADOS_FACTURABLES = [EstadoCotizacion::Enviada, EstadoCotizacion::Pagada, EstadoCotizacion::ProductoEntregado];
 
     /**
      * Columnas que se pueden filtrar desde el listado (además de las fechas).
@@ -100,6 +126,33 @@ class Cotizacion extends Model
     public function pagos(): HasMany
     {
         return $this->hasMany(CotizacionPago::class)->orderBy('fecha_pago')->orderBy('id');
+    }
+
+    /**
+     * @return HasMany<Factura, $this>
+     */
+    public function facturas(): HasMany
+    {
+        return $this->hasMany(Factura::class);
+    }
+
+    /**
+     * La factura que la marca como facturada: cualquiera que no esté
+     * cancelada, aunque todavía no se haya timbrado.
+     *
+     * @return HasOne<Factura, $this>
+     */
+    public function facturaVigente(): HasOne
+    {
+        return $this->hasOne(Factura::class)->where('estado', '!=', EstadoFactura::Cancelada->value);
+    }
+
+    /**
+     * @return BelongsTo<Cotizacion, $this>
+     */
+    public function duplicadaDe(): BelongsTo
+    {
+        return $this->belongsTo(Cotizacion::class, 'duplicada_de_id');
     }
 
     /**
@@ -149,9 +202,70 @@ class Cotizacion extends Model
             : $this->pagos()->where('tipo', TipoPago::Anticipo)->exists();
     }
 
+    /**
+     * Una cotización facturada ya no cambia: la factura salió de ella.
+     */
     public function esEditable(): bool
     {
-        return $this->estado->esEditable();
+        return $this->estado->esEditable() && ! $this->estaFacturada();
+    }
+
+    /**
+     * Usa factura_vigente_exists cuando el listado lo precargó con withExists().
+     */
+    public function estaFacturada(): bool
+    {
+        if (array_key_exists('factura_vigente_exists', $this->attributes)) {
+            return (bool) $this->attributes['factura_vigente_exists'];
+        }
+
+        return $this->relationLoaded('facturaVigente') ? $this->facturaVigente !== null : $this->facturaVigente()->exists();
+    }
+
+    /**
+     * Por estado y sin factura vigente. Las líneas se revisan aparte
+     * (motivoNoFacturable).
+     */
+    public function esFacturable(): bool
+    {
+        return in_array($this->estado, self::ESTADOS_FACTURABLES, true) && ! $this->estaFacturada();
+    }
+
+    /**
+     * Líneas que no pueden pasar a una factura: las libres y las de artículos
+     * eliminados (el CFDI necesita las claves SAT del artículo).
+     *
+     * @return Collection<int, CotizacionLinea>
+     */
+    public function lineasNoFacturables(): Collection
+    {
+        $this->loadMissing('lineas.articulo');
+
+        return $this->lineas->filter(fn (CotizacionLinea $linea) => $linea->articulo === null || $linea->articulo->trashed())->values();
+    }
+
+    /**
+     * Por qué no se puede facturar; null si se puede.
+     */
+    public function motivoNoFacturable(): ?string
+    {
+        if (! in_array($this->estado, self::ESTADOS_FACTURABLES, true)) {
+            return 'Una cotización en '.mb_strtolower($this->estado->etiqueta()).' no se puede facturar: envíala primero.';
+        }
+
+        $this->loadMissing('facturaVigente');
+
+        if ($this->facturaVigente !== null) {
+            return "Esta cotización ya tiene la factura {$this->facturaVigente->folioVisible()}.";
+        }
+
+        $lineas = $this->lineasNoFacturables();
+
+        if ($lineas->isNotEmpty()) {
+            return 'Tiene líneas que no vienen del catálogo ('.$lineas->pluck('orden')->implode(', ').'). Corrígelas para poder facturar.';
+        }
+
+        return null;
     }
 
     public function puedeEliminarse(): bool
@@ -282,30 +396,42 @@ class Cotizacion extends Model
      * Aplica los filtros del listado (combinados con Y). Los vacíos se ignoran.
      *
      * @param  Builder<self>  $consulta
-     * @param  array{cliente?: string, rfc?: string, folio?: int|null, estado?: string, desde?: CarbonImmutable|null, hasta?: CarbonImmutable|null}  $filtros
+     *                                   El texto busca en el folio (si parece uno), la razón social, el nombre
+     *                                   comercial y el RFC del cliente. El estado "por_caducar" no es un estado:
+     *                                   son las que ya muestran el aviso de caducidad.
+     * @param  array{texto?: string, folio?: int|null, estado?: string, desde?: CarbonImmutable|null, hasta?: CarbonImmutable|null}  $filtros
      */
     #[Scope]
     protected function filtrar(Builder $consulta, array $filtros): void
     {
-        $cliente = trim($filtros['cliente'] ?? '');
-        $rfc = trim($filtros['rfc'] ?? '');
+        $texto = trim($filtros['texto'] ?? '');
+        $folio = $filtros['folio'] ?? null;
+        $estado = $filtros['estado'] ?? '';
 
-        if ($cliente !== '') {
-            $consulta->whereHas('cliente', fn (Builder $clientes) => $clientes->withTrashed()->where(
-                fn (Builder $nombres) => $nombres->where('razon_social', 'like', "%{$cliente}%")->orWhere('nombre_comercial', 'like', "%{$cliente}%")
-            ));
+        if ($texto !== '') {
+            $rfc = strtoupper((string) preg_replace('/\s+/', '', $texto));
+
+            $consulta->where(function (Builder $coincidencias) use ($texto, $rfc, $folio) {
+                $coincidencias->whereHas('cliente', fn (Builder $clientes) => $clientes->withTrashed()->where(
+                    fn (Builder $datos) => $datos->where('razon_social', 'like', "%{$texto}%")
+                        ->orWhere('nombre_comercial', 'like', "%{$texto}%")
+                        ->orWhere('rfc', 'like', "%{$rfc}%")
+                ));
+
+                if ($folio !== null) {
+                    $coincidencias->orWhere('folio', $folio);
+                }
+            });
         }
 
-        if ($rfc !== '') {
-            $consulta->whereHas('cliente', fn (Builder $clientes) => $clientes->withTrashed()->where('rfc', 'like', "%{$rfc}%"));
-        }
-
-        if (($filtros['folio'] ?? null) !== null) {
-            $consulta->where('folio', $filtros['folio']);
-        }
-
-        if (($filtros['estado'] ?? '') !== '') {
-            $consulta->where('estado', $filtros['estado']);
+        if ($estado === self::POR_CADUCAR) {
+            $consulta->porCaducar();
+        } elseif ($estado === self::FACTURADAS) {
+            $consulta->facturadas();
+        } elseif ($estado === self::POR_FACTURAR) {
+            $consulta->porFacturar();
+        } elseif ($estado !== '') {
+            $consulta->where('estado', $estado);
         }
 
         if (($filtros['desde'] ?? null) !== null) {
@@ -318,8 +444,28 @@ class Cotizacion extends Model
     }
 
     /**
-     * Las que el comando de caducidad borra: editables, sin pagos y sin
-     * movimiento en DIAS_CADUCIDAD días.
+     * Las que ya muestran el aviso de caducidad (mostrarAvisoCaducidad()):
+     * movida el día D, se borra el D + 30 y el aviso sale si D + 30 − hoy ≤ 7,
+     * es decir, si el último movimiento fue antes del inicio de hoy − 22
+     * (días calendario en la zona del negocio).
+     *
+     * @param  Builder<self>  $consulta
+     */
+    #[Scope]
+    protected function porCaducar(Builder $consulta): void
+    {
+        $limite = CarbonImmutable::now(config('app.zona_negocio'))->startOfDay()
+            ->subDays(self::DIAS_CADUCIDAD - self::DIAS_AVISO_CADUCIDAD - 1);
+
+        $consulta->whereIn('estado', [EstadoCotizacion::Borrador, EstadoCotizacion::Enviada])
+            ->doesntHave('pagos')
+            ->doesntHave('facturaVigente')
+            ->where('updated_at', '<', $limite->utc());
+    }
+
+    /**
+     * Las que el comando de caducidad borra: editables, sin pagos, sin
+     * factura y sin movimiento en DIAS_CADUCIDAD días.
      *
      * @param  Builder<self>  $consulta
      */
@@ -328,7 +474,44 @@ class Cotizacion extends Model
     {
         $consulta->whereIn('estado', [EstadoCotizacion::Borrador, EstadoCotizacion::Enviada])
             ->doesntHave('pagos')
+            ->doesntHave('facturaVigente')
             ->where('updated_at', '<', now()->subDays(self::DIAS_CADUCIDAD));
+    }
+
+    /**
+     * @param  Builder<self>  $consulta
+     */
+    #[Scope]
+    protected function facturadas(Builder $consulta): void
+    {
+        $consulta->has('facturaVigente');
+    }
+
+    /**
+     * Se pueden facturar por estado y aún no tienen factura. Incluye las que
+     * tienen líneas libres, para que se vean y se corrijan.
+     *
+     * @param  Builder<self>  $consulta
+     */
+    #[Scope]
+    protected function porFacturar(Builder $consulta): void
+    {
+        $consulta->whereIn('estado', self::ESTADOS_FACTURABLES)->doesntHave('facturaVigente');
+    }
+
+    /**
+     * Todas sus líneas vienen de un artículo que sigue en el catálogo (la
+     * misma regla que lineasNoFacturables, en SQL).
+     *
+     * @param  Builder<self>  $consulta
+     */
+    #[Scope]
+    protected function soloLineasDeCatalogo(Builder $consulta): void
+    {
+        $consulta->whereDoesntHave('lineas', fn (Builder $lineas) => $lineas->where(
+            fn (Builder $noFacturables) => $noFacturables->whereNull('articulo_id')
+                ->orWhereHas('articulo', fn (Builder $articulos) => $articulos->onlyTrashed())
+        ));
     }
 
     /**

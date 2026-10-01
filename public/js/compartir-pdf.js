@@ -121,6 +121,15 @@
             if (navigator.canShare && navigator.canShare({ files: [archivo] })) {
                 return navigator.share({ files: [archivo], text: boton.dataset.texto }).then(function () {
                     return marcar(boton);
+                }, function (error) {
+                    if (error && error.name === 'AbortError') {
+                        throw error;
+                    }
+
+                    guardarArchivo(archivo);
+                    abrirWhatsApp(boton);
+
+                    return marcar(boton);
                 });
             }
 

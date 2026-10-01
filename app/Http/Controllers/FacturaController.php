@@ -12,10 +12,14 @@ use App\Enums\TipoDescuento;
 use App\Enums\UsoCfdi;
 use App\Http\Requests\CancelarFacturaRequest;
 use App\Http\Requests\FacturaRequest;
+use App\Http\Requests\ListadoCotizacionesRequest;
 use App\Http\Requests\ListadoFacturasRequest;
+use App\Models\Cotizacion;
+use App\Models\CotizacionLinea;
 use App\Models\Factura;
 use App\Models\FacturaLinea;
 use App\Models\User;
+use App\Services\Documentos\CalculadoraTotalesDocumento;
 use App\Services\Facturacion\CanceladorFacturas;
 use App\Services\Facturacion\FacturapiCliente;
 use App\Services\Facturacion\FacturapiException;
@@ -53,8 +57,30 @@ class FacturaController extends Controller
         return view('facturas._resultados', $this->datosListado($request, $facturas));
     }
 
-    public function create(Request $request): View
+    /**
+     * Formulario de alta: vacío, lleno con una cotización (?cotizacion=) o
+     * con una copia de otra factura (?duplicar=&cliente_id=). No guarda nada:
+     * la factura nace al pulsar "Generar y timbrar".
+     */
+    public function create(Request $request): View|RedirectResponse
     {
+        if ($request->filled('cotizacion')) {
+            $cotizacion = $request->user()->cotizaciones()->findOrFail($request->integer('cotizacion'));
+            $motivo = $cotizacion->motivoNoFacturable();
+
+            if ($motivo !== null) {
+                return redirect()->route('cotizaciones.show', $cotizacion)->with('error', $motivo);
+            }
+
+            return view('facturas.crear', $this->datosFormulario($request, precarga: $this->precargaDeCotizacion($cotizacion)));
+        }
+
+        if ($request->filled('duplicar')) {
+            $original = $request->user()->facturas()->findOrFail($request->integer('duplicar'));
+
+            return view('facturas.crear', $this->datosFormulario($request, precarga: $this->precargaDeFactura($request, $original)));
+        }
+
         return view('facturas.crear', $this->datosFormulario($request));
     }
 
@@ -62,11 +88,33 @@ class FacturaController extends Controller
      * Guarda la captura completa (folio, factura y líneas) y, ya confirmada la
      * transacción, intenta timbrar. Si el timbrado falla la factura queda
      * pendiente: la captura no se pierde.
+     *
+     * Si sale de una cotización, la fila de la cotización se bloquea y se
+     * vuelve a revisar: dos clics o dos pestañas no crean dos facturas.
      */
     public function store(FacturaRequest $request): RedirectResponse
     {
-        $factura = DB::transaction(function () use ($request) {
+        $origen = $request->origen();
+
+        $resultado = DB::transaction(function () use ($request, $origen): Factura|RedirectResponse {
+            if ($origen['cotizacion_id'] !== null) {
+                $cotizacion = Cotizacion::whereKey($origen['cotizacion_id'])->lockForUpdate()->firstOrFail();
+                $vigente = $cotizacion->facturaVigente()->first();
+
+                if ($vigente !== null) {
+                    return redirect()->route('facturas.show', $vigente)
+                        ->with('error', "Esta cotización ya se facturó en {$vigente->folioVisible()}.");
+                }
+
+                $motivo = $cotizacion->motivoNoFacturable();
+
+                if ($motivo !== null) {
+                    return back()->withInput()->with('error', $motivo);
+                }
+            }
+
             $factura = $request->user()->facturas()->make($request->datosFactura());
+            $factura->forceFill($origen);
             $factura->folio = $this->siguienteFolio($request->user());
             $factura->aplicarTotales($request->totales());
             $factura->save();
@@ -76,7 +124,35 @@ class FacturaController extends Controller
             return $factura;
         });
 
-        return $this->respuestaTimbrado($factura, $this->timbrador->timbrar($factura));
+        if ($resultado instanceof RedirectResponse) {
+            return $resultado;
+        }
+
+        return $this->respuestaTimbrado($resultado, $this->timbrador->timbrar($resultado));
+    }
+
+    /**
+     * Cotizaciones que se pueden facturar ya, para la ventana "Desde
+     * cotización": página completa sin JavaScript, o solo la lista con
+     * ?fragmento=1.
+     */
+    public function cotizaciones(ListadoCotizacionesRequest $request): View
+    {
+        $cotizaciones = $request->user()->cotizaciones()
+            ->with('cliente')
+            ->porFacturar()
+            ->soloLineasDeCatalogo()
+            ->filtrar(['texto' => $request->texto(), 'folio' => $request->folio()])
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->limit(20)
+            ->get();
+
+        $datos = ['cotizaciones' => $cotizaciones, 'texto' => $request->texto()];
+
+        return $request->boolean('fragmento')
+            ? view('facturas._cotizaciones-facturables', $datos)
+            : view('facturas.cotizaciones', $datos);
     }
 
     /**
@@ -89,7 +165,7 @@ class FacturaController extends Controller
 
         $sinConsulta = $factura->cancelacionEnCurso() && ! $cancelador->refrescar($factura);
 
-        $factura->load(['cliente', 'lineas', 'complementoPago', 'sustituta']);
+        $factura->load(['cliente', 'lineas', 'complementoPago', 'sustituta', 'cotizacion', 'duplicadaDe']);
 
         return view('facturas.show', [
             'factura' => $factura,
@@ -98,6 +174,7 @@ class FacturaController extends Controller
             'sustitutas' => $factura->puedeCancelarse() ? $this->sustitutas($factura) : [],
             'formasPagoComplemento' => array_diff_key(FormaPago::opciones(), [FormaPago::PorDefinir->value => true]),
             'hoy' => now(config('app.zona_negocio'))->toDateString(),
+            'clientes' => $this->clientes($factura->user),
         ]);
     }
 
@@ -326,34 +403,128 @@ class FacturaController extends Controller
     }
 
     /**
-     * Líneas a pintar: las del intento fallido (old), las guardadas, o
-     * ninguna en el alta.
+     * El formulario lleno con la cotización tal como está: cliente, descuento
+     * global y líneas (con sus precios cotizados). Avisa de los precios que
+     * cambiaron desde entonces en el catálogo, sin cambiar la línea.
      *
      * @return array<string, mixed>
      */
-    private function datosFormulario(Request $request, ?Factura $factura = null): array
+    private function precargaDeCotizacion(Cotizacion $cotizacion): array
+    {
+        $cotizacion->loadMissing('lineas.articulo');
+        $pesos = fn ($monto) => '$'.number_format((float) $monto, 2);
+
+        $avisos = $cotizacion->lineas
+            ->filter(fn (CotizacionLinea $linea) => CalculadoraTotalesDocumento::centavos($linea->precio_unitario) !== CalculadoraTotalesDocumento::centavos($linea->articulo->precio_unitario_sin_iva))
+            ->map(fn (CotizacionLinea $linea) => "{$linea->descripcion}: {$pesos($linea->precio_unitario)} en la cotización, {$pesos($linea->articulo->precio_unitario_sin_iva)} hoy en el catálogo.")
+            ->values()
+            ->all();
+
+        return [
+            'cabecera' => [
+                'cliente_id' => $cotizacion->cliente_id,
+                'descuento_global_tipo' => $cotizacion->descuento_global_tipo?->value,
+                'descuento_global_valor' => $cotizacion->descuento_global_valor,
+            ],
+            'lineas' => $cotizacion->lineas->map($this->lineaFormulario(...))->all(),
+            'cotizacion' => $cotizacion,
+            'avisosPrecio' => $avisos,
+        ];
+    }
+
+    /**
+     * El formulario lleno con una copia de la factura para el cliente elegido
+     * (si es ajeno o está eliminado queda sin elegir). Se omiten las líneas de
+     * artículos eliminados: una factura nueva no los acepta.
+     *
+     * @return array<string, mixed>
+     */
+    private function precargaDeFactura(Request $request, Factura $original): array
+    {
+        $original->loadMissing('lineas.articulo');
+
+        [$vigentes, $omitidas] = $original->lineas->partition(fn (FacturaLinea $linea) => $linea->articulo !== null && ! $linea->articulo->trashed());
+
+        return [
+            'cabecera' => [
+                'cliente_id' => $request->user()->clientes()->find($request->integer('cliente_id'))?->id,
+                'uso_cfdi' => $original->uso_cfdi->value,
+                'metodo_pago' => $original->metodo_pago->value,
+                'forma_pago' => $original->forma_pago->value,
+                'descuento_global_tipo' => $original->descuento_global_tipo?->value,
+                'descuento_global_valor' => $original->descuento_global_valor,
+            ],
+            'lineas' => $vigentes->map($this->lineaFormulario(...))->values()->all(),
+            'duplicadaDe' => $original,
+            'lineasOmitidas' => $omitidas->pluck('descripcion')->all(),
+        ];
+    }
+
+    /**
+     * Una línea guardada (de factura o de cotización) como la pinta el
+     * formulario.
+     *
+     * @return array<string, mixed>
+     */
+    private function lineaFormulario(FacturaLinea|CotizacionLinea $linea): array
+    {
+        return [
+            'articulo_id' => $linea->articulo_id,
+            'cantidad' => $linea->cantidad,
+            'descripcion' => $linea->descripcion,
+            'modelo' => $linea->modelo,
+            'precio_unitario' => $linea->precio_unitario,
+            'descuento_tipo' => $linea->descuento_tipo?->value,
+            'descuento_valor' => $linea->descuento_valor,
+            'tasa_iva' => $linea->tasa_iva->value,
+            'importe' => $linea->importe,
+        ];
+    }
+
+    /**
+     * Clientes activos del usuario para los selects ("Razón social — RFC").
+     *
+     * @return array<int, string>
+     */
+    private function clientes(User $user): array
+    {
+        return $user->clientes()->orderBy('razon_social')->get()
+            ->mapWithKeys(fn ($cliente) => [$cliente->id => $cliente->razon_social.' — '.$cliente->rfc])->all();
+    }
+
+    /**
+     * Líneas a pintar: las del intento fallido (old), las guardadas, las de
+     * la precarga (cotización o factura duplicada), o ninguna en el alta.
+     *
+     * @param  array<string, mixed>  $precarga
+     * @return array<string, mixed>
+     */
+    private function datosFormulario(Request $request, ?Factura $factura = null, array $precarga = []): array
     {
         $lineas = $request->old('lineas');
 
         if (! is_array($lineas)) {
-            $lineas = $factura?->lineas->map(fn (FacturaLinea $linea) => [
-                'articulo_id' => $linea->articulo_id,
-                'cantidad' => $linea->cantidad,
-                'descripcion' => $linea->descripcion,
-                'modelo' => $linea->modelo,
-                'precio_unitario' => $linea->precio_unitario,
-                'descuento_tipo' => $linea->descuento_tipo?->value,
-                'descuento_valor' => $linea->descuento_valor,
-                'tasa_iva' => $linea->tasa_iva->value,
-                'importe' => $linea->importe,
-            ])->all() ?? [];
+            $lineas = $factura?->lineas->map($this->lineaFormulario(...))->all() ?? $precarga['lineas'] ?? [];
         }
+
+        $cabecera = $precarga['cabecera'] ?? [];
 
         return [
             'factura' => $factura,
             'lineas' => array_values(array_filter($lineas, 'is_array')),
-            'clientes' => $request->user()->clientes()->orderBy('razon_social')->get()
-                ->mapWithKeys(fn ($cliente) => [$cliente->id => $cliente->razon_social.' — '.$cliente->rfc])->all(),
+            'cabecera' => [
+                'cliente_id' => $factura?->cliente_id ?? $cabecera['cliente_id'] ?? null,
+                'uso_cfdi' => $factura?->uso_cfdi?->value ?? $cabecera['uso_cfdi'] ?? UsoCfdi::GastosEnGeneral->value,
+                'metodo_pago' => $factura?->metodo_pago?->value ?? $cabecera['metodo_pago'] ?? MetodoPago::UnaExhibicion->value,
+                'forma_pago' => $factura?->forma_pago?->value ?? $cabecera['forma_pago'] ?? null,
+                'descuento_global_tipo' => $factura ? $factura->descuento_global_tipo?->value : $cabecera['descuento_global_tipo'] ?? null,
+                'descuento_global_valor' => $factura ? $factura->descuento_global_valor : $cabecera['descuento_global_valor'] ?? null,
+            ],
+            'cotizacionOrigen' => $precarga['cotizacion'] ?? null,
+            'facturaOrigen' => $precarga['duplicadaDe'] ?? null,
+            'avisosPrecio' => $precarga['avisosPrecio'] ?? [],
+            'lineasOmitidas' => $precarga['lineasOmitidas'] ?? [],
+            'clientes' => $this->clientes($request->user()),
             'usosCfdi' => UsoCfdi::opcionesFactura(),
             'metodosPago' => MetodoPago::opciones(),
             'formasPago' => FormaPago::opciones(),

@@ -27,7 +27,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * Solo la cabecera que captura el usuario es asignable. El folio lo pone
  * FacturaController al crear; el estado, los sellos, las copias fiscales y el
  * error solo los escriben los métodos de timbrado y cancelación; los totales,
- * aplicarTotales() con la calculadora.
+ * aplicarTotales() con la calculadora. cotizacion_id y duplicada_de_id (el
+ * origen) los pone FacturaController::store y no cambian después.
  */
 #[Fillable([
     'cliente_id',
@@ -99,6 +100,24 @@ class Factura extends Model
     public function complementoPago(): HasOne
     {
         return $this->hasOne(ComplementoPago::class);
+    }
+
+    /**
+     * La cotización de la que salió, si salió de una.
+     *
+     * @return BelongsTo<Cotizacion, $this>
+     */
+    public function cotizacion(): BelongsTo
+    {
+        return $this->belongsTo(Cotizacion::class);
+    }
+
+    /**
+     * @return BelongsTo<Factura, $this>
+     */
+    public function duplicadaDe(): BelongsTo
+    {
+        return $this->belongsTo(Factura::class, 'duplicada_de_id');
     }
 
     /**

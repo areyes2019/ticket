@@ -17,9 +17,11 @@
     const buscador = bandeja.querySelector('[data-buscar]');
     const vacia = bandeja.querySelector('[data-vacia]');
     const sinSeleccion = bandeja.querySelector('[data-sin-seleccion]');
-    const botonCarpetas = bandeja.querySelector('[data-mostrar-carpetas]');
+    const botonesCarpetas = Array.from(bandeja.querySelectorAll('[data-mostrar-carpetas]'));
     const redactar = document.getElementById('bandeja-redactar');
     const aviso = document.querySelector('[data-bandeja-aviso]');
+    // En escritorio "Carpetas" pliega la columna; en tableta y celular la despliega encima.
+    const escritorio = window.matchMedia('(min-width: 1024px)');
 
     const filtro = { tipo: 'carpeta', valor: 'entrada' };
     let activa = filas.find(function (fila) {
@@ -114,12 +116,32 @@
 
         activa = null;
         filtrar();
-        mostrarCarpetas(false);
+
+        if (!escritorio.matches) {
+            mostrarCarpetas(false);
+        }
     }
 
-    function mostrarCarpetas(abiertas) {
-        bandeja.classList.toggle('bandeja-carpetas-abiertas', abiertas);
-        botonCarpetas.setAttribute('aria-expanded', abiertas ? 'true' : 'false');
+    function carpetasVisibles() {
+        return escritorio.matches
+            ? !bandeja.classList.contains('bandeja-carpetas-ocultas')
+            : bandeja.classList.contains('bandeja-carpetas-abiertas');
+    }
+
+    function actualizarBotonCarpetas() {
+        botonesCarpetas.forEach(function (boton) {
+            boton.setAttribute('aria-expanded', carpetasVisibles() ? 'true' : 'false');
+        });
+    }
+
+    function mostrarCarpetas(visibles) {
+        if (escritorio.matches) {
+            bandeja.classList.toggle('bandeja-carpetas-ocultas', !visibles);
+        } else {
+            bandeja.classList.toggle('bandeja-carpetas-abiertas', visibles);
+        }
+
+        actualizarBotonCarpetas();
     }
 
     function avisar() {
@@ -172,13 +194,16 @@
         } else if (objetivo.matches('[data-demo]')) {
             avisar();
         } else if (objetivo.matches('[data-mostrar-carpetas]')) {
-            mostrarCarpetas(!bandeja.classList.contains('bandeja-carpetas-abiertas'));
+            mostrarCarpetas(!carpetasVisibles());
         } else if (objetivo.matches('[data-bandeja-redactar]') && redactar && typeof redactar.showModal === 'function') {
             redactar.showModal();
         }
     });
 
     buscador.addEventListener('input', filtrar);
+
+    actualizarBotonCarpetas();
+    escritorio.addEventListener('change', actualizarBotonCarpetas);
 
     if (redactar) {
         redactar.addEventListener('close', function () {
