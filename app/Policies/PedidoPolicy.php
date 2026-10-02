@@ -57,6 +57,49 @@ class PedidoPolicy
         return $this->esDueno($user, $pedido);
     }
 
+    /**
+     * La orden de trabajo (022) vive dentro de la venta: sus reglas también.
+     */
+    public function crearOrdenTrabajo(User $user, Pedido $pedido): Response
+    {
+        $dueno = $this->esDueno($user, $pedido);
+
+        if ($dueno->denied()) {
+            return $dueno;
+        }
+
+        $motivo = $pedido->motivoNoCreaOrdenTrabajo();
+
+        return $motivo === null ? Response::allow() : Response::deny($motivo);
+    }
+
+    /**
+     * Sin orden responde 404, como un recurso que no existe.
+     */
+    public function verOrdenTrabajo(User $user, Pedido $pedido): Response
+    {
+        $dueno = $this->esDueno($user, $pedido);
+
+        if ($dueno->denied() || $pedido->ordenTrabajo === null) {
+            return Response::denyAsNotFound();
+        }
+
+        return Response::allow();
+    }
+
+    public function editarOrdenTrabajo(User $user, Pedido $pedido): Response
+    {
+        $ver = $this->verOrdenTrabajo($user, $pedido);
+
+        if ($ver->denied()) {
+            return $ver;
+        }
+
+        return $pedido->ordenTrabajo->esEditable()
+            ? Response::allow()
+            : Response::deny('La venta ya se entregó: la orden queda solo para consulta.');
+    }
+
     private function esDueno(User $user, Pedido $pedido): Response
     {
         return $pedido->user_id === $user->id

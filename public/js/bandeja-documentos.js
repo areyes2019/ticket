@@ -1,5 +1,6 @@
 // Bandeja de documentos: cotizaciones (spec 014), órdenes de compra (017) y el
-// dashboard, con cotizaciones y facturas en dos listas y un solo visor.
+// dashboard, con cotizaciones, facturas y órdenes de trabajo en varias listas
+// y un solo visor (020).
 //
 // Filtrar, buscar y paginar lo hace busqueda-dinamica.js. Este script muestra
 // en el visor el documento elegido sin recargar: pide su vista previa en HTML
@@ -11,8 +12,9 @@
 //   data-parametro      nombre del parámetro de la URL; las filas llevan
 //                       data-<parametro>="<id>" (data-cotizacion, data-orden).
 //                       Varios, separados por espacio, si hay varias listas
-//                       ("cotizacion factura"); la vista previa dice de cuál
-//                       es con data-documento.
+//                       ("cotizacion factura ot"); la vista previa dice de
+//                       cuál es con data-documento. Cada nombre es una sola
+//                       palabra, porque se lee como fila.dataset[nombre].
 //   data-sin-seleccion  texto del visor vacío.
 // El visor es [data-visor-documento].
 (function () {

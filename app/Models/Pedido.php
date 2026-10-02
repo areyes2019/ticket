@@ -164,6 +164,43 @@ class Pedido extends Model
     }
 
     /**
+     * @return HasOne<OrdenTrabajo, $this>
+     */
+    public function ordenTrabajo(): HasOne
+    {
+        return $this->hasOne(OrdenTrabajo::class);
+    }
+
+    public function puedeCrearOrdenTrabajo(): bool
+    {
+        return $this->motivoNoCreaOrdenTrabajo() === null;
+    }
+
+    /**
+     * La orden nace con el primer pago, de cualquier monto (022). Si después
+     * se borran los pagos, la orden se queda: el trabajo ya pudo empezar.
+     */
+    public function motivoNoCreaOrdenTrabajo(): ?string
+    {
+        return match (true) {
+            $this->ordenTrabajo !== null => 'Ya tiene orden de trabajo.',
+            $this->estaEntregado() => 'La venta ya se entregó.',
+            ! $this->tienePagos() => 'Registra un pago antes de crear la orden de trabajo.',
+            default => null,
+        };
+    }
+
+    /**
+     * Cobrada y sin orden: la etiqueta "Sin orden" del listado. Una venta
+     * entregada no la lleva, para no marcar las anteriores a 022.
+     */
+    public function necesitaOrdenTrabajo(): bool
+    {
+        return in_array($this->estado, [EstadoPedido::Anticipo, EstadoPedido::Pagado], true)
+            && $this->ordenTrabajo === null;
+    }
+
+    /**
      * Escribe los totales calculados (no guarda).
      *
      * @param  array<string, mixed>  $totales  resultado de CalculadoraTotalesDocumento::calcular()

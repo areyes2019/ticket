@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Cotizacion;
 use App\Models\Factura;
+use App\Models\OrdenTrabajo;
 use App\Support\Demo\BandejaCorreoDemo;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -11,14 +12,15 @@ use Illuminate\View\View;
 class DashboardController extends Controller
 {
     /**
-     * Cuántas cotizaciones y facturas recientes muestra cada lista del inicio.
+     * Cuántos documentos recientes muestra cada lista del inicio.
      */
     public const RECIENTES = 25;
 
     /**
-     * Inicio: cotizaciones y facturas recientes con la vista previa del
-     * documento pedido en la URL (?cotizacion= o ?factura=) o, si no hay, de la
-     * primera cotización, y la ventana para crear una cotización ahí mismo.
+     * Inicio: cotizaciones y facturas recientes (en acordeón) y órdenes de
+     * trabajo recientes, con la vista previa del documento pedido en la URL
+     * (?cotizacion=, ?factura= u ?ot=) o, si no hay, de la primera cotización,
+     * y la ventana para crear una cotización ahí mismo.
      * Además, la bandeja de correo de demostración (013),
      * que se abre desde el menú de aplicaciones.
      */
@@ -43,12 +45,22 @@ class DashboardController extends Controller
             ->limit(self::RECIENTES)
             ->get();
 
+        // De todos los estados; la venta y sus líneas, para el folio, el
+        // cliente y "Falta color" sin una consulta por fila.
+        $ordenesTrabajo = $user->ordenesTrabajo()
+            ->with(['pedido.lineas', 'lineas'])
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->limit(self::RECIENTES)
+            ->get();
+
         // Un id ajeno o inexistente se ignora, como en la bandeja de cotizaciones.
         $abierta = match (true) {
             $request->filled('factura') => $user->facturas()->find($request->integer('factura')),
             $request->filled('cotizacion') => $user->cotizaciones()->find($request->integer('cotizacion')),
+            $request->filled('ot') => $user->ordenesTrabajo()->find($request->integer('ot')),
             default => null,
-        } ?? $cotizaciones->first() ?? $facturas->first();
+        } ?? $cotizaciones->first() ?? $facturas->first() ?? $ordenesTrabajo->first();
 
         $datosVisor = match (true) {
             $abierta instanceof Cotizacion => [
@@ -56,13 +68,18 @@ class DashboardController extends Controller
                 'cotizacion' => $abierta->load(['cliente', 'lineas', 'pagos', 'facturaVigente', 'venta.facturaVigente']),
             ],
             $abierta instanceof Factura => ['factura' => $abierta->load(['cliente', 'lineas'])],
+            $abierta instanceof OrdenTrabajo => OrdenTrabajoController::datosVistaPrevia($abierta->pedido),
             default => [],
         };
 
         return view('dashboard', [
             'cotizaciones' => $cotizaciones,
             'facturas' => $facturas,
+            'ordenesTrabajo' => $ordenesTrabajo,
             'abierta' => $abierta,
+            // La sección Facturas del acordeón empieza cerrada, salvo que la
+            // abierta sea una factura.
+            'facturasAbiertas' => $abierta instanceof Factura,
             'datosVisor' => $datosVisor,
             // La ventana "Nueva cotización"; tras un error de validación vuelve
             // abierta con lo capturado.

@@ -22,12 +22,14 @@ use App\Http\Controllers\ExportacionArticulosController;
 use App\Http\Controllers\FacturaController;
 use App\Http\Controllers\GenerarOrdenesCompraController;
 use App\Http\Controllers\HistorialAccesoController;
+use App\Http\Controllers\HojaProduccionController;
 use App\Http\Controllers\ImagenesArticulosController;
 use App\Http\Controllers\ImportacionArticulosController;
 use App\Http\Controllers\InicioController;
 use App\Http\Controllers\MovimientoController;
 use App\Http\Controllers\OrdenCompraController;
 use App\Http\Controllers\OrdenCompraPagoController;
+use App\Http\Controllers\OrdenTrabajoController;
 use App\Http\Controllers\PedidoController;
 use App\Http\Controllers\PedidoEntregaController;
 use App\Http\Controllers\PedidoPagoController;
@@ -144,6 +146,20 @@ Route::middleware(['auth', AsegurarUsuarioActivo::class])->group(function () {
     Route::delete('pedidos/{pedido}/pagos/{pago}', [PedidoPagoController::class, 'destroy'])
         ->scopeBindings()
         ->name('pedidos.pagos.destroy');
+
+    // Orden de trabajo de la venta (022): una por venta, así que cuelga del pedido sin id propio.
+    Route::get('pedidos/produccion', HojaProduccionController::class)->name('pedidos.produccion');
+    Route::controller(OrdenTrabajoController::class)->prefix('pedidos/{pedido}/orden-trabajo')->name('pedidos.orden-trabajo.')->group(function () {
+        Route::get('crear', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::get('/', 'show')->name('show');
+        Route::get('vista-previa', 'vistaPrevia')->name('vista-previa');
+        Route::get('editar', 'edit')->name('edit');
+        Route::put('/', 'update')->name('update');
+        Route::post('avanzar', 'avanzar')->name('avanzar');
+        Route::get('imprimir', 'imprimir')->name('imprimir');
+        Route::get('imagen', 'imagen')->name('imagen');
+    });
 
     Route::resource('pedidos', PedidoController::class)
         ->parameters(['pedidos' => 'pedido']);

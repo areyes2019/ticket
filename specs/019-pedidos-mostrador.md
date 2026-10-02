@@ -76,6 +76,9 @@ El flujo, tal como quedó tras la revisión de la remota:
 El sistema **no da seguimiento a la fabricación**: no hay órdenes de trabajo, dibujos, colores de
 tinta ni estados de producción.
 
+> **Desde [022](022-ordenes-trabajo.md)**: la venta con al menos un pago admite una orden de trabajo
+> con color de tinta por línea, imagen del diseño y estados En dibujo → En proceso → Terminado.
+
 ## Objetivo / Alcance
 
 Un módulo nuevo, **Pedidos**, sobre la arquitectura monolítica Laravel + Blade + JavaScript nativo de

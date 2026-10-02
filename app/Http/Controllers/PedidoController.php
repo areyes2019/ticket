@@ -17,6 +17,7 @@ use App\Models\Pedido;
 use App\Models\PedidoLinea;
 use App\Models\User;
 use App\Services\Inventario\RegistradorInventario;
+use App\Services\OrdenesTrabajo\ConservadorColores;
 use App\Services\Pedidos\CodigoQrPedido;
 use App\Services\Pedidos\GeneradorTicketPedido;
 use App\Services\Pedidos\MensajePedido;
@@ -32,7 +33,10 @@ use Illuminate\View\View;
 
 class PedidoController extends Controller
 {
-    public function __construct(private readonly RegistradorInventario $inventario) {}
+    public function __construct(
+        private readonly RegistradorInventario $inventario,
+        private readonly ConservadorColores $colores,
+    ) {}
 
     public function index(ListadoPedidosRequest $request): View
     {
@@ -108,7 +112,7 @@ class PedidoController extends Controller
     {
         Gate::authorize('view', $pedido);
 
-        $pedido->load(['lineas', 'pagos.cuenta', 'facturaVigente', 'cotizacion.facturaVigente', 'cliente']);
+        $pedido->load(['lineas', 'pagos.cuenta', 'facturaVigente', 'cotizacion.facturaVigente', 'cliente', 'ordenTrabajo']);
 
         $motivoAutofactura = $pedido->motivoAutofacturaNoDisponible();
 
@@ -136,7 +140,8 @@ class PedidoController extends Controller
      * PedidoRequest ya verificó que es del usuario y editable. Primero se
      * devuelve lo que el pedido sacó: así uno que se llevó las últimas piezas
      * se puede editar sin que su propio descuento lo bloquee. La venta de una
-     * cotización no se bloquea por existencia (021): deja faltante.
+     * cotización no se bloquea por existencia (021): deja faltante. Los
+     * colores de su orden de trabajo pasan a las líneas nuevas (022).
      */
     public function update(PedidoRequest $request, Pedido $pedido): RedirectResponse
     {
@@ -155,7 +160,9 @@ class PedidoController extends Controller
 
             $bloqueado->fill($request->datosPedido());
             $bloqueado->aplicarTotales($request->totales());
+            $colores = $this->colores->recordar($bloqueado);
             $this->guardarLineas($bloqueado, $request->lineas(), $request->totales());
+            $this->colores->reaplicar($bloqueado, $colores);
             $bloqueado->recalcularEstado();
             $bloqueado->save();
 
@@ -169,7 +176,8 @@ class PedidoController extends Controller
     /**
      * Borrado físico (se lleva las líneas) y devolución de existencias. Si
      * nació de una cotización, deshace la aceptación: la cotización vuelve a
-     * enviada (021).
+     * enviada (021). Su orden de trabajo se borra con Eloquent para que se
+     * lleve también el archivo del diseño (022).
      */
     public function destroy(Pedido $pedido): RedirectResponse
     {
@@ -190,6 +198,7 @@ class PedidoController extends Controller
                 ? Cotizacion::whereKey($pedido->cotizacion_id)->lockForUpdate()->first()
                 : null;
 
+            $pedido->ordenTrabajo?->delete();
             $pedido->delete();
             $cotizacion?->revertirAceptacion();
 
@@ -306,7 +315,7 @@ class PedidoController extends Controller
     private function pedidos(ListadoPedidosRequest $request): LengthAwarePaginator
     {
         return $request->user()->pedidos()
-            ->with('cotizacion:id,folio')
+            ->with(['cotizacion:id,folio', 'ordenTrabajo:id,pedido_id'])
             ->withSum('pagos', 'monto')
             ->filtrar($request->filtros())
             ->orderByDesc('created_at')

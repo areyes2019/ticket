@@ -2,7 +2,7 @@
 
 namespace App\Rules;
 
-use App\Services\Articulos\ProcesadorImagenArticulo;
+use App\Services\Imagenes\GuardadorImagenWebp;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Http\UploadedFile;
@@ -18,7 +18,7 @@ class ImagenLegible implements ValidationRule
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        if (! $value instanceof UploadedFile || ! app(ProcesadorImagenArticulo::class)->esImagen((string) file_get_contents($value->getRealPath()))) {
+        if (! $value instanceof UploadedFile || ! app(GuardadorImagenWebp::class)->esImagen((string) file_get_contents($value->getRealPath()))) {
             $fail('La :attribute no es una imagen JPG, PNG ni WEBP legible.');
         }
     }

@@ -66,6 +66,14 @@
 
             <x-boton :href="route('pedidos.etiqueta', $pedido)" variante="secundario" icono="printer" target="_blank">Imprimir etiqueta</x-boton>
 
+            @if ($pedido->ordenTrabajo)
+                <x-boton :href="route('pedidos.orden-trabajo.show', $pedido)" variante="secundario" icono="clipboard-check">Orden de trabajo</x-boton>
+            @elseif ($pedido->puedeCrearOrdenTrabajo())
+                <x-boton :href="route('pedidos.orden-trabajo.create', $pedido)" variante="secundario" icono="clipboard-plus">Orden de trabajo</x-boton>
+            @elseif (! $pedido->estaEntregado())
+                <x-boton tipo="button" variante="secundario" icono="clipboard-plus" disabled title="{{ $pedido->motivoNoCreaOrdenTrabajo() }}">Orden de trabajo</x-boton>
+            @endif
+
             @if ($pedido->puedeCompartirTicket() && $mensajeListo !== null)
                 <x-boton href="https://wa.me/?text={{ rawurlencode($mensajeListo) }}" variante="secundario" icono="bell" target="_blank" rel="noopener">Avisar que está listo</x-boton>
             @endif
@@ -92,6 +100,10 @@
         </div>
 
         <div class="detalle-principal">
+            @if ($pedido->ordenTrabajo)
+                <p class="ayuda" data-orden-trabajo>Orden de trabajo: <span @class(['etiqueta', $pedido->ordenTrabajo->estado->claseEtiqueta()])>{{ $pedido->ordenTrabajo->estado->etiqueta() }}</span> <a href="{{ route('pedidos.orden-trabajo.show', $pedido) }}">Ver orden</a></p>
+            @endif
+
             @if ($pedido->cotizacion)
                 <p class="ayuda" data-origen-cotizacion>Origen: cotización <a href="{{ route('cotizaciones.show', $pedido->cotizacion) }}">{{ $pedido->cotizacion->folio_formateado }}</a> aceptada.</p>
             @endif

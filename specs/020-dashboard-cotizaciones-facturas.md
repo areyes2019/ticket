@@ -16,6 +16,14 @@
   en la vista previa.
 - [012-facturacion.md](012-facturacion.md): ruta nueva `facturas.vista-previa` y la hoja de la factura
   en HTML.
+- [022-ordenes-trabajo.md](022-ordenes-trabajo.md) (por la **Corrección 1**): ruta nueva
+  `pedidos.orden-trabajo.vista-previa`, parcial `ordenes-trabajo/_vista-previa` y `origen=dashboard`
+  en "avanzar". Se retira de "Fuera de alcance" de 022 una lista de órdenes fuera de la venta (aquí,
+  solo en el dashboard).
+
+> **Corrección 1 (2026-10-02, implementada):** cotizaciones y facturas pasan a **una sola
+> columna con acordeón**, y la columna que hoy es "Facturas" pasa a ser **Órdenes de trabajo**. Ver
+> la sección "Corrección 1". Donde esa sección contradiga lo de arriba, manda la corrección.
 
 ## Historia de usuario
 
@@ -254,6 +262,214 @@ por AJAX) el envío de `form[data-timbrar-cotizacion]`:
 - Volver al dashboard después de enviar por correo, pagar o duplicar desde el visor (esas acciones
   siguen su destino de 014 y 012).
 
+## Corrección 1: documentos en acordeón y columna de órdenes de trabajo
+
+> **Estado: implementada** el 2026-10-02 (ver "Estado de implementación de la corrección 1").
+
+### Historia de usuario
+
+Como usuario, quiero tener cotizaciones y facturas juntas en una sola columna, abriendo y cerrando
+cada grupo según lo que esté usando, y dedicar la segunda columna a las **órdenes de trabajo**, para
+ver desde el inicio qué está en dibujo y qué está en producción, y abrir cualquier orden en el visor
+sin salir de la página.
+
+```
+┌──────────────────────────┬──────────────────────────┬──────────────────────────┐
+│ Documentos               │ Órdenes de trabajo  🖨   │ Visor                    │
+│ ▾ Cotizaciones   👁  +   │ Buscar orden             │ (cotización, factura     │
+│   Buscar cotización      │ PED-0004 · En dibujo     │  u orden abierta)        │
+│   COT-0012 …             │ PED-0003 · En proceso    │                          │
+│ ▸ Facturas       👁      │ …                        │                          │
+└──────────────────────────┴──────────────────────────┴──────────────────────────┘
+```
+
+### Qué cambia
+
+| Antes | Ahora |
+|---|---|
+| Columna 1: Cotizaciones | Columna 1: **Documentos**, con dos secciones en acordeón: Cotizaciones y Facturas |
+| Columna 2: Facturas | Columna 2: **Órdenes de trabajo** |
+| Visor: cotización o factura | Visor: cotización, factura **u orden de trabajo** |
+
+Todo lo demás de esta spec sigue igual: los botones "Ver todas" y "Nueva cotización", la ventana de
+alta, el timbrado directo, los buscadores locales y las 25 más recientes por lista.
+
+### Columna 1: Documentos (acordeón)
+
+- Cada sección es un `<details>` con su `<summary>` como encabezado: icono, título, número de
+  documentos cargados y, a la derecha, sus botones (los de hoy). Funciona **sin JavaScript**.
+- Secciones **independientes**: se pueden tener las dos abiertas, una o ninguna. No es un acordeón
+  exclusivo.
+- Cada sección conserva su buscador (`data-filtro-local`), sus filas, su "Sin …" y, en Facturas,
+  `data-lista-facturas`.
+- **Al cargar:** Cotizaciones abierta y Facturas cerrada. Si el documento abierto es una factura
+  (`?factura=`), Facturas también se abre.
+- Abrir o cerrar una sección se recuerda **por navegador** (`localStorage`, envuelto en
+  `try/catch`). Sin almacenamiento disponible se usa la regla de "al cargar".
+- Un clic en los botones del encabezado ("Ver todas", "Nueva cotización") **no** abre ni cierra la
+  sección: hacen lo suyo (navegar o abrir la ventana). Lo resuelve el navegador, porque un `<summary>`
+  no se activa cuando el clic cae en un enlace o botón dentro de él; no hace falta JavaScript.
+- **Timbrado directo:** al llegar la factura nueva, si la sección Facturas está cerrada se abre, para
+  que se vea la fila insertada y resaltada (`timbrar-cotizacion.js`).
+
+### Columna 2: Órdenes de trabajo
+
+- Encabezado con icono (`bi-clipboard-check`) y "Órdenes de trabajo". A la derecha, un botón de solo
+  icono **"Hoja de producción"** (`bi-printer`, `pedidos.produccion`, pestaña nueva). No hay "Ver
+  todas": no existe un listado de órdenes fuera de la venta (022).
+- Buscador "Buscar orden" (`data-filtro-local`).
+- Las **25 órdenes más recientes** del usuario (`created_at` descendente), **de cualquier estado**,
+  con `pedido.cliente` y el conteo de líneas sin color precargados (sin N+1).
+- Vacía: "Sin órdenes de trabajo".
+
+**Componente `<x-ordenes-trabajo.fila>` (nuevo):**
+
+- Miniatura del diseño (o el icono si no tiene imagen), folio de la venta (PED-0004), cliente,
+  número de artículos, fecha corta y la etiqueta del estado (`claseEtiqueta()` de 022).
+- Si tiene líneas sin color, la marca "Falta color".
+- Enlace a `pedidos.orden-trabajo.show` con `data-vista-previa` hacia la vista previa, y
+  `data-ot="{id de la orden}"`.
+
+### Visor: vista previa de la orden
+
+**Ruta nueva** (en el grupo de 022, antes de `Route::resource('pedidos', ...)`):
+
+| Método | URL | Acción | Nombre |
+|---|---|---|---|
+| GET | `/pedidos/{pedido}/orden-trabajo/vista-previa` | fragmento HTML del visor de la orden | `pedidos.orden-trabajo.vista-previa` |
+
+`OrdenTrabajoController::vistaPrevia`: `Gate::authorize('verOrdenTrabajo')` (ajena o sin orden →
+404) y el parcial `ordenes-trabajo/_vista-previa`.
+
+**Parcial `ordenes-trabajo/_vista-previa`** (`data-vista-previa-de="{id de la orden}"`,
+`data-documento="ot"`):
+
+- Acciones: Volver (celular), **Avanzar** ("Pasar a En proceso" / "Pasar a Terminado", con la
+  misma confirmación de 022, solo si `puedeAvanzar()`), **Editar** (si `esEditable()`),
+  **Imprimir** (pestaña nueva), **Ver venta** y **Abrir** (detalle de la orden).
+- El cuerpo de `ordenes-trabajo/show`: encabezado con folio y estado, cliente y teléfono, tabla de
+  artículos con su color, alerta de líneas sin color y la imagen del diseño. Se extrae a un parcial
+  que comparten `show` y la vista previa, para no duplicarlo.
+- En `terminado`, "Avisar que está listo" como en 022.
+
+**Avanzar desde el dashboard:** el formulario lleva `origen=dashboard`. `OrdenTrabajoController::
+avanzar` redirige entonces a `dashboard?ot={id}` con el mismo aviso ("PED-0004 pasó a En proceso.");
+sin `origen`, sigue yendo al detalle de la orden. Es un envío normal (recarga la página), sin AJAX
+nuevo.
+
+### `DashboardController`
+
+- Se agrega `ordenesTrabajo` (las 25 de arriba). Facturas y cotizaciones siguen cargándose igual.
+- **Documento abierto:** `?factura=`, `?cotizacion=` o `?ot=` si es del usuario (ajeno o
+  inexistente se ignora). Sin parámetro, la primera cotización; sin cotizaciones, la primera factura;
+  sin facturas, la primera orden.
+- Pasa `facturasAbiertas = $abierta instanceof Factura` para abrir la sección al cargar.
+
+### `bandeja-documentos.js`
+
+- `data-parametro="cotizacion factura ot"`. Se usa `ot` (una palabra) porque el script lee
+  `fila.dataset[parametro]`, y `data-orden` ya lo usan las órdenes de compra.
+- Sin seleccionar: "Selecciona una cotización, una factura o una orden".
+- Las filas dentro de un `<details>` cerrado no cambian nada: el clic solo ocurre si están visibles.
+
+### Diseño adaptable (reemplaza la sección de arriba para el dashboard)
+
+- **Escritorio (≥1024px):** Documentos, Órdenes de trabajo y visor en tres columnas. Cada sección
+  del acordeón con scroll propio cuando las dos están abiertas, para que la columna no crezca más que
+  la pantalla.
+- **Tableta (768–1023px):** Documentos y Órdenes, una sobre otra, junto al visor.
+- **Celular (<768px):** las columnas apiladas; el visor a pantalla completa con "Volver".
+- Sin scroll horizontal de página. Esquinas rectas y Bootstrap Icons (003).
+
+### Pruebas (Pest)
+
+- **`DashboardTest`:**
+  - la columna "Órdenes de trabajo" solo con órdenes propias, de todos los estados, con folio,
+    cliente y estado; vacía, "Sin órdenes de trabajo";
+  - el botón "Hoja de producción" apunta a `pedidos.produccion`;
+  - cotizaciones y facturas dentro de dos `<details>`; Cotizaciones con `open` y Facturas sin él;
+  - `?factura=` propia abre la sección Facturas;
+  - `?ot=` propia abre la orden en el visor; ajena se ignora;
+  - sin cotizaciones ni facturas, se abre la orden más reciente;
+  - la lista de órdenes no hace una consulta por fila.
+- **`OrdenTrabajoTest`:**
+  - `vista-previa` muestra la orden con sus acciones; ajena o venta sin orden → 404;
+  - "avanzar" con `origen=dashboard` redirige a `dashboard?ot={id}` con el aviso; sin `origen`, al
+    detalle;
+  - la vista previa no muestra "Avanzar" ni "Editar" en una venta entregada.
+- **`TimbrarCotizacionTest`** y las pruebas de 011 a 022 siguen pasando.
+
+### Criterios de aceptación
+
+1. La primera columna se llama "Documentos" y tiene Cotizaciones y Facturas como secciones que se
+   abren y cierran por separado, también sin JavaScript.
+2. Al entrar, Cotizaciones está abierta y Facturas cerrada (salvo que se abra una factura); la
+   elección se recuerda en ese navegador.
+3. Los botones "Ver todas" y "Nueva cotización" funcionan sin abrir ni cerrar la sección.
+4. Al timbrar directo, la sección Facturas se abre y muestra la factura nueva arriba.
+5. La segunda columna muestra las 25 órdenes de trabajo más recientes con folio, cliente, estado y
+   "Falta color" si aplica, con buscador y el botón "Hoja de producción".
+6. Clic en una orden la muestra en el visor sin recargar; recargar la conserva (`?ot=`).
+7. Desde el visor, "Avanzar" pide confirmación y regresa al dashboard con la orden abierta y el
+   aviso.
+8. Nada funciona con órdenes ajenas (404). Pint, Pest y `node --check` pasan.
+
+### Supuestos asumidos
+
+1. El acordeón es de secciones independientes (no se cierra una al abrir la otra).
+2. Facturas empieza cerrada porque cotizaciones es lo que más se usa en el inicio.
+3. La columna de órdenes muestra **todos** los estados, incluidas las terminadas, ordenadas por
+   alta; el buscador y la etiqueta de estado bastan para ubicar las pendientes. Si se prefiere ver
+   solo `en_dibujo` y `en_proceso`, es un cambio de una línea en la consulta.
+4. No se agrega "Nueva orden" en la columna: una orden se crea desde su venta, que es donde se ve si
+   tiene pago (022).
+5. Avanzar desde el visor recarga la página (envío normal), en lugar de AJAX, para no agregar
+   llamadas nuevas a lo de 022.
+6. El parámetro de la URL es `ot` con el id de la orden; la ruta de la vista previa usa la venta,
+   como el resto de las rutas de 022.
+7. Este cambio reemplaza el supuesto 2 de arriba ("dos listas y un visor").
+
+### Estado de implementación de la corrección 1
+
+Implementada el 2026-10-02.
+
+- **Archivos nuevos**:
+  - `components/ordenes-trabajo/fila`, `ordenes-trabajo/_vista-previa` y `ordenes-trabajo/_detalle`
+    (el cuerpo de la orden, que ahora comparten `show` y la vista previa),
+  - `public/js/dashboard-secciones.js` (recuerda qué secciones del acordeón están abiertas).
+- **Archivos modificados**:
+  - `DashboardController` (órdenes recientes, `?ot=`, `facturasAbiertas`),
+  - `OrdenTrabajoController` (`vistaPrevia`; `datosVistaPrevia()` público y estático, que también usan
+    `show` y el dashboard; `avanzar` con `origen=dashboard`), `routes/web.php`,
+  - vistas `dashboard` y `ordenes-trabajo/show`,
+  - `timbrar-cotizacion.js` (abre la sección Facturas), `bandeja-documentos.js` (comentario) y
+    `app.css` (acordeón, miniatura de la fila y tarjetas de la orden en el visor),
+  - pruebas `DashboardTest` (6 nuevas) y `OrdenTrabajoTest` (2 nuevas y la ruta `vista-previa` en las
+    de sesión, venta ajena y venta sin orden).
+- **Decisiones al implementar**:
+  - "Ver todas" de Facturas pasó de enlace de texto a botón de solo icono (`bi-eye`), igual que el
+    de Cotizaciones, para que los dos encabezados del acordeón se vean parejos.
+  - El número junto a cada título es el de documentos **cargados** (máximo 25), no el total.
+  - La sección que contiene el documento abierto en el visor se queda abierta aunque el navegador
+    recuerde que estaba cerrada.
+  - Abrir Facturas por un timbrado también queda recordado (el evento `toggle` no distingue quién
+    abrió la sección).
+  - Con las dos secciones abiertas, cada lista se limita a `40vh` con scroll propio (`:has()`); con
+    una sola, la lista crece y la columna hace scroll.
+  - La fila de la orden muestra la miniatura del diseño en lugar de las iniciales del cliente; sin
+    imagen, un recuadro con el icono.
+  - No se agregó prueba JS para `bandeja-documentos.js`: es un script ligado al DOM sin funciones
+    exportadas, y las pruebas de `tests/js` solo cubren funciones puras.
+- **Verificación**:
+  - la suite Pest pasa completa (1052 pruebas),
+  - `node --test tests/js/*.test.js` pasa (37),
+  - Pint no reporta cambios y `node --check` valida los scripts tocados.
+
+  **No se revisó la UI en un navegador real.** Falta probar en escritorio, tableta y celular: abrir y
+  cerrar las secciones (también que los botones del encabezado no las abran ni cierren), que se
+  recuerden al recargar, el scroll con las dos abiertas, el clic en filas de órdenes, "Avanzar" desde
+  el visor y la sección Facturas abriéndose tras un timbrado directo.
+
 ## Estado de implementación
 
 Implementada el 2026-10-02, en tres entregas: inicio con dos listas y visor, ventana "Nueva
@@ -316,7 +532,8 @@ cotización" y timbrado directo.
 
 1. El inicio del dashboard muestra cotizaciones y facturas reales; la bandeja de correo de
    demostración pasa al menú de aplicaciones.
-2. No hay columna de carpetas: dos listas y un visor.
+2. No hay columna de carpetas: dos listas y un visor. *(Reemplazado por la Corrección 1:
+   documentos en acordeón, órdenes de trabajo y visor.)*
 3. Cada lista muestra las 25 más recientes, sin paginar; "Ver todas" lleva al listado completo.
 4. Los buscadores del dashboard filtran solo lo cargado.
 5. Se abre al entrar la cotización más reciente; el documento abierto queda en la URL.

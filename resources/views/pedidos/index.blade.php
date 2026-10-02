@@ -6,7 +6,10 @@
 @section('content')
     <div class="encabezado">
         <h1>Ventas</h1>
-        <x-boton :href="route('pedidos.create')" icono="plus-lg">Nueva venta</x-boton>
+        <div class="acciones">
+            <x-boton :href="route('pedidos.produccion')" variante="secundario" icono="printer" target="_blank">Hoja de producción</x-boton>
+            <x-boton :href="route('pedidos.create')" icono="plus-lg">Nueva venta</x-boton>
+        </div>
     </div>
 
     @include('documentos._mensajes')

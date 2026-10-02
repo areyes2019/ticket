@@ -24,7 +24,12 @@
             <td class="numero">{{ $pesos($pedido->total) }}</td>
             <td class="numero">{{ $pesos($pedido->totalPagado()) }}</td>
             <td class="numero">{{ $pesos($pedido->saldoPendiente()) }}</td>
-            <td><span @class(['etiqueta', $pedido->estado->claseEtiqueta()])>{{ $pedido->estado->etiqueta() }}</span></td>
+            <td>
+                <span @class(['etiqueta', $pedido->estado->claseEtiqueta()])>{{ $pedido->estado->etiqueta() }}</span>
+                @if ($pedido->necesitaOrdenTrabajo())
+                    <span class="etiqueta etiqueta-sin-orden" title="Ya tiene pago y todavía no tiene orden de trabajo">Sin orden</span>
+                @endif
+            </td>
             <td>
                 <x-boton :href="route('pedidos.show', $pedido)" variante="suave" icono="eye" title="Ver" descripcion="Ver {{ $pedido->folio_formateado }}" />
             </td>

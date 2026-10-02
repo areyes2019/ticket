@@ -56,6 +56,14 @@
             return;
         }
 
+        // En el dashboard la lista vive en una sección del acordeón: se abre
+        // para que se vea la factura nueva.
+        const seccion = lista.closest('details');
+
+        if (seccion) {
+            seccion.open = true;
+        }
+
         const fila = crear(html);
         lista.prepend(fila);
         fila.classList.add('bandeja-fila-nueva');

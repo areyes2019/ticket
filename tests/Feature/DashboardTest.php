@@ -3,8 +3,11 @@
 use App\Models\Cliente;
 use App\Models\Cotizacion;
 use App\Models\Factura;
+use App\Models\OrdenTrabajo;
+use App\Models\Pedido;
 use App\Models\User;
 use App\Support\Demo\BandejaCorreoDemo;
+use Illuminate\Support\Facades\DB;
 
 it('muestra la bandeja de correo de demostración en el dashboard', function () {
     $correo = (new BandejaCorreoDemo)->correos()[0];
@@ -85,7 +88,8 @@ describe('inicio con cotizaciones y facturas', function () {
         $this->actingAs(User::factory()->create())->get('/dashboard')
             ->assertOk()
             ->assertSee('Sin cotizaciones')
-            ->assertSee('Selecciona una cotización o una factura');
+            ->assertSee('Sin órdenes de trabajo')
+            ->assertSee('Selecciona una cotización, una factura o una orden');
     });
 
     it('ofrece ver todas y una ventana para crear la cotización', function () {
@@ -143,6 +147,100 @@ describe('inicio con cotizaciones y facturas', function () {
             ->assertSee(route('facturas.pdf', [$this->factura, 'descargar' => 1]), false)
             ->assertSee(route('facturas.enviar', $this->factura), false)
             ->assertSee(route('facturas.show', $this->factura), false);
+    });
+});
+
+describe('documentos en acordeón y órdenes de trabajo', function () {
+    beforeEach(function () {
+        $this->user = User::factory()->create();
+
+        // Una orden sin pasar por los pagos: lo que se prueba aquí es el dashboard.
+        $this->ordenDe = function (User $user, string $cliente, string $estado = 'en_dibujo'): OrdenTrabajo {
+            $pedido = Pedido::factory()->for($user)->conLinea()->create(['cliente_nombre' => $cliente]);
+            $orden = new OrdenTrabajo;
+            $orden->forceFill(['user_id' => $user->id, 'pedido_id' => $pedido->id, 'estado' => $estado])->save();
+
+            return $orden;
+        };
+    });
+
+    it('pone cotizaciones y facturas en un acordeón con Cotizaciones abierta', function () {
+        $cliente = Cliente::factory()->create(['user_id' => $this->user->id]);
+        Cotizacion::factory()->for($cliente)->conLinea()->create(['user_id' => $this->user->id]);
+        $factura = Factura::factory()->for($cliente)->timbrada()->conLinea()->create(['user_id' => $this->user->id]);
+
+        $this->actingAs($this->user)->get('/dashboard')
+            ->assertOk()
+            ->assertSee('data-seccion="cotizaciones" open>', false)
+            ->assertSee('data-seccion="facturas" >', false)
+            ->assertSee('aria-label="Ver todas las facturas"', false)
+            ->assertSee(asset('js/dashboard-secciones.js'), false);
+
+        $this->actingAs($this->user)->get('/dashboard?factura='.$factura->id)
+            ->assertSee('data-seccion="facturas"  open >', false);
+    });
+
+    it('lista las órdenes propias de todos los estados con la hoja de producción', function () {
+        $enDibujo = ($this->ordenDe)($this->user, 'Cliente en dibujo');
+        $terminada = ($this->ordenDe)($this->user, 'Cliente terminado', 'terminado');
+        ($this->ordenDe)(User::factory()->create(), 'Cliente ajeno');
+
+        $this->actingAs($this->user)->get('/dashboard')
+            ->assertOk()
+            ->assertSeeInOrder(['Órdenes de trabajo', 'Cliente terminado', 'Cliente en dibujo'])
+            ->assertSee($enDibujo->pedido->folio_formateado)
+            ->assertSee('En dibujo')
+            ->assertSee('Terminado')
+            ->assertSee(route('pedidos.orden-trabajo.vista-previa', $terminada->pedido), false)
+            ->assertSee('data-ot="'.$enDibujo->id.'"', false)
+            ->assertSee(route('pedidos.produccion'), false)
+            ->assertDontSee('Cliente ajeno');
+    });
+
+    it('marca las órdenes con líneas sin color', function () {
+        ($this->ordenDe)($this->user, 'Cliente sin color');
+
+        $this->actingAs($this->user)->get('/dashboard')->assertSee('Falta color');
+    });
+
+    it('abre la orden pedida en la URL e ignora una ajena', function () {
+        $orden = ($this->ordenDe)($this->user, 'Cliente propio');
+        $ajena = ($this->ordenDe)(User::factory()->create(), 'Cliente ajeno');
+        $cliente = Cliente::factory()->create(['user_id' => $this->user->id]);
+        Cotizacion::factory()->for($cliente)->conLinea()->create(['user_id' => $this->user->id]);
+
+        $this->actingAs($this->user)->get('/dashboard?ot='.$orden->id)
+            ->assertSee('data-vista-previa-de="'.$orden->id.'" data-documento="ot"', false);
+
+        $this->actingAs($this->user)->get('/dashboard?ot='.$ajena->id)
+            ->assertSee('data-documento="cotizacion"', false)
+            ->assertDontSee('data-documento="ot"', false);
+    });
+
+    it('sin cotizaciones ni facturas abre la orden más reciente', function () {
+        ($this->ordenDe)($this->user, 'Cliente anterior');
+        $reciente = ($this->ordenDe)($this->user, 'Cliente reciente');
+
+        $this->actingAs($this->user)->get('/dashboard')
+            ->assertSee('data-vista-previa-de="'.$reciente->id.'" data-documento="ot"', false);
+    });
+
+    it('no hace una consulta por cada orden de la lista', function () {
+        ($this->ordenDe)($this->user, 'Cliente 1');
+        $this->actingAs($this->user)->get('/dashboard');
+
+        DB::enableQueryLog();
+        $this->get('/dashboard')->assertOk();
+        $conUna = count(DB::getQueryLog());
+
+        foreach (range(2, 6) as $i) {
+            ($this->ordenDe)($this->user, "Cliente {$i}");
+        }
+
+        DB::flushQueryLog();
+        $this->get('/dashboard')->assertOk();
+
+        expect(count(DB::getQueryLog()))->toBe($conUna);
     });
 });
 

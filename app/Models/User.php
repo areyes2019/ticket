@@ -129,6 +129,14 @@ class User extends Authenticatable
     }
 
     /**
+     * @return HasMany<OrdenTrabajo, $this>
+     */
+    public function ordenesTrabajo(): HasMany
+    {
+        return $this->hasMany(OrdenTrabajo::class);
+    }
+
+    /**
      * @return HasMany<Configuracion, $this>
      */
     public function configuraciones(): HasMany

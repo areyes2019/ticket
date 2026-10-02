@@ -2269,9 +2269,9 @@ a.bandeja-abrir {
     }
 }
 
-/* Inicio del dashboard: cotizaciones y facturas recientes, cada una en su
-   lista, con un solo visor. Tableta: las dos listas, una sobre otra, junto al
-   visor. Celular: las listas apiladas y el visor a pantalla completa. */
+/* Inicio del dashboard: "Documentos" (cotizaciones y facturas en acordeón),
+   órdenes de trabajo y un solo visor. Tableta: las dos columnas, una sobre
+   otra, junto al visor. Celular: apiladas y el visor a pantalla completa. */
 .bandeja-dashboard {
     grid-template-columns: var(--ancho-bandeja-lista) var(--ancho-bandeja-lista) minmax(0, 1fr);
 }
@@ -2306,7 +2306,7 @@ a.bandeja-abrir {
         grid-row: 1 / span 2;
     }
 
-    .bandeja-lista-facturas {
+    .bandeja-lista-ordenes {
         border-top: 1px solid var(--color-borde);
     }
 }
@@ -2319,6 +2319,94 @@ a.bandeja-abrir {
     .bandeja-dashboard .bandeja-visor {
         grid-column: 1;
     }
+}
+
+/* Acordeón "Documentos": cada sección es un <details>. La columna hace scroll
+   si las dos están abiertas y no caben; entonces cada lista tiene además su
+   propio scroll, para que una no empuje a la otra fuera de la pantalla. */
+.bandeja-lista-documentos {
+    overflow-y: auto;
+}
+
+.bandeja-seccion {
+    border-bottom: 1px solid var(--color-borde);
+}
+
+.bandeja-seccion > summary {
+    padding-bottom: var(--espacio-3);
+    list-style: none;
+    cursor: pointer;
+    user-select: none;
+}
+
+.bandeja-seccion[open] > summary {
+    padding-bottom: 0;
+}
+
+.bandeja-seccion > summary::-webkit-details-marker {
+    display: none;
+}
+
+.bandeja-seccion > summary:hover {
+    background: var(--color-superficie-suave);
+}
+
+.bandeja-seccion-flecha {
+    font-size: 0.75em;
+    color: var(--color-texto-suave);
+    transition: transform 0.2s ease;
+}
+
+.bandeja-seccion[open] .bandeja-seccion-flecha {
+    transform: rotate(90deg);
+}
+
+.bandeja-seccion-cuenta {
+    font-size: var(--texto-pequeno);
+    font-weight: 400;
+    color: var(--color-texto-suave);
+}
+
+.bandeja-lista-documentos:has(.bandeja-seccion[open] ~ .bandeja-seccion[open]) .bandeja-filas {
+    max-height: 40vh;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bandeja-seccion-flecha {
+        transition: none;
+    }
+}
+
+/* Miniatura del diseño en la fila de una orden de trabajo, del tamaño del
+   avatar de las demás listas. */
+.bandeja-miniatura {
+    flex: none;
+    width: var(--lado-avatar);
+    height: var(--lado-avatar);
+    object-fit: cover;
+    border: 1px solid var(--color-borde);
+}
+
+.bandeja-miniatura-vacia {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-texto-suave);
+    background: var(--color-superficie-suave);
+}
+
+/* La orden de trabajo en el visor: sus tarjetas al ancho de una hoja. */
+.bandeja-documento > .tarjeta,
+.bandeja-documento > .alerta {
+    max-width: var(--ancho-hoja);
+    margin-right: auto;
+    margin-left: auto;
+}
+
+.bandeja-documento-titulo {
+    max-width: var(--ancho-hoja);
+    margin: 0 auto var(--espacio-2);
+    font-size: var(--texto-subtitulo);
 }
 
 /* Botones pequeños de solo icono junto al título de una lista del dashboard
@@ -2794,6 +2882,37 @@ a.bandeja-abrir {
     margin-left: var(--espacio-1);
     color: var(--color-texto-suave);
     cursor: help;
+}
+
+/* Orden de trabajo de la venta (022) */
+.etiqueta-orden-en-dibujo {
+    color: var(--color-advertencia);
+    background: var(--color-advertencia-fondo);
+}
+
+.etiqueta-orden-en-proceso {
+    color: var(--color-primario-oscuro);
+    background: var(--color-menu);
+}
+
+.etiqueta-orden-terminado {
+    color: var(--color-exito);
+    background: var(--color-exito-fondo);
+}
+
+/* Venta cobrada que todavía no tiene orden de trabajo, o línea sin color */
+.etiqueta-sin-orden {
+    margin-left: var(--espacio-1);
+    color: var(--color-advertencia);
+    background: var(--color-advertencia-fondo);
+    border: 1px solid var(--color-advertencia-borde);
+}
+
+.imagen-diseno {
+    display: block;
+    max-width: 100%;
+    max-height: 32rem;
+    border: 1px solid var(--color-borde);
 }
 
 .campos-cliente-pedido {
