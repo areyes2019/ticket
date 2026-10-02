@@ -12,6 +12,11 @@
     <p class="ayuda">Factura a partir de la cotización <a href="{{ route('cotizaciones.show', $cotizacionOrigen) }}">{{ $cotizacionOrigen->folio_formateado }}</a>. Revisa los datos fiscales antes de timbrar.</p>
 @endif
 
+{{-- La regla "si hay cotización, la cotización manda" (018) es invisible sin este aviso. --}}
+@if ($cotizacionOrigen || $factura?->cotizacion_id)
+    <x-alerta tipo="advertencia">El inventario se descontará al marcar la cotización como entregada, no al timbrar esta factura.</x-alerta>
+@endif
+
 @if ($facturaOrigen)
     <p class="ayuda">Copia de la factura <a href="{{ route('facturas.show', $facturaOrigen) }}">{{ $facturaOrigen->folioVisible() }}</a>. Revisa el cliente y los datos fiscales antes de timbrar.</p>
 @endif

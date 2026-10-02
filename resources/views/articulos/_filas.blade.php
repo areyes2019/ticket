@@ -13,6 +13,14 @@
             <td class="numero">${{ number_format((float) $articulo->costo_con_descuento, 2) }}</td>
             <td class="numero">${{ number_format($articulo->precio_unitario_con_iva, 2) }}</td>
             <td>
+                {{-- Las dos llevan a la ficha de existencias; con "No", la ficha abre el alta. --}}
+                @if ($articulo->existencia_exists)
+                    <a href="{{ route('existencias.show', $articulo) }}" class="etiqueta etiqueta-activa" title="Ver en existencias">Sí</a>
+                @else
+                    <a href="{{ route('existencias.show', $articulo) }}" title="Pasar {{ $articulo->modelo }} a existencias">No · Pasar a existencias</a>
+                @endif
+            </td>
+            <td>
                 <div class="acciones">
                     <x-boton :href="route('articulos.edit', $articulo)" variante="suave" icono="pencil" title="Editar" descripcion="Editar {{ $articulo->nombre }}" />
 
@@ -26,7 +34,7 @@
         </tr>
     @empty
         <tr>
-            <td colspan="7">
+            <td colspan="8">
                 {{ array_filter($filtros) !== [] ? 'Ningún artículo coincide con la búsqueda.' : 'Todavía no tienes artículos registrados.' }}
             </td>
         </tr>

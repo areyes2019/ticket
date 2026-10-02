@@ -24,7 +24,7 @@
         <form method="POST" action="{{ route('ordenes-compra.recibir', $orden) }}">
             @csrf
             <input type="hidden" name="origen" value="bandeja">
-            <x-boton variante="secundario" icono="box-seam" descripcion="Marcar como recibida" title="Marcar como recibida" data-confirmar="¿Marcar la orden como recibida? Ya no podrás cancelar su pago ni editarla." />
+            <x-boton variante="secundario" icono="box-seam" descripcion="Marcar como recibida" title="Marcar como recibida" data-confirmar="¿Marcar la orden como recibida? Su mercancía entrará a existencias y ya no podrás cancelar su pago ni editarla." />
         </form>
     @endif
     <form method="POST" action="{{ route('ordenes-compra.duplicar', $orden) }}">

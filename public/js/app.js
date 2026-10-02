@@ -85,3 +85,41 @@ window.copiarTexto = function (texto) {
         return false;
     });
 };
+
+// Menús desplegables de la barra (<details data-menu-grupo>): solo uno abierto a
+// la vez, y se cierran al hacer clic fuera o con Escape. Sin JavaScript siguen
+// funcionando como <details> normales.
+(function () {
+    const grupos = document.querySelectorAll('[data-menu-grupo]');
+
+    function cerrarTodos(excepto) {
+        grupos.forEach(function (grupo) {
+            if (grupo !== excepto) {
+                grupo.open = false;
+            }
+        });
+    }
+
+    grupos.forEach(function (grupo) {
+        grupo.addEventListener('toggle', function () {
+            if (grupo.open) {
+                cerrarTodos(grupo);
+            }
+        });
+    });
+
+    document.addEventListener('click', function (evento) {
+        if (!evento.target.closest('[data-menu-grupo]')) {
+            cerrarTodos(null);
+        }
+    });
+
+    document.addEventListener('keydown', function (evento) {
+        const abierto = document.querySelector('[data-menu-grupo][open]');
+
+        if (evento.key === 'Escape' && abierto) {
+            abierto.open = false;
+            abierto.querySelector('summary').focus();
+        }
+    });
+})();

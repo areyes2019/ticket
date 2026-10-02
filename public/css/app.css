@@ -85,6 +85,11 @@
     --color-avatar-5: #be123c;
     --color-avatar-6: #4d7c0f;
     --color-estrella: #f59e0b;
+
+    /* Menús desplegables de la barra */
+    --ancho-menu-panel: 19rem;
+    --lado-menu-panel-icono: 2.25rem;
+    --sombra-menu-panel: 0 12px 32px rgb(15 23 42 / 0.18), 0 2px 6px rgb(15 23 42 / 0.08);
 }
 
 *,
@@ -179,6 +184,156 @@ a > .icono,
 
 .menu form {
     margin: 0;
+}
+
+/* Grupos del menú (Compras, Ventas): <details> que despliega un panel. */
+.menu-grupo {
+    position: relative;
+}
+
+.menu-grupo > summary {
+    display: flex;
+    align-items: center;
+    color: var(--color-menu);
+    list-style: none;
+    cursor: pointer;
+    user-select: none;
+}
+
+.menu-grupo > summary::-webkit-details-marker {
+    display: none;
+}
+
+.menu-grupo > summary:hover,
+.menu-grupo[open] > summary {
+    color: var(--color-texto-invertido);
+}
+
+/* La sección donde está el usuario se subraya discretamente. */
+.menu-grupo > summary.menu-grupo-activo {
+    color: var(--color-texto-invertido);
+    box-shadow: inset 0 -2px 0 var(--color-menu-borde);
+}
+
+.menu-grupo-flecha {
+    margin-left: var(--espacio-1);
+    font-size: 0.75em;
+    transition: transform 0.2s ease;
+}
+
+.menu-grupo[open] .menu-grupo-flecha {
+    transform: rotate(180deg);
+}
+
+.menu-panel {
+    position: absolute;
+    top: calc(100% + var(--espacio-3));
+    left: 50%;
+    z-index: 20;
+    width: var(--ancho-menu-panel);
+    max-width: calc(100vw - 2 * var(--espacio-4));
+    padding: var(--espacio-2);
+    background: var(--color-superficie);
+    border: 1px solid var(--color-borde);
+    border-top: 3px solid var(--color-primario);
+    box-shadow: var(--sombra-menu-panel);
+    transform: translateX(-50%);
+    animation: menu-panel-entrada 0.18s ease-out;
+}
+
+/* Pico que une el panel con su título. */
+.menu-panel::before {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    margin-left: -6px;
+    border: 6px solid transparent;
+    border-bottom-color: var(--color-primario);
+    margin-bottom: 3px;
+}
+
+@keyframes menu-panel-entrada {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -6px);
+    }
+}
+
+.menu .menu-panel a {
+    display: flex;
+    align-items: center;
+    gap: var(--espacio-3);
+    padding: var(--espacio-2) var(--espacio-3);
+    color: var(--color-texto);
+    border-left: 2px solid transparent;
+}
+
+.menu .menu-panel a:hover,
+.menu .menu-panel a:focus-visible {
+    color: var(--color-texto);
+    background: var(--color-superficie-suave);
+    border-left-color: var(--color-primario);
+    outline: none;
+}
+
+.menu .menu-panel a[aria-current="page"] {
+    background: var(--color-precargado);
+    border-left-color: var(--color-primario);
+}
+
+.menu-panel-icono {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: var(--lado-menu-panel-icono);
+    height: var(--lado-menu-panel-icono);
+    color: var(--color-primario);
+    background: var(--color-precargado);
+    border: 1px solid var(--color-menu);
+    transition: color 0.15s ease, background 0.15s ease;
+}
+
+.menu-panel-icono > .icono {
+    margin-right: 0;
+    font-size: var(--texto-subtitulo);
+}
+
+.menu .menu-panel a:hover .menu-panel-icono,
+.menu .menu-panel a[aria-current="page"] .menu-panel-icono {
+    color: var(--color-texto-invertido);
+    background: var(--color-primario);
+    border-color: var(--color-primario);
+}
+
+.menu-panel-texto {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.menu-panel-texto strong {
+    font-weight: 600;
+}
+
+.menu-panel-texto small {
+    font-size: var(--texto-mini);
+    color: var(--color-texto-suave);
+}
+
+/* En pantallas angostas la barra se parte en renglones: el panel se alinea a
+   la izquierda de su título para no salirse de la pantalla. */
+@media (max-width: 767px) {
+    .menu-panel {
+        left: 0;
+        transform: none;
+        animation: none;
+    }
+
+    .menu-panel::before {
+        left: var(--espacio-5);
+    }
 }
 
 /* Botones */
@@ -563,6 +718,10 @@ h1.tarjeta-titulo {
 
 .tabla-fija .col-acciones {
     width: var(--ancho-columna-acciones);
+}
+
+.tabla-fija .col-existencias {
+    width: 9rem;
 }
 
 /* Constancia de Situación Fiscal (clientes) */
@@ -1917,4 +2076,52 @@ a.bandeja-abrir {
 .tabla .fila-total td {
     font-weight: 600;
     border-top: 2px solid var(--color-borde-campo);
+}
+
+/* Existencias (018): cifras del conjunto filtrado y artículos por pedir. */
+.cifras {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: var(--espacio-3);
+    margin-bottom: var(--espacio-4);
+}
+
+.cifra {
+    margin: 0;
+}
+
+.cifra p {
+    margin: 0;
+}
+
+.cifra-etiqueta {
+    font-size: var(--texto-mini);
+    color: var(--color-texto-suave);
+}
+
+.cifra-valor {
+    font-size: var(--texto-titulo);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.filtro-con-contador {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--espacio-2);
+}
+
+.filtro-con-contador .texto-discreto {
+    padding-bottom: var(--espacio-2);
+    white-space: nowrap;
+}
+
+.fila-por-pedir td {
+    background: var(--color-advertencia-fondo);
+}
+
+.etiqueta-por-pedir {
+    color: var(--color-advertencia);
+    background: var(--color-advertencia-fondo);
+    border: 1px solid var(--color-advertencia-borde);
 }

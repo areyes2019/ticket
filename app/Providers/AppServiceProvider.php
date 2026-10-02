@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Models\Cotizacion;
 use App\Models\CotizacionPago;
+use App\Models\Factura;
 use App\Models\OrdenCompra;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -32,11 +34,13 @@ class AppServiceProvider extends ServiceProvider
 
         Route::resourceVerbs(['create' => 'crear', 'edit' => 'editar']);
 
-        // Alias estables en movimientos.documentable_type: mover o renombrar
-        // un modelo no rompe los movimientos guardados.
+        // Alias estables en documentable_type (movimientos de Tesorería y de
+        // inventario): mover o renombrar un modelo no rompe lo guardado.
         Relation::enforceMorphMap([
             'cotizacion_pago' => CotizacionPago::class,
             'orden_compra' => OrdenCompra::class,
+            'factura' => Factura::class,
+            'cotizacion' => Cotizacion::class,
         ]);
     }
 }

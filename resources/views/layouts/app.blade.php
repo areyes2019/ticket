@@ -17,13 +17,59 @@
         <nav class="menu">
             @auth
                 <a href="{{ route('dashboard') }}"><x-icono nombre="speedometer2" />Dashboard</a>
-                <a href="{{ route('clientes.index') }}"><x-icono nombre="people" />Clientes</a>
-                <a href="{{ route('proveedores.index') }}"><x-icono nombre="truck" />Proveedores</a>
-                <a href="{{ route('ordenes-compra.index') }}"><x-icono nombre="cart" />Órdenes de compra</a>
-                <a href="{{ route('catalogos.index') }}"><x-icono nombre="collection" />Catálogos</a>
-                <a href="{{ route('articulos.index') }}"><x-icono nombre="box-seam" />Artículos</a>
-                <a href="{{ route('cotizaciones.index') }}"><x-icono nombre="file-earmark-text" />Cotizaciones</a>
-                <a href="{{ route('facturas.index') }}"><x-icono nombre="receipt" />Facturas</a>
+                <details class="menu-grupo" data-menu-grupo>
+                    <summary @if (request()->routeIs('proveedores.*', 'ordenes-compra.*')) class="menu-grupo-activo" @endif>
+                        <x-icono nombre="bag" />Compras<x-icono nombre="chevron-down" class="menu-grupo-flecha" />
+                    </summary>
+                    <div class="menu-panel">
+                        <a href="{{ route('proveedores.index') }}" @if (request()->routeIs('proveedores.*')) aria-current="page" @endif>
+                            <span class="menu-panel-icono"><x-icono nombre="truck" /></span>
+                            <span class="menu-panel-texto"><strong>Proveedores</strong><small>Directorio de quienes te venden</small></span>
+                        </a>
+                        <a href="{{ route('ordenes-compra.index') }}" @if (request()->routeIs('ordenes-compra.*')) aria-current="page" @endif>
+                            <span class="menu-panel-icono"><x-icono nombre="cart" /></span>
+                            <span class="menu-panel-texto"><strong>Órdenes de compra</strong><small>Pedidos, pagos y recepción</small></span>
+                        </a>
+                    </div>
+                </details>
+                <details class="menu-grupo" data-menu-grupo>
+                    <summary @if (request()->routeIs('facturas.*', 'cotizaciones.*', 'clientes.*')) class="menu-grupo-activo" @endif>
+                        <x-icono nombre="graph-up-arrow" />Ventas<x-icono nombre="chevron-down" class="menu-grupo-flecha" />
+                    </summary>
+                    <div class="menu-panel">
+                        <a href="{{ route('facturas.index') }}" @if (request()->routeIs('facturas.*')) aria-current="page" @endif>
+                            <span class="menu-panel-icono"><x-icono nombre="receipt" /></span>
+                            <span class="menu-panel-texto"><strong>Facturas</strong><small>Comprobantes emitidos y timbrado</small></span>
+                        </a>
+                        <a href="{{ route('cotizaciones.index') }}" @if (request()->routeIs('cotizaciones.*')) aria-current="page" @endif>
+                            <span class="menu-panel-icono"><x-icono nombre="file-earmark-text" /></span>
+                            <span class="menu-panel-texto"><strong>Cotizaciones</strong><small>Propuestas para tus clientes</small></span>
+                        </a>
+                        <a href="{{ route('clientes.index') }}" @if (request()->routeIs('clientes.*')) aria-current="page" @endif>
+                            <span class="menu-panel-icono"><x-icono nombre="people" /></span>
+                            <span class="menu-panel-texto"><strong>Clientes</strong><small>Datos fiscales y de contacto</small></span>
+                        </a>
+                    </div>
+                </details>
+                <details class="menu-grupo" data-menu-grupo>
+                    <summary @if (request()->routeIs('articulos.*', 'catalogos.*', 'existencias.*')) class="menu-grupo-activo" @endif>
+                        <x-icono nombre="boxes" />Inventario<x-icono nombre="chevron-down" class="menu-grupo-flecha" />
+                    </summary>
+                    <div class="menu-panel">
+                        <a href="{{ route('articulos.index') }}" @if (request()->routeIs('articulos.*')) aria-current="page" @endif>
+                            <span class="menu-panel-icono"><x-icono nombre="box-seam" /></span>
+                            <span class="menu-panel-texto"><strong>Artículos</strong><small>Catálogo general con precios</small></span>
+                        </a>
+                        <a href="{{ route('catalogos.index') }}" @if (request()->routeIs('catalogos.*')) aria-current="page" @endif>
+                            <span class="menu-panel-icono"><x-icono nombre="collection" /></span>
+                            <span class="menu-panel-texto"><strong>Catálogos</strong><small>Listas de cada proveedor</small></span>
+                        </a>
+                        <a href="{{ route('existencias.index') }}" @if (request()->routeIs('existencias.*')) aria-current="page" @endif>
+                            <span class="menu-panel-icono"><x-icono nombre="boxes" /></span>
+                            <span class="menu-panel-texto"><strong>Existencias</strong><small>Piezas en bodega y reposición</small></span>
+                        </a>
+                    </div>
+                </details>
                 <a href="{{ route('tesoreria.movimientos.index') }}"><x-icono nombre="cash-coin" />Contabilidad</a>
                 @can('ver-historial-accesos')
                     <a href="{{ route('historial-accesos.index') }}"><x-icono nombre="clock-history" />Historial de accesos</a>

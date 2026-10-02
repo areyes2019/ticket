@@ -36,6 +36,10 @@ existen:
   ([remotas/030](remotas/030-total-al-peso-cerrado.md)) y PWA
   ([remotas/029](remotas/029-pwa-mostrador.md)): recibir una orden no toca existencias.
 
+> **Modificada por [018-inventario.md](018-inventario.md):** recibir una orden **sí** suma sus
+> líneas a existencias, dentro de una transacción que vuelve a comprobar `puedeRecibirse()`. Las
+> afirmaciones de esta spec de que recibir no toca existencias quedan superadas por la 018.
+
 ## Historia de usuario
 
 Como usuario registrado, quiero generar órdenes de compra a mis proveedores, con el mismo estilo de
@@ -277,8 +281,8 @@ No hay ruta pública ni firmada.
     `duplicada_de_id` = la original (asunción 6 de la auditoría). Redirige al detalle de la copia.
     Se puede duplicar en cualquier estado.
   - `recibir`: solo si `puedeRecibirse()`. Acción manual, total, sin validar cantidades y
-    **sin efecto sobre existencias**. Irreversible en esta historia. Flash "Orden de compra OC-0015
-    recibida."
+    **sin efecto sobre existencias** (superado por [018](018-inventario.md): ahora suma
+    existencias). Irreversible en esta historia. Flash "Orden de compra OC-0015 recibida."
 - **`EnvioOrdenCompraController`**: igual que `EnvioCotizacionController`.
   - `correo`: `EnviarOrdenCompraRequest`, envía `OrdenCompraMail` síncrono; si falla, error en la
     bolsa `envio` y el estado no cambia. Si sale, `marcarEnviada()`. Se puede enviar o reenviar en

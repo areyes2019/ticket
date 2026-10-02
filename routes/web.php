@@ -14,8 +14,10 @@ use App\Http\Controllers\EnvioCotizacionController;
 use App\Http\Controllers\EnvioFacturaController;
 use App\Http\Controllers\EnvioOrdenCompraController;
 use App\Http\Controllers\EstilosController;
+use App\Http\Controllers\ExistenciaController;
 use App\Http\Controllers\ExportacionArticulosController;
 use App\Http\Controllers\FacturaController;
+use App\Http\Controllers\GenerarOrdenesCompraController;
 use App\Http\Controllers\HistorialAccesoController;
 use App\Http\Controllers\ImagenesArticulosController;
 use App\Http\Controllers\ImportacionArticulosController;
@@ -113,6 +115,19 @@ Route::middleware(['auth', AsegurarUsuarioActivo::class])->group(function () {
     // parameters(): sin él, Str::singular daría un parámetro en inglés y el binding fallaría.
     Route::resource('ordenes-compra', OrdenCompraController::class)
         ->parameters(['ordenes-compra' => 'ordenCompra']);
+
+    // Inventario. Las rutas estáticas van antes de {articulo}, o se tomarían
+    // por un artículo.
+    Route::prefix('existencias')->name('existencias.')->group(function () {
+        Route::get('/', [ExistenciaController::class, 'index'])->name('index');
+        Route::get('buscar', [ExistenciaController::class, 'buscar'])->name('buscar');
+        Route::get('agregar', [ExistenciaController::class, 'agregar'])->name('agregar');
+        Route::post('generar-ordenes-compra', GenerarOrdenesCompraController::class)->name('generar-ordenes-compra');
+        Route::get('{articulo}', [ExistenciaController::class, 'show'])->name('show');
+        Route::post('{articulo}/ajuste', [ExistenciaController::class, 'ajuste'])->name('ajuste');
+        Route::put('{articulo}/parametros', [ExistenciaController::class, 'parametros'])->name('parametros');
+        Route::delete('{articulo}', [ExistenciaController::class, 'destroy'])->name('destroy');
+    });
 
     // Tesorería: en el menú se llama "Contabilidad".
     Route::prefix('tesoreria')->name('tesoreria.')->group(function () {

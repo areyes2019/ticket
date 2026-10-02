@@ -20,5 +20,6 @@
             </a>
         </th>
     @endforeach
+    <th>En existencias</th>
     <th>Acciones</th>
 </tr>

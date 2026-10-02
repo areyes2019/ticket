@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\EstadoCotizacion;
+use App\Enums\MotivoMovimientoInventario;
 use App\Enums\TasaIva;
 use App\Enums\TipoDescuento;
 use App\Http\Requests\CotizacionRequest;
@@ -13,6 +14,7 @@ use App\Models\Cotizacion;
 use App\Models\CotizacionLinea;
 use App\Models\User;
 use App\Services\Cotizaciones\GeneradorPdfCotizacion;
+use App\Services\Inventario\RegistradorInventario;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -173,16 +175,33 @@ class CotizacionController extends Controller
         return $request->boolean('descargar') ? $pdf->download($nombre) : $pdf->stream($nombre);
     }
 
-    public function entregar(Cotizacion $cotizacion): RedirectResponse
+    /**
+     * La mercancía sale de existencias al entregarse (018). Es la única salida
+     * que da de alta un artículo sin fila: lo crea en 0 y deja el faltante.
+     * La comprobación va dentro de la transacción para no descontar dos veces.
+     */
+    public function entregar(Cotizacion $cotizacion, RegistradorInventario $inventario): RedirectResponse
     {
         Gate::authorize('operar', $cotizacion);
 
-        if (! $cotizacion->puedeEntregarse()) {
+        $entregada = DB::transaction(function () use ($cotizacion, $inventario) {
+            $bloqueada = Cotizacion::whereKey($cotizacion->id)->lockForUpdate()->firstOrFail();
+
+            if (! $bloqueada->puedeEntregarse()) {
+                return false;
+            }
+
+            $bloqueada->estado = EstadoCotizacion::ProductoEntregado;
+            $bloqueada->save();
+
+            $inventario->salidaPorDocumento($bloqueada, $bloqueada->lineas, MotivoMovimientoInventario::VentaCotizacion, creaFila: true);
+
+            return true;
+        });
+
+        if (! $entregada) {
             return back()->with('error', 'Solo una cotización pagada se puede marcar como entregada.');
         }
-
-        $cotizacion->estado = EstadoCotizacion::ProductoEntregado;
-        $cotizacion->save();
 
         return back()->with('exito', 'Cotización marcada como entregada.');
     }

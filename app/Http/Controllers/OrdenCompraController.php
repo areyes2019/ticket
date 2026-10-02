@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\EstadoOrdenCompra;
+use App\Enums\MotivoMovimientoInventario;
 use App\Enums\TasaIva;
 use App\Enums\TipoDescuento;
 use App\Http\Controllers\Concerns\RegresaABandeja;
@@ -11,6 +12,7 @@ use App\Http\Requests\OrdenCompraRequest;
 use App\Models\OrdenCompra;
 use App\Models\OrdenCompraLinea;
 use App\Models\User;
+use App\Services\Inventario\RegistradorInventario;
 use App\Services\OrdenesCompra\GeneradorPdfOrdenCompra;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
@@ -80,7 +82,7 @@ class OrdenCompraController extends Controller
     {
         $orden = DB::transaction(function () use ($request) {
             $orden = $request->user()->ordenesCompra()->make($request->datosOrden());
-            $orden->folio = $this->siguienteFolio($request->user());
+            $orden->folio = OrdenCompra::siguienteFolio($request->user());
             $orden->aplicarTotales($request->totales());
             $orden->save();
 
@@ -173,19 +175,33 @@ class OrdenCompraController extends Controller
     }
 
     /**
-     * Recepción manual, total e irreversible. No toca existencias: el sistema
-     * no lleva inventario.
+     * Recepción manual, total e irreversible. Suma las líneas a existencias
+     * (018): un artículo que no estaba marcado entra solo.
      */
-    public function recibir(Request $request, OrdenCompra $ordenCompra): RedirectResponse
+    public function recibir(Request $request, OrdenCompra $ordenCompra, RegistradorInventario $inventario): RedirectResponse
     {
         Gate::authorize('operar', $ordenCompra);
 
-        if (! $ordenCompra->puedeRecibirse()) {
+        // La comprobación va dentro de la transacción, con la orden bloqueada:
+        // un doble clic o un F5 encuentran la orden ya recibida y no suman dos veces.
+        $recibida = DB::transaction(function () use ($ordenCompra, $inventario) {
+            $orden = OrdenCompra::whereKey($ordenCompra->id)->lockForUpdate()->firstOrFail();
+
+            if (! $orden->puedeRecibirse()) {
+                return false;
+            }
+
+            $orden->estado = EstadoOrdenCompra::Recibida;
+            $orden->save();
+
+            $inventario->entradaPorDocumento($orden, $orden->lineas, MotivoMovimientoInventario::RecepcionOrden);
+
+            return true;
+        });
+
+        if (! $recibida) {
             return back()->with('error', 'Solo una orden pagada se puede marcar como recibida.');
         }
-
-        $ordenCompra->estado = EstadoOrdenCompra::Recibida;
-        $ordenCompra->save();
 
         return redirect()->to($this->destinoOrdenCompra($request, $ordenCompra))
             ->with('exito', "Orden de compra {$ordenCompra->folio_formateado} recibida.");
@@ -202,7 +218,7 @@ class OrdenCompraController extends Controller
 
         $copia = DB::transaction(function () use ($request, $ordenCompra) {
             $copia = $ordenCompra->replicate(['folio', 'estado', 'duplicada_de_id', 'fecha_entrega_esperada', 'cuenta_id', 'fecha_pago', 'created_at', 'updated_at']);
-            $copia->folio = $this->siguienteFolio($request->user());
+            $copia->folio = OrdenCompra::siguienteFolio($request->user());
             $copia->estado = EstadoOrdenCompra::Borrador;
             $copia->duplicada_de_id = $ordenCompra->id;
             $copia->save();
@@ -235,21 +251,6 @@ class OrdenCompraController extends Controller
             'cuentas' => $orden->user->cuentas()->activas()->orderBy('nombre')->pluck('nombre', 'id')->all(),
             'hoy' => now(config('app.zona_negocio'))->toDateString(),
         ];
-    }
-
-    /**
-     * Consecutivo por usuario que nunca se reutiliza. El bloqueo de la fila del
-     * usuario evita que dos altas simultáneas tomen el mismo folio. El máximo
-     * existente es una red de seguridad por si el contador se quedó atrás.
-     */
-    private function siguienteFolio(User $user): int
-    {
-        $bloqueado = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
-        $folio = max($bloqueado->ultimo_folio_orden_compra, (int) $bloqueado->ordenesCompra()->max('folio')) + 1;
-
-        $bloqueado->forceFill(['ultimo_folio_orden_compra' => $folio])->save();
-
-        return $folio;
     }
 
     /**

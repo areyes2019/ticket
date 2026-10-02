@@ -88,7 +88,7 @@
             @if ($cotizacion->puedeEntregarse())
                 <form method="POST" action="{{ route('cotizaciones.entregar', $cotizacion) }}">
                     @csrf
-                    <x-boton variante="secundario" icono="box-seam" data-confirmar="¿Marcar la cotización como entregada?">Marcar como entregado</x-boton>
+                    <x-boton variante="secundario" icono="box-seam" data-confirmar="¿Marcar la cotización como entregada? Sus artículos saldrán de existencias.">Marcar como entregado</x-boton>
                 </form>
             @endif
 

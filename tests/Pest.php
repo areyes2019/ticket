@@ -2,8 +2,11 @@
 
 use App\Models\Articulo;
 use App\Models\Catalogo;
+use App\Models\Existencia;
+use App\Models\Factura;
 use App\Models\Proveedor;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -120,4 +123,41 @@ function articuloFacturable(User $user, array $atributos = []): Articulo
         ->create(['user_id' => $user->id]);
 
     return Articulo::factory()->for($catalogo)->create(['user_id' => $user->id, 'precio_proveedor' => '100.00', ...$atributos]);
+}
+
+/**
+ * Agrega una línea a una cotización, factura u orden de compra, con o sin
+ * artículo. Los importes no importan para el inventario.
+ */
+function agregarLinea(Model $documento, ?Articulo $articulo, int $cantidad): void
+{
+    $datos = [
+        'orden' => $documento->lineas()->count() + 1,
+        'articulo_id' => $articulo?->id,
+        'cantidad' => $cantidad,
+        'descripcion' => $articulo->nombre ?? 'Flete',
+        'modelo' => $articulo->modelo ?? 'LIBRE',
+        'precio_unitario' => '100.00',
+        'tasa_iva' => '16',
+        'importe' => '100.00',
+        'iva_importe' => '16.00',
+    ];
+
+    if ($documento instanceof Factura) {
+        $datos += ['clave_prod_serv' => $articulo->clave_prod_serv, 'clave_unidad' => $articulo->clave_unidad, 'objeto_imp' => $articulo->objeto_imp];
+    }
+
+    $documento->lineas()->forceCreate($datos);
+}
+
+/**
+ * Marca el artículo "en existencias" con estos números, sin movimiento (como
+ * si viniera de antes).
+ */
+function marcarExistencia(Articulo $articulo, int $existencia, int $faltante = 0, int $minimo = 0, ?int $maximo = null): Existencia
+{
+    $fila = new Existencia;
+    $fila->forceFill(['articulo_id' => $articulo->id, 'existencia' => $existencia, 'faltante_pendiente' => $faltante, 'minimo' => $minimo, 'maximo' => $maximo])->save();
+
+    return $fila;
 }

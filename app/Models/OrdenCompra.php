@@ -170,6 +170,23 @@ class OrdenCompra extends Model
     }
 
     /**
+     * Consecutivo por usuario que nunca se reutiliza. El bloqueo de la fila del
+     * usuario evita que dos altas simultáneas tomen el mismo folio. El máximo
+     * existente es una red de seguridad por si el contador se quedó atrás.
+     * Se llama dentro de una transacción (alta, duplicado y las órdenes que
+     * genera Existencias).
+     */
+    public static function siguienteFolio(User $user): int
+    {
+        $bloqueado = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+        $folio = max($bloqueado->ultimo_folio_orden_compra, (int) $bloqueado->ordenesCompra()->max('folio')) + 1;
+
+        $bloqueado->forceFill(['ultimo_folio_orden_compra' => $folio])->save();
+
+        return $folio;
+    }
+
+    /**
      * "OC-0015".
      *
      * @return Attribute<string, never>

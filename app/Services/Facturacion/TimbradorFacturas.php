@@ -4,11 +4,14 @@ namespace App\Services\Facturacion;
 
 use App\Enums\EstadoComplementoPago;
 use App\Enums\EstadoFactura;
+use App\Enums\MotivoMovimientoInventario;
 use App\Enums\TipoErrorTimbrado;
 use App\Models\ComplementoPago;
 use App\Models\Factura;
+use App\Services\Inventario\RegistradorInventario;
 use Closure;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Timbra facturas y complementos de pago contra facturapi.io.
@@ -22,6 +25,7 @@ class TimbradorFacturas
     public function __construct(
         private FacturapiCliente $facturapi,
         private ConstructorPayloadFacturapi $payload,
+        private RegistradorInventario $inventario,
     ) {}
 
     public function timbrar(Factura $factura): ResultadoTimbrado
@@ -48,7 +52,16 @@ class TimbradorFacturas
                 return $error->tipo === TipoErrorTimbrado::Datos ? ResultadoTimbrado::ErrorDatos : ResultadoTimbrado::ErrorPac;
             }
 
-            $factura->aplicarRespuestaTimbrado($respuesta, $receptor, $this->emisor($respuesta));
+            // El timbrado y la salida de existencias se guardan juntos. Una
+            // factura que viene de una cotización no descuenta: lo hace la
+            // cotización al entregarse (018). Un artículo sin fila no se mueve.
+            DB::transaction(function () use ($factura, $respuesta, $receptor) {
+                $factura->aplicarRespuestaTimbrado($respuesta, $receptor, $this->emisor($respuesta));
+
+                if ($factura->cotizacion_id === null) {
+                    $this->inventario->salidaPorDocumento($factura, $factura->lineas, MotivoMovimientoInventario::VentaFactura, creaFila: false);
+                }
+            });
 
             return ResultadoTimbrado::Timbrada;
         });

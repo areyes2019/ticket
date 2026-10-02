@@ -167,6 +167,7 @@ class ArticuloController extends Controller
     {
         return $request->user()->articulos()
             ->with(['proveedor', 'catalogo'])
+            ->withExists('existencia')
             ->filtrar($request->filtros())
             ->ordenar($request->orden(), $request->direccion())
             ->paginate($request->porPagina())

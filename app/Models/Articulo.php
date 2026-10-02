@@ -12,6 +12,8 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
@@ -149,6 +151,25 @@ class Articulo extends Model
     public function catalogo(): BelongsTo
     {
         return $this->belongsTo(Catalogo::class)->withTrashed();
+    }
+
+    /**
+     * Su fila en existencias, si está marcado (sin las quitadas, por el soft
+     * delete).
+     *
+     * @return HasOne<Existencia, $this>
+     */
+    public function existencia(): HasOne
+    {
+        return $this->hasOne(Existencia::class);
+    }
+
+    /**
+     * @return HasMany<MovimientoInventario, $this>
+     */
+    public function movimientosInventario(): HasMany
+    {
+        return $this->hasMany(MovimientoInventario::class);
     }
 
     /**

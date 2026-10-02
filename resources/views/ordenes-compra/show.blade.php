@@ -66,7 +66,7 @@
             @if ($orden->puedeRecibirse())
                 <form method="POST" action="{{ route('ordenes-compra.recibir', $orden) }}">
                     @csrf
-                    <x-boton variante="secundario" icono="box-seam" data-confirmar="¿Marcar la orden como recibida? Ya no podrás cancelar su pago ni editarla.">Marcar como recibida</x-boton>
+                    <x-boton variante="secundario" icono="box-seam" data-confirmar="¿Marcar la orden como recibida? Su mercancía entrará a existencias y ya no podrás cancelar su pago ni editarla.">Marcar como recibida</x-boton>
                 </form>
             @endif
 

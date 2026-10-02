@@ -3,8 +3,11 @@
 namespace App\Services\Facturacion;
 
 use App\Enums\EstadoCancelacion;
+use App\Enums\EstadoFactura;
 use App\Enums\MotivoCancelacion;
 use App\Models\Factura;
+use App\Services\Inventario\RegistradorInventario;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -14,7 +17,10 @@ use Illuminate\Support\Facades\Log;
  */
 class CanceladorFacturas
 {
-    public function __construct(private FacturapiCliente $facturapi) {}
+    public function __construct(
+        private FacturapiCliente $facturapi,
+        private RegistradorInventario $inventario,
+    ) {}
 
     /**
      * La sustitución se manda con el UUID fiscal de la sustituta (así lo
@@ -35,7 +41,7 @@ class CanceladorFacturas
         $factura->factura_sustituta_id = $motivo->requiereSustituta() ? $sustituta?->id : null;
 
         $estado = $this->estadoDe($respuesta, $factura) ?? EstadoCancelacion::Pendiente;
-        $factura->aplicarEstadoCancelacion($estado);
+        $this->aplicar($factura, $estado);
 
         return $estado;
     }
@@ -55,10 +61,27 @@ class CanceladorFacturas
         $estado = $this->estadoDe($respuesta, $factura);
 
         if ($estado !== null && $estado !== $factura->estado_cancelacion) {
-            $factura->aplicarEstadoCancelacion($estado);
+            $this->aplicar($factura, $estado);
         }
 
         return true;
+    }
+
+    /**
+     * Único punto donde una factura pasa a cancelada. Con accepted devuelve a
+     * existencias, en la misma transacción, lo que la factura sacó al
+     * timbrarse (018); mientras siga pending la mercancía sigue fuera.
+     * devolverFactura() no devuelve dos veces aunque se refresque de nuevo.
+     */
+    private function aplicar(Factura $factura, EstadoCancelacion $estado): void
+    {
+        DB::transaction(function () use ($factura, $estado) {
+            $factura->aplicarEstadoCancelacion($estado);
+
+            if ($factura->estado === EstadoFactura::Cancelada) {
+                $this->inventario->devolverFactura($factura);
+            }
+        });
     }
 
     /**
