@@ -1,59 +1,56 @@
 @extends('layouts.app')
 
 @section('title', 'Órdenes de compra · '.config('app.name'))
-@section('contenido-clase', 'contenido-ancho')
+@section('contenido-clase', 'contenido-bandeja')
 
 @section('content')
-    <div class="encabezado">
-        <h1>Órdenes de compra</h1>
-        <x-boton :href="route('ordenes-compra.create')" icono="plus-lg">Nueva orden de compra</x-boton>
-    </div>
+    <h1 class="solo-lectores">Órdenes de compra</h1>
 
     @include('documentos._mensajes')
 
-    {{-- Los filtros de columna se asocian con form="filtros-ordenes". Las fechas y el periodo
-         toman el valor de los atajos al pulsarlos (data-busqueda-sincronizar). --}}
-    <form id="filtros-ordenes" method="GET" action="{{ route('ordenes-compra.index') }}" class="buscador" data-busqueda-dinamica="{{ route('ordenes-compra.buscar') }}">
-        @include('ordenes-compra._atajos')
-        <input type="hidden" name="periodo" value="{{ $periodo === App\Http\Requests\ListadoOrdenesCompraRequest::PERIODO_DEFECTO ? '' : $periodo }}" data-busqueda-sincronizar>
-        <x-campo nombre="fecha_desde" etiqueta="Desde" tipo="date" :valor="$fechaDesde" data-busqueda-sincronizar />
-        <x-campo nombre="fecha_hasta" etiqueta="Hasta" tipo="date" :valor="$fechaHasta" data-busqueda-sincronizar />
-        {{-- La búsqueda es dinámica; el botón solo existe como respaldo cuando no hay JavaScript. --}}
-        <noscript><x-boton icono="search">Buscar</x-boton></noscript>
-        <x-boton :href="route('ordenes-compra.index')" variante="secundario" icono="x-lg">Limpiar</x-boton>
+    @foreach (['envio', 'pago'] as $bolsa)
+        @if ($errors->{$bolsa}->any())
+            <x-alerta tipo="error">
+                @foreach ($errors->{$bolsa}->all() as $error)
+                    <p>{{ $error }}</p>
+                @endforeach
+            </x-alerta>
+        @endif
+    @endforeach
+
+    <x-alerta tipo="error" hidden data-compartir-error></x-alerta>
+    <x-alerta tipo="error" hidden data-busqueda-error>No se pudo realizar la búsqueda. Intenta de nuevo.</x-alerta>
+    <x-alerta tipo="error" hidden data-vista-previa-error>No se pudo abrir la orden de compra. Intenta de nuevo.</x-alerta>
+
+    {{-- Carpeta y etiqueta viajan ocultas: los enlaces de la izquierda las
+         cambian (data-busqueda-sincronizar). El buscador se asocia con form="…". --}}
+    <form id="filtros-ordenes" method="GET" action="{{ route('ordenes-compra.index') }}" data-busqueda-dinamica="{{ route('ordenes-compra.buscar') }}" hidden>
+        <input type="hidden" name="periodo" value="{{ $parametros['periodo'] ?? '' }}" data-busqueda-sincronizar>
+        <input type="hidden" name="estado" value="{{ $estado }}" data-busqueda-sincronizar>
     </form>
 
-    <x-alerta tipo="error" hidden data-busqueda-error>No se pudo realizar la búsqueda. Intenta de nuevo.</x-alerta>
+    <div class="bandeja" data-bandeja-documentos data-parametro="orden" data-sin-seleccion="Selecciona una orden de compra">
+        @include('ordenes-compra._carpetas')
 
-    <x-card class="tabla-contenedor">
-        <table class="tabla" data-busqueda-tabla>
-            <thead>
-                <tr>
-                    <th>Folio</th>
-                    <th>Proveedor</th>
-                    <th>RFC</th>
-                    <th>Estado</th>
-                    <th class="numero">Total</th>
-                    <th>Fecha</th>
-                    <th>Acciones</th>
-                </tr>
-                <tr class="tabla-filtros">
-                    <th><x-campo nombre="folio" etiqueta="Filtrar por folio" tipo="search" :valor="$campos['folio']" form="filtros-ordenes" autocomplete="off" /></th>
-                    <th><x-campo nombre="proveedor" etiqueta="Filtrar por proveedor" tipo="search" :valor="$campos['proveedor']" form="filtros-ordenes" autocomplete="off" /></th>
-                    <th><x-campo nombre="rfc" etiqueta="Filtrar por RFC" tipo="search" :valor="$campos['rfc']" form="filtros-ordenes" autocomplete="off" /></th>
-                    <th><x-campo nombre="estado" etiqueta="Filtrar por estado" tipo="select" :opciones="App\Enums\EstadoOrdenCompra::opciones()" :valor="$campos['estado']" vacia="Todos" form="filtros-ordenes" /></th>
-                    <th></th>
-                    <th></th>
-                    <th></th>
-                </tr>
-            </thead>
+        <section class="bandeja-lista" aria-label="Lista de órdenes de compra" data-busqueda-tabla>
+            <x-bandeja.encabezado-lista texto="Buscar por folio, proveedor o RFC" nombre="q" :valor="$texto" formulario="filtros-ordenes" />
+
             @include('ordenes-compra._filas')
-        </table>
-    </x-card>
+            @include('ordenes-compra._paginacion')
+        </section>
 
-    @include('ordenes-compra._paginacion')
+        <section class="bandeja-visor bandeja-visor-documento" aria-label="Orden de compra abierta" data-visor-documento>
+            @if ($abierta)
+                @include('ordenes-compra._vista-previa', ['orden' => $abierta])
+            @else
+                <p class="bandeja-sin-seleccion"><x-icono nombre="cart" />Selecciona una orden de compra</p>
+            @endif
+        </section>
+    </div>
 @endsection
 
 @push('scripts')
     <script src="{{ asset('js/busqueda-dinamica.js') }}"></script>
+    <script src="{{ asset('js/bandeja-documentos.js') }}"></script>
+    <script src="{{ asset('js/compartir-pdf.js') }}"></script>
 @endpush

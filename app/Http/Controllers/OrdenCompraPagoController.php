@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\EstadoOrdenCompra;
 use App\Enums\TipoMovimiento;
 use App\Exceptions\OperacionTesoreriaRechazada;
+use App\Http\Controllers\Concerns\RegresaABandeja;
 use App\Http\Requests\OrdenCompraPagoRequest;
 use App\Models\OrdenCompra;
 use App\Services\Tesoreria\RegistradorMovimientos;
@@ -19,6 +20,8 @@ use Illuminate\Validation\ValidationException;
  */
 class OrdenCompraPagoController extends Controller
 {
+    use RegresaABandeja;
+
     public function __construct(private readonly RegistradorMovimientos $registrador) {}
 
     /**
@@ -53,7 +56,7 @@ class OrdenCompraPagoController extends Controller
             return $bloqueada;
         });
 
-        return redirect()->route('ordenes-compra.show', $ordenCompra)
+        return redirect()->to($this->destinoOrdenCompra($request, $ordenCompra))
             ->with('exito', 'Pago de $'.number_format((float) $orden->total, 2)." registrado en {$cuenta->nombre}. La orden quedó pagada.");
     }
 

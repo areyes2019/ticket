@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\EstadoOrdenCompra;
 use App\Enums\TasaIva;
 use App\Enums\TipoDescuento;
+use App\Http\Controllers\Concerns\RegresaABandeja;
 use App\Http\Requests\ListadoOrdenesCompraRequest;
 use App\Http\Requests\OrdenCompraRequest;
 use App\Models\OrdenCompra;
@@ -21,20 +22,50 @@ use Illuminate\View\View;
 
 class OrdenCompraController extends Controller
 {
+    use RegresaABandeja;
+
+    /**
+     * Bandeja: carpetas (periodos), lista y la vista previa de la orden pedida
+     * en la URL o, si no hay, de la primera de la lista.
+     */
     public function index(ListadoOrdenesCompraRequest $request): View
     {
-        return view('ordenes-compra.index', $this->datosListado($request, $this->ordenes($request)));
+        $ordenes = $this->ordenes($request);
+
+        $abierta = $request->abierta() === null ? null : $request->user()->ordenesCompra()->find($request->abierta());
+        $abierta ??= $ordenes->first();
+        $abierta?->load(['proveedor', 'lineas', 'cuenta']);
+
+        return view('ordenes-compra.index', [
+            ...$this->datosListado($request, $ordenes),
+            ...($abierta ? $this->datosAcciones($abierta) : []),
+            'abierta' => $abierta,
+        ]);
     }
 
     /**
-     * Solo atajos, filas y paginación, para la búsqueda dinámica (AJAX). Los
-     * enlaces de página apuntan al listado completo.
+     * Solo carpetas, filas y paginación, para la búsqueda dinámica (AJAX). Los
+     * enlaces de página apuntan a la bandeja completa.
      */
     public function buscar(ListadoOrdenesCompraRequest $request): View
     {
         $ordenes = $this->ordenes($request)->withPath(route('ordenes-compra.index'));
 
         return view('ordenes-compra._resultados', $this->datosListado($request, $ordenes));
+    }
+
+    /**
+     * La hoja de la orden en HTML con sus acciones, para el visor de la
+     * bandeja (AJAX).
+     */
+    public function vistaPrevia(OrdenCompra $ordenCompra): View
+    {
+        Gate::authorize('view', $ordenCompra);
+
+        return view('ordenes-compra._vista-previa', [
+            ...$this->datosAcciones($ordenCompra),
+            'orden' => $ordenCompra->load(['proveedor', 'lineas', 'cuenta']),
+        ]);
     }
 
     public function create(Request $request): View
@@ -69,9 +100,8 @@ class OrdenCompraController extends Controller
         $ordenCompra->load(['proveedor', 'lineas', 'cuenta', 'duplicadaDe']);
 
         return view('ordenes-compra.show', [
+            ...$this->datosAcciones($ordenCompra),
             'orden' => $ordenCompra,
-            'cuentas' => $ordenCompra->user->cuentas()->activas()->orderBy('nombre')->pluck('nombre', 'id')->all(),
-            'hoy' => now(config('app.zona_negocio'))->toDateString(),
         ]);
     }
 
@@ -146,7 +176,7 @@ class OrdenCompraController extends Controller
      * Recepción manual, total e irreversible. No toca existencias: el sistema
      * no lleva inventario.
      */
-    public function recibir(OrdenCompra $ordenCompra): RedirectResponse
+    public function recibir(Request $request, OrdenCompra $ordenCompra): RedirectResponse
     {
         Gate::authorize('operar', $ordenCompra);
 
@@ -157,7 +187,8 @@ class OrdenCompraController extends Controller
         $ordenCompra->estado = EstadoOrdenCompra::Recibida;
         $ordenCompra->save();
 
-        return back()->with('exito', "Orden de compra {$ordenCompra->folio_formateado} recibida.");
+        return redirect()->to($this->destinoOrdenCompra($request, $ordenCompra))
+            ->with('exito', "Orden de compra {$ordenCompra->folio_formateado} recibida.");
     }
 
     /**
@@ -183,8 +214,27 @@ class OrdenCompraController extends Controller
             return $copia;
         });
 
-        return redirect()->route('ordenes-compra.show', $copia)
+        // Desde la bandeja, la copia queda abierta en ella.
+        $destino = $request->input('origen') === 'bandeja'
+            ? route('ordenes-compra.index', ['orden' => $copia->id])
+            : route('ordenes-compra.show', $copia);
+
+        return redirect()->to($destino)
             ->with('exito', "Se creó {$copia->folio_formateado} como copia de {$ordenCompra->folio_formateado}.");
+    }
+
+    /**
+     * Lo que pide la ventana de pago, en el detalle y en la vista previa de
+     * la bandeja.
+     *
+     * @return array<string, mixed>
+     */
+    private function datosAcciones(OrdenCompra $orden): array
+    {
+        return [
+            'cuentas' => $orden->user->cuentas()->activas()->orderBy('nombre')->pluck('nombre', 'id')->all(),
+            'hoy' => now(config('app.zona_negocio'))->toDateString(),
+        ];
     }
 
     /**
@@ -244,12 +294,41 @@ class OrdenCompraController extends Controller
     {
         return [
             'ordenes' => $ordenes,
-            'campos' => $request->campos(),
             'periodo' => $request->periodo(),
-            'fechaDesde' => $request->fechaDesde()?->toDateString(),
-            'fechaHasta' => $request->fechaHasta()?->toDateString(),
-            'hayFiltros' => $request->hayFiltros(),
+            'estado' => $request->estado(),
+            'texto' => $request->texto(),
+            'parametros' => $request->parametros(),
+            'contadores' => $this->contadores($request->user()),
         ];
+    }
+
+    /**
+     * Cuántas órdenes tiene cada carpeta, sin etiqueta ni búsqueda, en una
+     * sola consulta.
+     *
+     * @return array<string, int>
+     */
+    private function contadores(User $user): array
+    {
+        $columnas = [];
+        $valores = [];
+
+        foreach (array_keys(ListadoOrdenesCompraRequest::PERIODOS) as $periodo) {
+            [$desde, $hasta] = ListadoOrdenesCompraRequest::rango($periodo);
+
+            if ($desde === null) {
+                $columnas[] = "count(*) as {$periodo}";
+
+                continue;
+            }
+
+            $columnas[] = "coalesce(sum(case when created_at between ? and ? then 1 else 0 end), 0) as {$periodo}";
+            array_push($valores, $desde->utc(), $hasta->utc());
+        }
+
+        $fila = $user->ordenesCompra()->toBase()->selectRaw(implode(', ', $columnas), $valores)->first();
+
+        return array_map('intval', (array) $fila);
     }
 
     /**

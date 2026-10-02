@@ -8,6 +8,10 @@ como egreso de Tesorería sujeto a saldo no negativo, cancelación del pago, rec
 duplicar, y el bloqueo real del borrado de proveedores. La parte del navegador y el protocolo entre
 navegador y servidor se rehicieron para Laravel + Blade + JavaScript nativo.
 
+**Toma la distribución de:** [013-dashboard-bandeja-correo.md](013-dashboard-bandeja-correo.md),
+igual que [014-cotizaciones-bandeja.md](014-cotizaciones-bandeja.md): el listado es una bandeja de
+tres columnas (carpetas, lista y visor) con sus piezas y estilos (ver "Bandeja").
+
 **Modifica:** [004-gestion-proveedores.md](004-gestion-proveedores.md) (`tiene_ordenes_activas`
 deja de ser columna y se deriva de las órdenes), [011-cotizaciones.md](011-cotizaciones.md)
 (`articulos.sugerencias` acepta proveedor y precio de costo; `CotizacionMail` usa el trait
@@ -229,6 +233,7 @@ binding implícito falla. Se usa `ordenCompra` (camelCase) para que el argumento
 |---|---|---|---|
 | GET | `/ordenes-compra` | listado, filtros y página en la URL | `ordenes-compra.index` |
 | GET | `/ordenes-compra/buscar` | fragmento HTML para la búsqueda dinámica | `ordenes-compra.buscar` |
+| GET | `/ordenes-compra/{ordenCompra}/vista-previa` | fragmento HTML del visor de la bandeja | `ordenes-compra.vista-previa` |
 | GET | `/ordenes-compra/crear` | formulario de alta | `ordenes-compra.create` |
 | POST | `/ordenes-compra` | alta | `ordenes-compra.store` |
 | GET | `/ordenes-compra/{ordenCompra}` | detalle con pago y acciones | `ordenes-compra.show` |
@@ -248,11 +253,14 @@ No hay ruta pública ni firmada.
 ### Controladores
 
 - **`OrdenCompraController`**
-  - `index`: órdenes del usuario con `proveedor` precargado, filtradas con
+  - `index`: la bandeja. Órdenes del usuario con `proveedor` precargado, filtradas con
     `ListadoOrdenesCompraRequest`, orden `created_at desc, id desc`, 25 por página con
-    `withQueryString()`. Sin parámetros de fecha se aplica "Este mes".
-  - `buscar`: la misma consulta; devuelve `ordenes-compra/_resultados` con
-    `->withPath(route('ordenes-compra.index'))`.
+    `withQueryString()`. Además pasa `abierta` (la de `?orden=` si es del usuario —una ajena o
+    inexistente se ignora— o la primera de la página) y `contadores` (órdenes por carpeta, sin
+    etiqueta ni búsqueda, en una sola consulta), como `CotizacionController` (014).
+  - `buscar`: la misma consulta; devuelve `ordenes-compra/_resultados` (carpetas, filas y
+    paginación) con `->withPath(route('ordenes-compra.index'))`.
+  - `vistaPrevia`: `Gate::authorize('view')` (ajena → 404) y el parcial `_vista-previa`.
   - `create`: proveedores del usuario (sin eliminados, por nombre comercial).
   - `store`: en una transacción asigna folio, crea la orden en `borrador`, guarda líneas y totales.
     Redirige al detalle: "Orden de compra OC-0015 creada."
@@ -429,12 +437,21 @@ Artículos.
 - `monto` no tiene regla: se ignora.
 - El saldo no negativo **no** se valida aquí: lo revisa el servicio con la cuenta bloqueada.
 
-**`ListadoOrdenesCompraRequest`**: como `ListadoCotizacionesRequest` en su versión original, no
-rechaza nada; sanea `proveedor` (nombre comercial o razón social, parcial), `rfc` (parcial), `folio`
-(exacto, acepta `OC-0015` o `15`), `estado` (lista blanca), `fecha_desde`/`fecha_hasta` (`Y-m-d`),
-`periodo` (`hoy`, `semana`, `mes`) y `pagina`. Las fechas son días calendario completos en
-`config('app.zona_negocio')`, convertidos a UTC antes de comparar contra `created_at`. Si llegan
-fechas, mandan sobre el periodo.
+**`ListadoOrdenesCompraRequest`**: los parámetros de la bandeja, como `ListadoCotizacionesRequest`
+(014). No rechaza nada: un valor inválido se ignora.
+
+| Parámetro | Valores | Por defecto |
+|---|---|---|
+| `periodo` | `hoy`, `semana`, `mes`, `todas` | `mes` |
+| `estado` | `borrador`, `enviada`, `pagada`, `recibida` | ninguno |
+| `q` | texto libre: nombre comercial, contacto o RFC del proveedor (incluidos eliminados; el RFC sin espacios y en mayúsculas), o folio (`15`, `0015`, `OC-0015`, con **O**) | vacío |
+| `orden` | id de la orden abierta | la primera de la lista |
+| `page` | página | 1 |
+
+Los periodos son días calendario completos en `config('app.zona_negocio')`, convertidos a UTC antes
+de comparar contra `created_at`; reutiliza `ListadoCotizacionesRequest::rango()`. `parametros()`
+arma los enlaces sin `orden`: al cambiar de carpeta o etiqueta se abre la primera de la lista
+nueva.
 
 `attributes()` en español en todos.
 
@@ -447,20 +464,45 @@ Todas con `layouts/app`, `x-card`, `x-campo`, `x-boton`, `x-alerta`, `x-icono` y
 En `layouts/app.blade.php`, **"Órdenes de compra"** (`bi-cart`) justo después de "Proveedores"
 (asunción 8 de la auditoría).
 
-### `ordenes-compra/index.blade.php` — listado
+### Bandeja (`ordenes-compra/index.blade.php`)
 
-Listado clásico, sin bandeja (asunción 5 de la auditoría):
+La misma distribución de 013 y 014, con órdenes reales del usuario:
 
-- Tabla: folio, proveedor (nombre comercial; RFC debajo si existe), estado (etiqueta con color),
-  total, fecha (zona del negocio) y "Ver".
-- Fila de filtros bajo los títulos: proveedor, RFC, folio y estado (`select`), dentro del
-  formulario `data-busqueda-dinamica` apuntando a `ordenes-compra.buscar`.
-- Sobre la tabla: enlaces "Hoy", "Esta semana", "Este mes" (`data-busqueda-enlace`, el activo
-  resaltado, por defecto "Este mes") y dos campos `date` "Desde"/"Hasta", con
-  `data-busqueda-sincronizar` en `periodo`, `fecha_desde` y `fecha_hasta`, como en 011.
-- Sin órdenes: "No hay órdenes de compra con estos filtros."
-- Botón "Nueva orden de compra".
-- Parciales `_resultados`, `_filas` y `_paginacion`.
+- `@section('contenido-clase', 'contenido-bandeja')`: ocupa toda la pantalla bajo el menú.
+- `<h1>` solo para lectores, avisos de sesión y errores de las bolsas `envio` y `pago`.
+- Formulario oculto `#filtros-ordenes` con `data-busqueda-dinamica` y los campos ocultos `periodo` y
+  `estado` (`data-busqueda-sincronizar`); el buscador de la lista se asocia con
+  `form="filtros-ordenes"`.
+
+| Columna | Contenido |
+|---|---|
+| Izquierda (`_carpetas`) | **"Nueva orden"** (`bi-plus-lg`), carpetas Hoy (`bi-calendar-day`), Esta semana (`bi-calendar-week`), Este mes (`bi-calendar-month`, activa al entrar) y Todas (`bi-inbox`) con contador; etiquetas Borrador, Enviada, Pagada y Recibida con el color de su estado |
+| Centro | Buscador "Buscar por folio, proveedor o RFC", filas (`_filas`) y paginación (`_paginacion`) |
+| Derecha | La vista previa de `abierta`, o "Selecciona una orden de compra" |
+
+- Carpeta y etiqueta se combinan; pulsar la etiqueta activa la quita. Son enlaces normales
+  (`data-busqueda-enlace`).
+- **Fila** (`<x-ordenes-compra.fila>`): iniciales y nombre comercial del proveedor
+  (`<x-bandeja.avatar>`), fecha (hora si es de hoy, "Ayer" o fecha corta), folio, total, etiqueta
+  de estado y, si no está recibida y tiene fecha esperada, "Entrega dd/mm". Es un enlace al detalle
+  con `data-vista-previa`. Sin resultados: "Sin órdenes de compra".
+- **Vista previa** (`_vista-previa`): barra de acciones con "Volver" (celular), Enviar por correo,
+  Compartir por WhatsApp (el PDF se baja al apuntar al botón), Registrar pago (si `enviada`), Marcar
+  como recibida (si `pagada`), Duplicar, Ver PDF, Descargar y "Abrir" (el detalle). Editar, Cancelar
+  pago y Eliminar siguen **solo** en el detalle. Debajo, la etiqueta de estado, el pago si existe y
+  la hoja.
+- Las acciones de la vista previa mandan `origen=bandeja` y regresan a la bandeja anterior (solo si
+  la página anterior es la bandeja; si no, a `/ordenes-compra?orden={id}`); duplicar abre la copia
+  en la bandeja. El trait `RegresaABandeja` gana `destinoOrdenCompra()`, con la misma regla que
+  `destinoCotizacion()`.
+- **Hoja** (`<x-ordenes-compra.hoja>`): el contenido del PDF en HTML. La usan la vista previa y el
+  detalle.
+- Las ventanas de envío y pago viven en el parcial `ordenes-compra/_dialogos` (con `$origen`
+  opcional), compartido por el detalle y la vista previa.
+- **Diseño adaptable**: el de 013 (tres columnas en escritorio; lista y visor con "Carpetas" en
+  tableta; una columna con "Volver" en celular). Sin scroll horizontal.
+- **Sin JavaScript**: carpetas, etiquetas y paginación recargan la página, el buscador funciona con
+  Enter y una fila abre el detalle.
 
 ### `ordenes-compra/crear.blade.php` y `editar.blade.php` (`_formulario.blade.php`)
 
@@ -536,6 +578,10 @@ cotizaciones; la columna "Utilidad" queda vacía cuando `muestra_utilidad` es `f
     líneas con `articulo_id` (las libres se quedan, porque no dependen del proveedor) y recalcula;
     si cancela, regresa el `select` al proveedor anterior.
   - Cotización y factura no tienen ese `select`, así que su comportamiento no cambia.
+- **`bandeja-cotizaciones.js` pasa a `bandeja-documentos.js`** y se vuelve genérico: se activa en
+  `[data-bandeja-documentos]`, con `data-parametro` (el parámetro de la URL y el atributo de las
+  filas: `cotizacion` o `orden`) y `data-sin-seleccion` (texto del visor vacío). El visor es
+  `[data-visor-documento]`. La bandeja de cotizaciones no cambia de comportamiento.
 - **`compartir-pdf.js`**, **`busqueda-dinamica.js`**, **`totales-documento.js`** y `app.js`
   (diálogos, `data-confirmar`, `data-enviar-una-vez`): sin cambios.
 
@@ -636,7 +682,15 @@ Implementada el 2026-10-01.
   anterior a esta historia: `EstiloUniformeTest` por el `<button>` de `dashboard.blade.php`). Pint
   no reporta cambios y las 36 pruebas de Node pasan.
 
-  **No se revisó la UI en un navegador real.** Falta probar el formulario (buscador filtrado por
+- **Bandeja (013/014)**, agregada el mismo día a pedido del usuario: el listado en tabla se reemplazó
+  por la bandeja. Archivos nuevos: `components/ordenes-compra/fila` y `hoja` (la hoja era el parcial
+  `_hoja`), `ordenes-compra/_carpetas`, `_vista-previa` y `_dialogos`. Se eliminó `_atajos`.
+  `bandeja-cotizaciones.js` pasó a `bandeja-documentos.js` (genérico) y `RegresaABandeja` ganó
+  `destinoOrdenCompra()`. Las pruebas del listado se reemplazaron por el bloque `bandeja` de
+  `OrdenesCompraTest` (28 pruebas en el archivo); la suite pasa 794 de 795 (la misma falla anterior).
+
+  **No se revisó la UI en un navegador real.** Falta probar la bandeja (clic en filas, filtrar con
+  una orden abierta, acciones desde el visor, celular), el formulario (buscador filtrado por
   proveedor, confirmación al cambiar de proveedor, totales en vivo), los diálogos de envío y pago,
   cancelar el pago, recibir, compartir por WhatsApp en un teléfono y el PDF impreso, y confirmar que
   los formularios de cotización y factura siguen igual.
@@ -669,8 +723,10 @@ Implementada el 2026-10-01.
 14. Solo se edita en `borrador`/`enviada` (editar una `enviada` la regresa a `borrador`) y solo se
     elimina en `borrador`.
 15. Los totales siempre los calcula el servidor; un total manipulado en la petición no se guarda.
-16. El listado filtra combinando proveedor, RFC, folio y estado, y por fecha con Hoy/Esta
-    semana/Este mes ("Este mes" por defecto) o rango.
+16. `/ordenes-compra` es una bandeja de tres columnas: carpetas Hoy, Esta semana, Este mes (activa al
+    entrar) y Todas con contador; etiquetas por estado que se combinan con la carpeta; un buscador por
+    folio, proveedor o RFC; y la orden elegida a la derecha en HTML, sin recargar, con sus acciones.
+    Las acciones hechas desde la bandeja regresan a ella con la orden abierta.
 17. Duplicar crea una copia en `borrador` con folio propio, mismo proveedor, líneas, descuento global
     y observaciones, sin pago ni fecha esperada.
 18. Un proveedor con al menos una orden en estado distinto de `recibida` (incluido `borrador`) no se
@@ -722,7 +778,9 @@ Implementada el 2026-10-01.
    reutiliza.
 3. La orden acepta líneas libres (resuelve la contradicción de la remota con los fletes).
 4. `fecha_pago` no puede ser futura, en la zona del negocio.
-5. Listado clásico (tabla, filtros por columna, atajos y rango), no bandeja.
+5. ~~Listado clásico (tabla, filtros por columna, atajos y rango), no bandeja.~~ **Redefinida
+   después de implementar**: el listado es una bandeja como la de cotizaciones (013/014), sin rango
+   de fechas personalizado.
 6. Duplicar guarda `duplicada_de_id`.
 7. Un artículo eliminado o que ya no es del proveedor no se agrega; las líneas guardadas conservan
    su copia y no se revalidan al enviar o pagar.

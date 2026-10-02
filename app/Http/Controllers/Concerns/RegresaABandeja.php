@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Concerns;
 
 use App\Models\Cotizacion;
+use App\Models\OrdenCompra;
 use Illuminate\Http\Request;
 
 trait RegresaABandeja
@@ -15,14 +16,27 @@ trait RegresaABandeja
      */
     protected function destinoCotizacion(Request $request, Cotizacion $cotizacion): string
     {
+        return $this->destinoDocumento($request, 'cotizaciones', 'cotizacion', $cotizacion);
+    }
+
+    /**
+     * Lo mismo para una orden de compra (?orden=8 en su bandeja).
+     */
+    protected function destinoOrdenCompra(Request $request, OrdenCompra $orden): string
+    {
+        return $this->destinoDocumento($request, 'ordenes-compra', 'orden', $orden);
+    }
+
+    private function destinoDocumento(Request $request, string $rutas, string $parametro, Cotizacion|OrdenCompra $documento): string
+    {
         if ($request->input('origen') !== 'bandeja') {
-            return route('cotizaciones.show', $cotizacion);
+            return route("{$rutas}.show", $documento);
         }
 
         $anterior = url()->previous();
 
-        return str_starts_with($anterior, route('cotizaciones.index').'?')
+        return str_starts_with($anterior, route("{$rutas}.index").'?')
             ? $anterior
-            : route('cotizaciones.index', ['cotizacion' => $cotizacion->id]);
+            : route("{$rutas}.index", [$parametro => $documento->id]);
     }
 }

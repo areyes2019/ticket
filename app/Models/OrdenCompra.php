@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\EstadoOrdenCompra;
 use App\Enums\TipoDescuento;
+use Carbon\CarbonImmutable;
 use Database\Factories\OrdenCompraFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -49,11 +50,6 @@ class OrdenCompra extends Model
     protected $attributes = [
         'estado' => 'borrador',
     ];
-
-    /**
-     * Columnas que se pueden filtrar desde el listado (además de las fechas).
-     */
-    public const FILTROS = ['proveedor', 'rfc', 'folio', 'estado'];
 
     /**
      * Columnas de totales que escribe la calculadora.
@@ -184,31 +180,36 @@ class OrdenCompra extends Model
     }
 
     /**
-     * Filtros del listado, combinados con Y. Los vacíos se ignoran. Las fechas
-     * son límites inclusivos ya en la zona del negocio.
+     * Filtros de la bandeja, combinados con Y. Los vacíos se ignoran. Las
+     * fechas son límites inclusivos ya en la zona del negocio.
+     *
+     * El texto busca en el nombre comercial, el contacto y el RFC del
+     * proveedor (incluidos los eliminados) y, si parece un folio, también por
+     * folio.
      *
      * @param  Builder<self>  $consulta
-     * @param  array<string, mixed>  $filtros
+     * @param  array{texto?: string, folio?: int|null, estado?: string, desde?: CarbonImmutable|null, hasta?: CarbonImmutable|null}  $filtros
      */
     #[Scope]
     protected function filtrar(Builder $consulta, array $filtros): void
     {
-        $proveedor = $filtros['proveedor'] ?? '';
-        $rfc = $filtros['rfc'] ?? '';
+        $texto = trim($filtros['texto'] ?? '');
+        $folio = $filtros['folio'] ?? null;
 
-        if ($proveedor !== '') {
-            $consulta->whereHas('proveedor', fn (Builder $proveedores) => $proveedores->withTrashed()->where(
-                fn (Builder $datos) => $datos->where('nombre_comercial', 'like', "%{$proveedor}%")
-                    ->orWhere('nombre_contacto', 'like', "%{$proveedor}%")
-            ));
-        }
+        if ($texto !== '') {
+            $rfc = strtoupper((string) preg_replace('/\s+/', '', $texto));
 
-        if ($rfc !== '') {
-            $consulta->whereHas('proveedor', fn (Builder $proveedores) => $proveedores->withTrashed()->where('rfc', 'like', "%{$rfc}%"));
-        }
+            $consulta->where(function (Builder $coincidencias) use ($texto, $rfc, $folio) {
+                $coincidencias->whereHas('proveedor', fn (Builder $proveedores) => $proveedores->withTrashed()->where(
+                    fn (Builder $datos) => $datos->where('nombre_comercial', 'like', "%{$texto}%")
+                        ->orWhere('nombre_contacto', 'like', "%{$texto}%")
+                        ->orWhere('rfc', 'like', "%{$rfc}%")
+                ));
 
-        if (($filtros['folio'] ?? null) !== null) {
-            $consulta->where('folio', $filtros['folio']);
+                if ($folio !== null) {
+                    $coincidencias->orWhere('folio', $folio);
+                }
+            });
         }
 
         if (($filtros['estado'] ?? '') !== '') {

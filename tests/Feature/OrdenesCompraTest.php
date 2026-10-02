@@ -9,6 +9,7 @@ use App\Models\Cuenta;
 use App\Models\OrdenCompra;
 use App\Models\Proveedor;
 use App\Models\User;
+use Illuminate\Support\Facades\Mail;
 
 /**
  * Artículo de lista $200 en un catálogo con 10% de descuento y 25% de
@@ -199,39 +200,106 @@ describe('recepción y duplicado', function () {
     });
 });
 
-describe('listado', function () {
-    it('filtra por proveedor, RFC, folio y estado', function () {
-        $otro = Proveedor::factory()->for($this->user)->create(['nombre_comercial' => 'Papelera Sur', 'rfc' => 'PSU010101AB1']);
-        $a = OrdenCompra::factory()->for($this->proveedor)->create();
-        $b = OrdenCompra::factory()->for($otro)->enEstado(EstadoOrdenCompra::Enviada)->create();
-
-        $this->actingAs($this->user)->get('/ordenes-compra?proveedor=papelera')->assertSee($b->folio_formateado)->assertDontSee($a->folio_formateado);
-        $this->actingAs($this->user)->get('/ordenes-compra?rfc=psu01')->assertSee($b->folio_formateado)->assertDontSee($a->folio_formateado);
-        $this->actingAs($this->user)->get('/ordenes-compra?folio=OC-0001')->assertSee($a->folio_formateado)->assertDontSee($b->folio_formateado);
-        $this->actingAs($this->user)->get('/ordenes-compra?folio=2')->assertSee($b->folio_formateado)->assertDontSee($a->folio_formateado);
-        $this->actingAs($this->user)->get('/ordenes-compra?estado=enviada')->assertSee($b->folio_formateado)->assertDontSee($a->folio_formateado);
-    });
-
-    it('muestra este mes por defecto y acepta un rango', function () {
+describe('bandeja', function () {
+    it('muestra este mes por defecto, todas y los contadores por carpeta', function () {
         $vieja = OrdenCompra::factory()->for($this->proveedor)->create(['created_at' => now()->subMonths(2)]);
         $nueva = OrdenCompra::factory()->for($this->proveedor)->create();
-        $dia = $vieja->created_at->setTimezone(config('app.zona_negocio'))->toDateString();
+        OrdenCompra::factory()->create();
 
-        $this->actingAs($this->user)->get('/ordenes-compra')->assertSee($nueva->folio_formateado)->assertDontSee($vieja->folio_formateado);
-        $this->actingAs($this->user)->get("/ordenes-compra?fecha_desde={$dia}&fecha_hasta={$dia}")->assertSee($vieja->folio_formateado)->assertDontSee($nueva->folio_formateado);
+        $this->actingAs($this->user)->get('/ordenes-compra')
+            ->assertOk()
+            ->assertSee('Nueva orden')
+            ->assertSee('data-orden="'.$nueva->id.'"', false)
+            ->assertDontSee('data-orden="'.$vieja->id.'"', false)
+            ->assertViewHas('contadores', fn (array $contadores) => $contadores['mes'] === 1 && $contadores['todas'] === 2);
+
+        $this->actingAs($this->user)->get('/ordenes-compra?periodo=todas')
+            ->assertSee('data-orden="'.$vieja->id.'"', false)
+            ->assertSee('data-orden="'.$nueva->id.'"', false);
     });
 
-    it('responde el fragmento para la búsqueda dinámica', function () {
-        $orden = OrdenCompra::factory()->for($this->proveedor)->create();
+    it('combina carpeta y etiqueta, y la etiqueta activa se quita', function () {
+        $borrador = OrdenCompra::factory()->for($this->proveedor)->create();
+        $enviada = OrdenCompra::factory()->for($this->proveedor)->enEstado(EstadoOrdenCompra::Enviada)->create();
 
-        $this->actingAs($this->user)->get('/ordenes-compra/buscar', cabecerasAjax())
-            ->assertOk()->assertSee('ordenes-filas', false)->assertSee($orden->folio_formateado);
+        $this->actingAs($this->user)->get('/ordenes-compra?estado=enviada')
+            ->assertSee('data-orden="'.$enviada->id.'"', false)
+            ->assertDontSee('data-orden="'.$borrador->id.'"', false)
+            ->assertSee('href="'.e(route('ordenes-compra.index')).'"', false);
     });
 
-    it('no muestra órdenes de otro usuario', function () {
+    it('busca por proveedor, RFC con espacios y folio', function () {
+        // RFC sin el dígito 2: buscar "2" también busca en el RFC.
+        $this->proveedor->update(['nombre_comercial' => 'Aceros del Norte', 'rfc' => 'ADE010101AB1']);
+        $otro = Proveedor::factory()->for($this->user)->create(['nombre_comercial' => 'Papelera Sur', 'rfc' => 'PSU010101AB1']);
+        $a = OrdenCompra::factory()->for($this->proveedor)->create();
+        $b = OrdenCompra::factory()->for($otro)->create();
+
+        foreach (['papelera' => $b, 'psu 0101' => $b, 'OC-0001' => $a, '2' => $b] as $texto => $esperada) {
+            $otra = $esperada->is($a) ? $b : $a;
+
+            $this->actingAs($this->user)->get('/ordenes-compra?'.http_build_query(['q' => $texto]))
+                ->assertSee('data-orden="'.$esperada->id.'"', false)
+                ->assertDontSee('data-orden="'.$otra->id.'"', false);
+        }
+    });
+
+    it('abre la primera orden o la pedida en la URL, nunca una ajena', function () {
+        $primera = OrdenCompra::factory()->for($this->proveedor)->conLinea()->create(['created_at' => now()->subMinute()]);
+        $segunda = OrdenCompra::factory()->for($this->proveedor)->conLinea()->create();
         $ajena = OrdenCompra::factory()->conLinea()->create();
 
-        $this->actingAs($this->user)->get('/ordenes-compra?periodo=mes')->assertDontSee($ajena->proveedor->nombre_comercial);
+        $this->actingAs($this->user)->get('/ordenes-compra')
+            ->assertSee('data-vista-previa-de="'.$segunda->id.'"', false)
+            ->assertSee(route('ordenes-compra.pdf', [$segunda, 'descargar' => 1]), false);
+
+        $this->actingAs($this->user)->get('/ordenes-compra?orden='.$primera->id)
+            ->assertSee('data-vista-previa-de="'.$primera->id.'"', false);
+
+        $this->actingAs($this->user)->get('/ordenes-compra?orden='.$ajena->id)
+            ->assertSee('data-vista-previa-de="'.$segunda->id.'"', false)
+            ->assertDontSee($ajena->proveedor->nombre_comercial);
+    });
+
+    it('sin órdenes muestra el visor vacío', function () {
+        $this->actingAs($this->user)->get('/ordenes-compra')
+            ->assertSee('Sin órdenes de compra')
+            ->assertSee('Selecciona una orden de compra');
+    });
+
+    it('responde los fragmentos de búsqueda y de vista previa', function () {
+        $orden = OrdenCompra::factory()->for($this->proveedor)->conLinea()->enEstado(EstadoOrdenCompra::Enviada)->create();
+
+        $this->actingAs($this->user)->get('/ordenes-compra/buscar', cabecerasAjax())
+            ->assertOk()->assertSee('ordenes-filas', false)->assertSee('bandeja-carpetas', false)->assertSee($orden->folio_formateado);
+
+        $this->actingAs($this->user)->get("/ordenes-compra/{$orden->id}/vista-previa", cabecerasAjax())
+            ->assertOk()
+            ->assertSee('data-vista-previa-de="'.$orden->id.'"', false)
+            ->assertSee('dialogo-pago', false)
+            ->assertSee('name="origen" value="bandeja"', false);
+
+        $this->actingAs($this->user)->get('/ordenes-compra/'.OrdenCompra::factory()->conLinea()->create()->id.'/vista-previa', cabecerasAjax())
+            ->assertNotFound();
+    });
+
+    it('desde la bandeja, enviar, pagar, recibir y duplicar regresan a ella', function () {
+        Mail::fake();
+        $orden = OrdenCompra::factory()->for($this->proveedor)->conLinea()->create();
+        $cuenta = Cuenta::factory()->for($this->user)->conSaldo('1000.00')->create();
+        $bandeja = route('ordenes-compra.index', ['estado' => 'borrador', 'orden' => $orden->id]);
+        $hoy = today(config('app.zona_negocio'))->toDateString();
+
+        $this->actingAs($this->user)->from($bandeja)->post("/ordenes-compra/{$orden->id}/enviar", ['destinatarios_texto' => 'a@b.mx', 'origen' => 'bandeja'])
+            ->assertRedirect($bandeja);
+        $this->actingAs($this->user)->from('https://otro-sitio.example/x')->post("/ordenes-compra/{$orden->id}/pago", ['cuenta_id' => $cuenta->id, 'fecha_pago' => $hoy, 'origen' => 'bandeja'])
+            ->assertRedirect(route('ordenes-compra.index', ['orden' => $orden->id]));
+        $this->actingAs($this->user)->from($bandeja)->post("/ordenes-compra/{$orden->id}/recibir", ['origen' => 'bandeja'])
+            ->assertRedirect($bandeja);
+        $this->actingAs($this->user)->post("/ordenes-compra/{$orden->id}/duplicar", ['origen' => 'bandeja'])
+            ->assertRedirect(route('ordenes-compra.index', ['orden' => OrdenCompra::max('id')]));
+
+        expect($orden->fresh()->estado)->toBe(EstadoOrdenCompra::Recibida);
     });
 });
 

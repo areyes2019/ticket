@@ -1,7 +1,4 @@
-{{-- Respuesta de la búsqueda dinámica: el <table> solo sirve para que el navegador interprete el <tbody>. --}}
-<table>
-    @include('ordenes-compra._filas')
-</table>
-
+{{-- Respuesta de la búsqueda dinámica: cada pieza reemplaza a la de la página con el mismo id. --}}
+@include('ordenes-compra._carpetas')
+@include('ordenes-compra._filas')
 @include('ordenes-compra._paginacion')
-@include('ordenes-compra._atajos')

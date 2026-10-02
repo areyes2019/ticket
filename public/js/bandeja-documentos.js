@@ -1,18 +1,26 @@
-// Bandeja de cotizaciones (spec 014).
+// Bandeja de documentos: cotizaciones (spec 014) y órdenes de compra (017).
 //
 // Filtrar, buscar y paginar lo hace busqueda-dinamica.js. Este script muestra
-// en el visor la cotización elegida sin recargar: pide su vista previa en HTML
-// al servidor (cotizaciones.vista-previa) y deja su id en la URL
-// (?cotizacion=15) para que recargar o volver de un envío la mantenga abierta.
-// Además maneja "Carpetas" y "Volver" en pantallas chicas.
+// en el visor el documento elegido sin recargar: pide su vista previa en HTML
+// al servidor (data-vista-previa de la fila) y deja su id en la URL
+// (?cotizacion=15, ?orden=8) para que recargar o volver de una acción lo
+// mantenga abierto. Además maneja "Carpetas" y "Volver" en pantallas chicas.
+//
+// Se activa en [data-bandeja-documentos]. Atributos:
+//   data-parametro      nombre del parámetro de la URL; las filas llevan
+//                       data-<parametro>="<id>" (data-cotizacion, data-orden).
+//   data-sin-seleccion  texto del visor vacío.
+// El visor es [data-visor-documento].
 (function () {
-    const bandeja = document.querySelector('[data-bandeja-cotizaciones]');
+    const bandeja = document.querySelector('[data-bandeja-documentos]');
 
     if (!bandeja) {
         return;
     }
 
-    const visor = bandeja.querySelector('[data-visor-cotizacion]');
+    const parametro = bandeja.dataset.parametro;
+    const selectorFila = '[data-' + parametro + ']';
+    const visor = bandeja.querySelector('[data-visor-documento]');
     const botonCarpetas = bandeja.querySelector('[data-mostrar-carpetas]');
     const alertaError = document.querySelector('[data-vista-previa-error]');
     let abierta = idAbierta();
@@ -25,12 +33,12 @@
     }
 
     function filas() {
-        return Array.from(bandeja.querySelectorAll('[data-cotizacion]'));
+        return Array.from(bandeja.querySelectorAll(selectorFila));
     }
 
     function marcarActiva() {
         filas().forEach(function (fila) {
-            const activa = fila.dataset.cotizacion === abierta;
+            const activa = fila.dataset[parametro] === abierta;
             const enlace = fila.querySelector('[data-vista-previa]');
 
             fila.classList.toggle('bandeja-fila-activa', activa);
@@ -47,9 +55,9 @@
         const url = new URL(window.location.href);
 
         if (abierta) {
-            url.searchParams.set('cotizacion', abierta);
+            url.searchParams.set(parametro, abierta);
         } else {
-            url.searchParams.delete('cotizacion');
+            url.searchParams.delete(parametro);
         }
 
         history.replaceState(null, '', url);
@@ -61,7 +69,7 @@
 
         const aviso = document.createElement('p');
         aviso.className = 'bandeja-sin-seleccion';
-        aviso.textContent = 'Selecciona una cotización';
+        aviso.textContent = bandeja.dataset.sinSeleccion;
         visor.appendChild(aviso);
 
         marcarActiva();
@@ -78,7 +86,7 @@
         }
 
         peticionActual = new AbortController();
-        abierta = fila.dataset.cotizacion;
+        abierta = fila.dataset[parametro];
         marcarActiva();
         visor.setAttribute('aria-busy', 'true');
 
@@ -132,7 +140,7 @@
         // Ctrl/Cmd/Mayús + clic abre el detalle en otra pestaña, como un enlace normal.
         if (enlace && !evento.ctrlKey && !evento.metaKey && !evento.shiftKey) {
             evento.preventDefault();
-            abrir(enlace.closest('[data-cotizacion]'), true);
+            abrir(enlace.closest(selectorFila), true);
         } else if (evento.target.closest('[data-volver]')) {
             bandeja.classList.remove('bandeja-leyendo');
         } else if (evento.target.closest('[data-mostrar-carpetas]')) {
@@ -147,7 +155,7 @@
     document.addEventListener('busqueda:actualizada', function () {
         const lista = filas();
 
-        if (lista.some(function (fila) { return fila.dataset.cotizacion === abierta; })) {
+        if (lista.some(function (fila) { return fila.dataset[parametro] === abierta; })) {
             marcarActiva();
             recordarEnUrl();
         } else if (lista.length > 0) {

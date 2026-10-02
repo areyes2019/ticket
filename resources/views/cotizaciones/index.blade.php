@@ -29,7 +29,7 @@
         <input type="hidden" name="estado" value="{{ $estado }}" data-busqueda-sincronizar>
     </form>
 
-    <div class="bandeja" data-bandeja-cotizaciones>
+    <div class="bandeja" data-bandeja-documentos data-parametro="cotizacion" data-sin-seleccion="Selecciona una cotización">
         @include('cotizaciones._carpetas')
 
         <section class="bandeja-lista" aria-label="Lista de cotizaciones" data-busqueda-tabla>
@@ -39,7 +39,7 @@
             @include('cotizaciones._paginacion')
         </section>
 
-        <section class="bandeja-visor bandeja-visor-documento" aria-label="Cotización abierta" data-visor-cotizacion>
+        <section class="bandeja-visor bandeja-visor-documento" aria-label="Cotización abierta" data-visor-documento>
             @if ($abierta)
                 @include('cotizaciones._vista-previa', ['cotizacion' => $abierta])
             @else
@@ -51,6 +51,6 @@
 
 @push('scripts')
     <script src="{{ asset('js/busqueda-dinamica.js') }}"></script>
-    <script src="{{ asset('js/bandeja-cotizaciones.js') }}"></script>
+    <script src="{{ asset('js/bandeja-documentos.js') }}"></script>
     <script src="{{ asset('js/compartir-pdf.js') }}"></script>
 @endpush

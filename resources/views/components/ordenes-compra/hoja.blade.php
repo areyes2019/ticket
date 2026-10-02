@@ -1,10 +1,13 @@
-{{-- La orden como hoja de papel, con el mismo contenido que el PDF. Espera proveedor y lineas cargados. --}}
+@props(['orden'])
+
+{{-- La orden como hoja de papel, con el mismo contenido que el PDF. La usan el
+     visor de la bandeja y el detalle. Espera proveedor y lineas cargados. --}}
 @php
     $pesos = fn ($monto) => '$'.number_format((float) $monto, 2);
     $proveedor = $orden->proveedor;
 @endphp
 
-<article class="hoja" aria-label="Orden de compra {{ $orden->folio_formateado }}">
+<article {{ $attributes->class('hoja') }} aria-label="Orden de compra {{ $orden->folio_formateado }}">
     <header class="hoja-encabezado">
         <p class="hoja-negocio">{{ config('app.name') }}</p>
         <p class="hoja-folio">

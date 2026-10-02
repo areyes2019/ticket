@@ -88,7 +88,7 @@
         </div>
 
         <div class="detalle-principal">
-            @include('ordenes-compra._hoja')
+            <x-ordenes-compra.hoja :orden="$orden" />
 
             <x-card titulo="Pago">
                 @if ($orden->estaPagada())
@@ -105,41 +105,7 @@
     </div>
 
     {{-- Diálogos. Sin JavaScript se muestran con el enlace (#id) gracias a :target. --}}
-    <dialog id="dialogo-envio" class="ficha dialogo" aria-labelledby="dialogo-envio-titulo" @if ($errors->envio->any()) data-abrir-al-cargar @endif>
-        <form method="POST" action="{{ route('ordenes-compra.enviar', $orden) }}">
-            @csrf
-            <h2 id="dialogo-envio-titulo">Enviar por correo</h2>
-            <x-campo nombre="destinatarios_texto" etiqueta="Destinatarios" :valor="$orden->proveedor->correo" required
-                ayuda="Separa varios correos con comas (máximo {{ App\Http\Requests\EnviarOrdenCompraRequest::MAX_DESTINATARIOS }}). Se adjunta el PDF." />
-            <div class="acciones">
-                <x-boton icono="send" data-enviar-una-vez>Enviar</x-boton>
-                <x-boton href="#" variante="secundario" icono="x-lg" data-cerrar-dialogo>Cancelar</x-boton>
-            </div>
-        </form>
-    </dialog>
-
-    @if ($orden->puedeRegistrarPago())
-        <dialog id="dialogo-pago" class="ficha dialogo" aria-labelledby="dialogo-pago-titulo" @if ($errors->pago->any()) data-abrir-al-cargar @endif>
-            <form method="POST" action="{{ route('ordenes-compra.pago.store', $orden) }}">
-                @csrf
-                <h2 id="dialogo-pago-titulo">Registrar pago</h2>
-                @if ($errors->pago->any())
-                    <x-alerta tipo="error">
-                        @foreach ($errors->pago->all() as $error)
-                            <p>{{ $error }}</p>
-                        @endforeach
-                    </x-alerta>
-                @endif
-                <p>Se pagará el total de la orden: <strong>{{ $pesos($orden->total) }}</strong></p>
-                <x-campo nombre="fecha_pago" id="pago-fecha" etiqueta="Fecha de pago" tipo="date" :valor="$hoy" :max="$hoy" required />
-                @include('cotizaciones._cuenta-pago', ['id' => 'pago-cuenta'])
-                <div class="acciones">
-                    <x-boton icono="save" :disabled="$cuentas === []" data-enviar-una-vez>Registrar</x-boton>
-                    <x-boton href="#" variante="secundario" icono="x-lg" data-cerrar-dialogo>Cancelar</x-boton>
-                </div>
-            </form>
-        </dialog>
-    @endif
+    @include('ordenes-compra._dialogos')
 @endsection
 
 @push('scripts')

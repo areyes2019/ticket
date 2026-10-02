@@ -103,6 +103,7 @@ Route::middleware(['auth', AsegurarUsuarioActivo::class])->group(function () {
     Route::get('ordenes-compra/buscar', [OrdenCompraController::class, 'buscar'])->name('ordenes-compra.buscar');
     Route::post('ordenes-compra/{ordenCompra}/enviar', [EnvioOrdenCompraController::class, 'correo'])->name('ordenes-compra.enviar');
     Route::post('ordenes-compra/{ordenCompra}/marcar-enviada', [EnvioOrdenCompraController::class, 'marcarEnviada'])->name('ordenes-compra.marcar-enviada');
+    Route::get('ordenes-compra/{ordenCompra}/vista-previa', [OrdenCompraController::class, 'vistaPrevia'])->name('ordenes-compra.vista-previa');
     Route::get('ordenes-compra/{ordenCompra}/pdf', [OrdenCompraController::class, 'pdf'])->name('ordenes-compra.pdf');
     Route::post('ordenes-compra/{ordenCompra}/duplicar', [OrdenCompraController::class, 'duplicar'])->name('ordenes-compra.duplicar');
     Route::post('ordenes-compra/{ordenCompra}/recibir', [OrdenCompraController::class, 'recibir'])->name('ordenes-compra.recibir');

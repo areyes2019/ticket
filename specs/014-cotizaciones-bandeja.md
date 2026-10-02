@@ -165,6 +165,10 @@ Como antes, no rechaza nada: un valor inválido se ignora.
 
 ### `public/js/bandeja-cotizaciones.js` (nuevo)
 
+> Desde [017](017-ordenes-compra.md) este script es `public/js/bandeja-documentos.js`, genérico
+> (`data-bandeja-documentos`, `data-parametro="cotizacion"`, `data-visor-documento`) y compartido
+> con la bandeja de órdenes de compra. El comportamiento de la cotización descrito aquí no cambió.
+
 - **Clic en una fila**: pide `cotizaciones.vista-previa` con Axios (cancela la petición anterior), la
   pone en el visor, resalta la fila y guarda `?cotizacion={id}` en la URL con `history.replaceState`.
   Ctrl, Cmd o Mayús + clic abren el detalle como un enlace normal.

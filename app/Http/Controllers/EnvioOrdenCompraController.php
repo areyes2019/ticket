@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\RegresaABandeja;
 use App\Http\Requests\EnviarOrdenCompraRequest;
 use App\Mail\OrdenCompraMail;
 use App\Models\OrdenCompra;
@@ -14,6 +15,8 @@ use Throwable;
 
 class EnvioOrdenCompraController extends Controller
 {
+    use RegresaABandeja;
+
     /**
      * Envía el correo con el PDF adjunto (síncrono) y marca la orden como
      * enviada. Si el correo falla, el estado no cambia.
@@ -32,7 +35,7 @@ class EnvioOrdenCompraController extends Controller
 
         $ordenCompra->marcarEnviada();
 
-        return redirect()->route('ordenes-compra.show', $ordenCompra)
+        return redirect()->to($this->destinoOrdenCompra($request, $ordenCompra))
             ->with('exito', 'Orden de compra enviada a '.implode(', ', $destinatarios).'.');
     }
 

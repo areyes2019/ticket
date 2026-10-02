@@ -1,7 +1,7 @@
 @props(['cotizacion', 'activa' => false])
 
 {{-- Una cotización en la lista de la bandeja. Sin JavaScript el enlace abre el
-     detalle; con él, bandeja-cotizaciones.js la muestra en el visor. --}}
+     detalle; con él, bandeja-documentos.js la muestra en el visor. --}}
 @php
     $fecha = $cotizacion->created_at->setTimezone(config('app.zona_negocio'));
     $hoy = now(config('app.zona_negocio'));

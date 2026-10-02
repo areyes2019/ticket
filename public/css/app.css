@@ -1548,9 +1548,9 @@ body:has(.contenido-bandeja) {
     resize: vertical;
 }
 
-/* Bandeja de cotizaciones (bandeja-cotizaciones.js). Reutiliza la bandeja de
-   correo; aquí solo lo que cambia: carpetas y filas son enlaces, y el visor
-   muestra la cotización como una hoja de papel. */
+/* Bandeja de documentos (bandeja-documentos.js): cotizaciones y órdenes de
+   compra. Reutiliza la bandeja de correo; aquí solo lo que cambia: carpetas y
+   filas son enlaces, y el visor muestra el documento como una hoja de papel. */
 a.bandeja-opcion,
 a.bandeja-abrir {
     text-decoration: none;
