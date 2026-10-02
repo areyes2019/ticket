@@ -35,11 +35,11 @@ class CotizacionController extends Controller
 
         $abierta = $request->abierta() === null ? null : $request->user()->cotizaciones()->find($request->abierta());
         $abierta ??= $cotizaciones->first();
-        $abierta?->load(['cliente', 'lineas', 'pagos', 'facturaVigente']);
+        $abierta?->load(['cliente', 'lineas', 'pagos', 'facturaVigente', 'venta.facturaVigente']);
 
         return view('cotizaciones.index', [
             ...$this->datosListado($request, $cotizaciones),
-            ...($abierta ? $this->datosAcciones($abierta) : []),
+            ...($abierta ? self::datosAcciones($abierta) : []),
             'abierta' => $abierta,
         ]);
     }
@@ -64,14 +64,14 @@ class CotizacionController extends Controller
         Gate::authorize('view', $cotizacion);
 
         return view('cotizaciones._vista-previa', [
-            ...$this->datosAcciones($cotizacion),
-            'cotizacion' => $cotizacion->load(['cliente', 'lineas', 'pagos', 'facturaVigente']),
+            ...self::datosAcciones($cotizacion),
+            'cotizacion' => $cotizacion->load(['cliente', 'lineas', 'pagos', 'facturaVigente', 'venta.facturaVigente']),
         ]);
     }
 
     public function create(Request $request): View
     {
-        return view('cotizaciones.crear', $this->datosFormulario($request));
+        return view('cotizaciones.crear', self::datosFormulario($request));
     }
 
     /**
@@ -90,7 +90,12 @@ class CotizacionController extends Controller
             return $cotizacion;
         });
 
-        return redirect()->route('cotizaciones.show', $cotizacion)
+        // Desde la ventana del dashboard, la nueva queda abierta en su visor.
+        $destino = $request->input('origen') === 'dashboard'
+            ? route('dashboard', ['cotizacion' => $cotizacion->id])
+            : route('cotizaciones.show', $cotizacion);
+
+        return redirect()->to($destino)
             ->with('exito', "Cotización {$cotizacion->folio_formateado} creada.");
     }
 
@@ -98,10 +103,10 @@ class CotizacionController extends Controller
     {
         Gate::authorize('view', $cotizacion);
 
-        $cotizacion->load(['cliente', 'lineas.articulo', 'pagos.cuenta', 'facturaVigente', 'duplicadaDe']);
+        $cotizacion->load(['cliente', 'lineas.articulo', 'pagos.cuenta', 'facturaVigente', 'duplicadaDe', 'venta.facturaVigente']);
 
         return view('cotizaciones.show', [
-            ...$this->datosAcciones($cotizacion),
+            ...self::datosAcciones($cotizacion),
             'cotizacion' => $cotizacion,
         ]);
     }
@@ -110,7 +115,7 @@ class CotizacionController extends Controller
     {
         Gate::authorize('update', $cotizacion);
 
-        return view('cotizaciones.editar', $this->datosFormulario($request, $cotizacion));
+        return view('cotizaciones.editar', self::datosFormulario($request, $cotizacion));
     }
 
     /**
@@ -214,7 +219,7 @@ class CotizacionController extends Controller
     public function duplicar(DuplicarCotizacionRequest $request, Cotizacion $cotizacion): RedirectResponse
     {
         $copia = DB::transaction(function () use ($request, $cotizacion) {
-            $copia = $cotizacion->replicate(['folio', 'estado', 'duplicada_de_id', 'created_at', 'updated_at']);
+            $copia = $cotizacion->replicate(['folio', 'estado', 'aceptada_en', 'duplicada_de_id', 'created_at', 'updated_at']);
             $copia->folio = $this->siguienteFolio($request->user());
             $copia->estado = EstadoCotizacion::Borrador;
             $copia->cliente_id = $request->integer('cliente_id');
@@ -244,11 +249,11 @@ class CotizacionController extends Controller
      */
     /**
      * Lo que piden las ventanas de pago y de duplicar, en el detalle y en la
-     * vista previa de la bandeja.
+     * vista previa de la bandeja y del dashboard.
      *
      * @return array<string, mixed>
      */
-    private function datosAcciones(Cotizacion $cotizacion): array
+    public static function datosAcciones(Cotizacion $cotizacion): array
     {
         return [
             'cuentas' => $cotizacion->user->cuentas()->activas()->orderBy('nombre')->pluck('nombre', 'id')->all(),
@@ -358,11 +363,12 @@ class CotizacionController extends Controller
 
     /**
      * Líneas a pintar: las del intento fallido (old), las guardadas, o
-     * ninguna en el alta.
+     * ninguna en el alta. También lo usa la ventana "Nueva cotización" del
+     * dashboard.
      *
      * @return array<string, mixed>
      */
-    private function datosFormulario(Request $request, ?Cotizacion $cotizacion = null): array
+    public static function datosFormulario(Request $request, ?Cotizacion $cotizacion = null): array
     {
         $lineas = $request->old('lineas');
 

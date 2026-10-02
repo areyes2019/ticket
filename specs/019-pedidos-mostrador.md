@@ -54,6 +54,10 @@ registro de supuestos, sujetas a corrección):
   claves de esta historia.
 - Los **datos del negocio** que imprime el ticket (`config/negocio.php`, desde `.env`).
 
+> **Desde [021](021-cotizacion-aceptada-a-venta.md)**: el Pedido se muestra
+> como **Venta** (el folio sigue siendo `PED-0042`) y también nace de una cotización aceptada (`cotizacion_id`,
+> `cliente_id`). Esa venta no se bloquea por existencia. Tablas, clases y rutas `pedidos` no cambian.
+
 ## Historia de usuario
 
 Como usuario registrado, quiero atender al cliente que entra al local y compra directo —sin

@@ -12,6 +12,7 @@
     $telefono = preg_replace('/\D/', '', (string) $cotizacion->cliente->telefono);
     $facturaVigente = $cotizacion->facturaVigente;
     $motivoNoFacturable = $cotizacion->motivoNoFacturable();
+    $puedeAceptarse = $cotizacion->puedeAceptarse();
 @endphp
 
 @section('content')
@@ -21,6 +22,9 @@
             <span @class(['etiqueta', $cotizacion->estado->claseEtiqueta()]) data-estado-documento>{{ $cotizacion->estado->etiqueta() }}</span>
             @if ($facturaVigente)
                 <a href="{{ route('facturas.show', $facturaVigente) }}" class="etiqueta etiqueta-facturada" title="Ver la factura">Facturada · {{ $facturaVigente->folioVisible() }}</a>
+            @endif
+            @if ($cotizacion->venta)
+                <a href="{{ route('pedidos.show', $cotizacion->venta) }}" class="etiqueta etiqueta-venta" title="Ver la venta" data-venta-de-cotizacion>Venta · {{ $cotizacion->venta->folio_formateado }}</a>
             @endif
         </h1>
         <x-boton :href="route('cotizaciones.index')" variante="secundario" icono="arrow-left">Listado</x-boton>
@@ -37,6 +41,11 @@
             </x-alerta>
         @endif
     @endforeach
+
+    {{-- Si ya no se puede aceptar (otra pestaña la aceptó), la ventana no se pinta: el motivo va aquí. --}}
+    @if ($errors->aceptar->any() && ! $puedeAceptarse)
+        <x-alerta tipo="error">{{ $errors->aceptar->first() }}</x-alerta>
+    @endif
 
     <x-alerta tipo="error" hidden data-compartir-error></x-alerta>
 
@@ -58,8 +67,19 @@
         </x-alerta>
     @endif
 
+    @if ($cotizacion->estaAceptada() && $cotizacion->venta)
+        <p class="ayuda">
+            Aceptada el {{ $cotizacion->aceptada_en?->setTimezone($zona)->format('d/m/Y') }}. El cobro, el ticket y la entrega siguen en la venta
+            <a href="{{ route('pedidos.show', $cotizacion->venta) }}">{{ $cotizacion->venta->folio_formateado }}</a>.
+        </p>
+    @endif
+
     <div class="detalle-documento">
         <div class="detalle-acciones">
+            @if ($puedeAceptarse)
+                <x-boton href="#dialogo-aceptar" icono="check2-circle" data-abrir-dialogo>Aceptar</x-boton>
+            @endif
+
             @if ($motivoNoFacturable === null)
                 <x-boton :href="route('facturas.create', ['cotizacion' => $cotizacion->id])" icono="receipt">Facturar</x-boton>
             @endif
@@ -178,6 +198,10 @@
     ])
 
     @include('cotizaciones._dialogos-pago')
+
+    @if ($puedeAceptarse)
+        @include('cotizaciones._dialogo-aceptar')
+    @endif
 @endsection
 
 @push('scripts')

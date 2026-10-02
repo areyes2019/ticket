@@ -21,7 +21,11 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
 /**
- * Venta de mostrador (019). El cliente vive en el propio pedido, sin RFC.
+ * La venta (019, 021): de mostrador, o nacida de una cotización aceptada
+ * (cotizacion_id y cliente_id, que escribe solo AceptadorCotizacion). En
+ * pantalla se llama "Venta"; el folio sigue siendo PED-0042. El cliente vive
+ * en el propio pedido, sin RFC; cliente_id solo apunta al cliente fiscal de la
+ * cotización.
  *
  * folio, estado, totales, entregado_en y los datos de la autofactura no son
  * asignables: los escriben el controlador y los métodos de este modelo.
@@ -74,6 +78,55 @@ class Pedido extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * La cotización aceptada de la que nació, si no es de mostrador.
+     *
+     * @return BelongsTo<Cotizacion, $this>
+     */
+    public function cotizacion(): BelongsTo
+    {
+        return $this->belongsTo(Cotizacion::class);
+    }
+
+    /**
+     * El cliente fiscal de esa cotización, aunque se haya eliminado.
+     *
+     * @return BelongsTo<Cliente, $this>
+     */
+    public function cliente(): BelongsTo
+    {
+        return $this->belongsTo(Cliente::class)->withTrashed();
+    }
+
+    public function esDeCotizacion(): bool
+    {
+        return $this->cotizacion_id !== null;
+    }
+
+    /**
+     * La factura vigente de su cotización: una sola factura entre la
+     * cotización aceptada y su venta (021).
+     */
+    public function facturaDeLaCotizacion(): ?Factura
+    {
+        return $this->esDeCotizacion() ? $this->cotizacion?->facturaVigente : null;
+    }
+
+    /**
+     * Consecutivo por usuario que nunca se reutiliza (mismo mecanismo que la
+     * cotización): es el "No. de ticket". Lo usan el alta de mostrador y la
+     * aceptación de una cotización; va dentro de su transacción.
+     */
+    public static function siguienteFolio(User $user): int
+    {
+        $bloqueado = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+        $folio = max($bloqueado->ultimo_folio_pedido, (int) $bloqueado->pedidos()->max('folio')) + 1;
+
+        $bloqueado->forceFill(['ultimo_folio_pedido' => $folio])->save();
+
+        return $folio;
     }
 
     /**
@@ -271,8 +324,8 @@ class Pedido extends Model
      */
     public function motivoAutofacturaNoDisponible(): ?string
     {
-        if ($this->facturaTimbrada() !== null) {
-            return 'Este pedido ya se facturó.';
+        if ($this->facturaTimbrada() !== null || $this->facturaDeLaCotizacion() !== null) {
+            return 'Esta venta ya se facturó.';
         }
 
         if (CarbonImmutable::now()->greaterThan($this->autofacturaVenceEl())) {
@@ -280,7 +333,7 @@ class Pedido extends Model
         }
 
         if ($this->autofactura_token === null || $this->tieneSaldo()) {
-            return 'Este pedido todavía no está pagado por completo.';
+            return 'Esta venta todavía no está pagada por completo.';
         }
 
         return null;
@@ -331,7 +384,7 @@ class Pedido extends Model
      * Filtros del listado, combinados con Y. Los vacíos se ignoran.
      *
      * @param  Builder<self>  $consulta
-     * @param  array{folio?: int|null, cliente?: string, telefono?: string, estado?: string, desde?: CarbonImmutable|null, hasta?: CarbonImmutable|null}  $filtros
+     * @param  array{folio?: int|null, cliente?: string, telefono?: string, estado?: string, origen?: string, desde?: CarbonImmutable|null, hasta?: CarbonImmutable|null}  $filtros
      */
     #[Scope]
     protected function filtrar(Builder $consulta, array $filtros): void
@@ -350,6 +403,12 @@ class Pedido extends Model
 
         if (($filtros['estado'] ?? '') !== '') {
             $consulta->where('estado', $filtros['estado']);
+        }
+
+        if (($filtros['origen'] ?? '') === 'mostrador') {
+            $consulta->whereNull('cotizacion_id');
+        } elseif (($filtros['origen'] ?? '') === 'cotizacion') {
+            $consulta->whereNotNull('cotizacion_id');
         }
 
         if (($filtros['desde'] ?? null) !== null) {

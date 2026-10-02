@@ -5,6 +5,10 @@ del detalle que dibuja el documento. **Toma la distribución de:**
 [013-dashboard-bandeja-correo.md](013-dashboard-bandeja-correo.md): tres columnas (carpetas, lista y
 visor), con sus piezas y estilos.
 
+> **Desde [020](020-dashboard-cotizaciones-facturas.md)** la vista previa de la cotización también
+> se usa en el dashboard, y su botón "Facturar" timbra directo tras una ventana de confirmación (ya no
+> abre el formulario de factura). `bandeja-documentos.js` admite varias listas con un solo visor.
+
 ## Historia de usuario
 
 Como usuario, quiero ver mis cotizaciones como en un gestor de correo, con carpetas por periodo y

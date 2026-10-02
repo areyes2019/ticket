@@ -6,6 +6,7 @@ enum EstadoCotizacion: string
 {
     case Borrador = 'borrador';
     case Enviada = 'enviada';
+    case Aceptada = 'aceptada';
     case Pagada = 'pagada';
     case ProductoEntregado = 'producto_entregado';
 
@@ -14,6 +15,7 @@ enum EstadoCotizacion: string
         return match ($this) {
             self::Borrador => 'Borrador',
             self::Enviada => 'Enviada',
+            self::Aceptada => 'Aceptada',
             self::Pagada => 'Pagada',
             self::ProductoEntregado => 'Entregada',
         };

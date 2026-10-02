@@ -29,6 +29,7 @@ class CotizacionPolicy
         return match (true) {
             $cotizacion->esEditable() => Response::allow(),
             $cotizacion->estaFacturada() => Response::deny('Una cotización facturada no se puede modificar.'),
+            $cotizacion->estaAceptada() => Response::deny($this->motivoAceptada($cotizacion)),
             default => Response::deny('Una cotización '.mb_strtolower($cotizacion->estado->etiqueta()).' ya no se puede editar.'),
         };
     }
@@ -43,6 +44,7 @@ class CotizacionPolicy
 
         return match (true) {
             $cotizacion->estaFacturada() => Response::deny('Una cotización facturada no se puede eliminar.'),
+            $cotizacion->estaAceptada() => Response::deny($this->motivoAceptada($cotizacion)),
             ! $cotizacion->esEditable() => Response::deny('Una cotización '.mb_strtolower($cotizacion->estado->etiqueta()).' no se puede eliminar.'),
             $cotizacion->tienePagos() => Response::deny('La cotización tiene pagos registrados: elimínalos antes de borrarla.'),
             default => Response::allow(),
@@ -50,12 +52,24 @@ class CotizacionPolicy
     }
 
     /**
-     * Enviar, compartir, pagar, entregar, duplicar, facturar y descargar el PDF: las
+     * Enviar, compartir, pagar, entregar, aceptar, duplicar, facturar y descargar el PDF: las
      * reglas de estado de cada acción las revisa su controlador.
      */
     public function operar(User $user, Cotizacion $cotizacion): Response
     {
         return $this->esDueno($user, $cotizacion);
+    }
+
+    /**
+     * Su vida sigue en la venta (021): ahí se corrige.
+     */
+    private function motivoAceptada(Cotizacion $cotizacion): string
+    {
+        $venta = $cotizacion->venta;
+
+        return $venta === null
+            ? 'Una cotización aceptada ya no se modifica.'
+            : "Una cotización aceptada ya no se modifica: corrige la venta {$venta->folio_formateado}.";
     }
 
     private function esDueno(User $user, Cotizacion $cotizacion): Response

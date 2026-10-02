@@ -30,6 +30,10 @@ use Illuminate\Support\Collection;
  * "Facturada" no es un estado: es tener una factura vigente (no cancelada)
  * vinculada por facturas.cotizacion_id.
  *
+ * "Aceptada" sí es un estado (021): aceptarla crea su venta (un Pedido con
+ * pedidos.cotizacion_id), donde siguen el cobro, la entrega y la autofactura.
+ * aceptada_en lo escriben solo marcarAceptada() y revertirAceptacion().
+ *
  * Los totales los escribe solo aplicarTotales(), con la calculadora.
  */
 #[Fillable([
@@ -84,7 +88,13 @@ class Cotizacion extends Model
     /**
      * Estados en los que una cotización se puede facturar.
      */
-    public const ESTADOS_FACTURABLES = [EstadoCotizacion::Enviada, EstadoCotizacion::Pagada, EstadoCotizacion::ProductoEntregado];
+    public const ESTADOS_FACTURABLES = [EstadoCotizacion::Enviada, EstadoCotizacion::Aceptada, EstadoCotizacion::Pagada, EstadoCotizacion::ProductoEntregado];
+
+    /**
+     * Estados desde los que se acepta (021): el cliente puede aceptar en
+     * persona una que nunca se le envió.
+     */
+    public const ESTADOS_ACEPTABLES = [EstadoCotizacion::Borrador, EstadoCotizacion::Enviada];
 
     /**
      * Columnas que se pueden filtrar desde el listado (además de las fechas).
@@ -148,6 +158,16 @@ class Cotizacion extends Model
     public function facturaVigente(): HasOne
     {
         return $this->hasOne(Factura::class)->where('estado', '!=', EstadoFactura::Cancelada->value);
+    }
+
+    /**
+     * La venta que nació al aceptarla (021).
+     *
+     * @return HasOne<Pedido, $this>
+     */
+    public function venta(): HasOne
+    {
+        return $this->hasOne(Pedido::class);
     }
 
     /**
@@ -226,12 +246,28 @@ class Cotizacion extends Model
     }
 
     /**
-     * Por estado y sin factura vigente. Las líneas se revisan aparte
+     * Por estado y sin factura vigente, ni suya ni de su venta (una sola
+     * factura entre las dos, 021). Las líneas se revisan aparte
      * (motivoNoFacturable).
      */
     public function esFacturable(): bool
     {
-        return in_array($this->estado, self::ESTADOS_FACTURABLES, true) && ! $this->estaFacturada();
+        return in_array($this->estado, self::ESTADOS_FACTURABLES, true)
+            && ! $this->estaFacturada()
+            && $this->facturaDeLaVenta() === null;
+    }
+
+    /**
+     * La factura vigente de su venta (autofactura), si la aceptó y ya se
+     * facturó por ahí.
+     */
+    public function facturaDeLaVenta(): ?Factura
+    {
+        if ($this->estado !== EstadoCotizacion::Aceptada) {
+            return null;
+        }
+
+        return $this->venta?->facturaVigente;
     }
 
     /**
@@ -262,6 +298,12 @@ class Cotizacion extends Model
             return "Esta cotización ya tiene la factura {$this->facturaVigente->folioVisible()}.";
         }
 
+        $facturaDeLaVenta = $this->facturaDeLaVenta();
+
+        if ($facturaDeLaVenta !== null) {
+            return "Su venta {$this->venta->folio_formateado} ya se facturó en {$facturaDeLaVenta->folioVisible()}.";
+        }
+
         $lineas = $this->lineasNoFacturables();
 
         if ($lineas->isNotEmpty()) {
@@ -269,6 +311,26 @@ class Cotizacion extends Model
         }
 
         return null;
+    }
+
+    /**
+     * Líneas cuyo precio cotizado ya no es el del catálogo, como aviso al
+     * facturar ("Tornillo M8: $100.00 en la cotización, $120.00 hoy en el
+     * catálogo"). La factura conserva el precio cotizado.
+     *
+     * @return list<string>
+     */
+    public function avisosDePrecio(): array
+    {
+        $this->loadMissing('lineas.articulo');
+        $pesos = fn ($monto) => '$'.number_format((float) $monto, 2);
+
+        return $this->lineas
+            ->filter(fn (CotizacionLinea $linea) => $linea->articulo !== null
+                && CalculadoraTotalesDocumento::centavos($linea->precio_unitario) !== CalculadoraTotalesDocumento::centavos($linea->articulo->precio_unitario_sin_iva))
+            ->map(fn (CotizacionLinea $linea) => "{$linea->descripcion}: {$pesos($linea->precio_unitario)} en la cotización, {$pesos($linea->articulo->precio_unitario_sin_iva)} hoy en el catálogo.")
+            ->values()
+            ->all();
     }
 
     public function puedeEliminarse(): bool
@@ -317,6 +379,90 @@ class Cotizacion extends Model
     public function puedeEntregarse(): bool
     {
         return $this->estado === EstadoCotizacion::Pagada;
+    }
+
+    public function estaAceptada(): bool
+    {
+        return $this->estado === EstadoCotizacion::Aceptada;
+    }
+
+    public function puedeAceptarse(): bool
+    {
+        return $this->motivoNoAceptable() === null;
+    }
+
+    /**
+     * Por qué no se puede aceptar; null si se puede. Las que ya tienen pagos
+     * siguen el flujo anterior (011): se cobran y se entregan desde aquí.
+     */
+    public function motivoNoAceptable(): ?string
+    {
+        if ($this->estaAceptada()) {
+            $this->loadMissing('venta');
+
+            return $this->venta === null
+                ? 'Esta cotización ya se aceptó.'
+                : "Ya se aceptó: su venta es {$this->venta->folio_formateado}.";
+        }
+
+        if ($this->tienePagos()) {
+            return 'Esta cotización ya tiene pagos: se cobra y se entrega desde aquí.';
+        }
+
+        if (! in_array($this->estado, self::ESTADOS_ACEPTABLES, true)) {
+            return 'Solo se acepta una cotización en borrador o enviada.';
+        }
+
+        if ($this->estaFacturada()) {
+            $this->loadMissing('facturaVigente');
+
+            return "Ya tiene la factura {$this->facturaVigente->folioVisible()}.";
+        }
+
+        return null;
+    }
+
+    /**
+     * Aviso de la ventana "Aceptar": líneas de catálogo sin existencia
+     * suficiente. No bloquea; la venta deja el faltante (021).
+     *
+     * @return list<string>
+     */
+    public function faltantesAlAceptar(): array
+    {
+        $this->loadMissing('lineas');
+
+        $existencias = Existencia::whereIn('articulo_id', $this->lineas->pluck('articulo_id')->filter())
+            ->pluck('existencia', 'articulo_id');
+
+        return $this->lineas
+            ->filter(fn (CotizacionLinea $linea) => $linea->articulo_id !== null
+                && (int) $existencias->get($linea->articulo_id, 0) < $linea->cantidad)
+            ->map(fn (CotizacionLinea $linea) => ($linea->modelo ?: $linea->descripcion)
+                .' (faltan '.($linea->cantidad - (int) $existencias->get($linea->articulo_id, 0)).')')
+            ->values()
+            ->all();
+    }
+
+    /**
+     * No guarda.
+     */
+    public function marcarAceptada(): void
+    {
+        $this->estado = EstadoCotizacion::Aceptada;
+        $this->aceptada_en = now();
+    }
+
+    /**
+     * Al borrar su venta: vuelve a enviada y la caducidad cuenta desde hoy
+     * (save() renueva updated_at).
+     */
+    public function revertirAceptacion(): void
+    {
+        $this->estado = EstadoCotizacion::Enviada;
+        $this->aceptada_en = null;
+        $this->updateTimestamps();
+        $this->save();
     }
 
     /**
@@ -499,7 +645,9 @@ class Cotizacion extends Model
     #[Scope]
     protected function porFacturar(Builder $consulta): void
     {
-        $consulta->whereIn('estado', self::ESTADOS_FACTURABLES)->doesntHave('facturaVigente');
+        $consulta->whereIn('estado', self::ESTADOS_FACTURABLES)
+            ->doesntHave('facturaVigente')
+            ->whereDoesntHave('venta.facturaVigente');
     }
 
     /**
@@ -535,6 +683,7 @@ class Cotizacion extends Model
             'base_iva_0' => 'decimal:2',
             'base_exento' => 'decimal:2',
             'total' => 'decimal:2',
+            'aceptada_en' => 'immutable_datetime',
         ];
     }
 }

@@ -21,6 +21,8 @@
     <x-alerta tipo="error" hidden data-compartir-error></x-alerta>
     <x-alerta tipo="error" hidden data-busqueda-error>No se pudo realizar la búsqueda. Intenta de nuevo.</x-alerta>
     <x-alerta tipo="error" hidden data-vista-previa-error>No se pudo abrir la cotización. Intenta de nuevo.</x-alerta>
+    <x-alerta tipo="exito" hidden data-timbrado-aviso-exito></x-alerta>
+    <x-alerta tipo="error" hidden data-timbrado-aviso-error></x-alerta>
 
     {{-- Carpeta y etiqueta viajan ocultas: los enlaces de la izquierda las
          cambian (data-busqueda-sincronizar). El buscador se asocia con form="…". --}}
@@ -53,4 +55,5 @@
     <script src="{{ asset('js/busqueda-dinamica.js') }}"></script>
     <script src="{{ asset('js/bandeja-documentos.js') }}"></script>
     <script src="{{ asset('js/compartir-pdf.js') }}"></script>
+    <script src="{{ asset('js/timbrar-cotizacion.js') }}"></script>
 @endpush

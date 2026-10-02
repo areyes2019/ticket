@@ -6,6 +6,10 @@ código de la plantilla. Todo se construye con el estilo propio de la app
 ([003-estilo-uniforme.md](003-estilo-uniforme.md)): esquinas rectas, Bootstrap Icons y las variables
 de color de `public/css/app.css`. No se instala Bootstrap.
 
+> **Desde [020](020-dashboard-cotizaciones-facturas.md)** el inicio del dashboard muestra
+> cotizaciones y facturas reales. Esta bandeja de correo de demostración sigue igual, pero ya no es
+> lo primero que se ve: se abre desde "Correo" en el menú de aplicaciones (`?app=correo`).
+
 ## Historia de usuario
 
 Como usuario, quiero ver en mi panel de inicio una interfaz como la de un gestor de correo, con datos

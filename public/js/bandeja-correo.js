@@ -13,7 +13,8 @@
     const filas = Array.from(bandeja.querySelectorAll('[data-correo]'));
     const visores = Array.from(bandeja.querySelectorAll('[data-visor]'));
     const opciones = Array.from(bandeja.querySelectorAll('[data-filtro]'));
-    const contadores = Array.from(bandeja.querySelectorAll('[data-contador]'));
+    // Incluye la insignia del sobre en el menú de aplicaciones, fuera de la bandeja.
+    const contadores = Array.from(document.querySelectorAll('[data-contador]'));
     const buscador = bandeja.querySelector('[data-buscar]');
     const vacia = bandeja.querySelector('[data-vacia]');
     const sinSeleccion = bandeja.querySelector('[data-sin-seleccion]');

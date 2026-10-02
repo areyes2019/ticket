@@ -23,6 +23,10 @@ Se conserva `costo_unitario` en las líneas (base de la futura utilidad de Tesor
 existe en el artículo (`costo_con_descuento`, [009](009-precio-proveedor-utilidad.md)) y no se
 puede reconstruir después.
 
+> **Desde [021](021-cotizacion-aceptada-a-venta.md)**: nace el estado
+> `aceptada`. Aceptar una cotización sin pagos crea su venta, y el cobro, la entrega y la autofactura
+> pasan a la venta. Las cotizaciones con pagos siguen el flujo de esta spec.
+
 ## Historia de usuario
 
 Como usuario registrado, quiero generar cotizaciones para mis clientes, enviárselas por correo o

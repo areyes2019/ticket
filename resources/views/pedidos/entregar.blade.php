@@ -65,6 +65,6 @@
             @endif
         @endif
 
-        <p class="entrega-detalle"><a href="{{ route('pedidos.show', $pedido) }}">Ver el pedido {{ $pedido->folio_formateado }}</a></p>
+        <p class="entrega-detalle"><a href="{{ route('pedidos.show', $pedido) }}">Ver la venta {{ $pedido->folio_formateado }}</a></p>
     </section>
 @endsection

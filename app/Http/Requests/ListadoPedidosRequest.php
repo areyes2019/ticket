@@ -17,6 +17,12 @@ class ListadoPedidosRequest extends FormRequest
     public const PERIODO_DEFECTO = 'mes';
 
     /**
+     * De dónde salió la venta (021): del mostrador o de una cotización
+     * aceptada.
+     */
+    public const ORIGENES = ['mostrador' => 'Mostrador', 'cotizacion' => 'Cotización'];
+
+    /**
      * @return array<string, mixed>
      */
     public function rules(): array
@@ -27,18 +33,20 @@ class ListadoPedidosRequest extends FormRequest
     /**
      * Valores tal como se escribieron, para volver a pintarlos.
      *
-     * @return array{folio: string, cliente: string, telefono: string, estado: string, periodo: string}
+     * @return array{folio: string, cliente: string, telefono: string, estado: string, origen: string, periodo: string}
      */
     public function valores(): array
     {
         $estado = $this->string('estado')->toString();
         $periodo = $this->string('periodo')->toString();
+        $origen = $this->string('origen')->toString();
 
         return [
             'folio' => $this->string('folio')->trim()->toString(),
             'cliente' => $this->string('cliente')->squish()->toString(),
             'telefono' => $this->string('telefono')->trim()->toString(),
             'estado' => EstadoPedido::tryFrom($estado) === null ? '' : $estado,
+            'origen' => array_key_exists($origen, self::ORIGENES) ? $origen : '',
             'periodo' => array_key_exists($periodo, ListadoCotizacionesRequest::PERIODOS) ? $periodo : self::PERIODO_DEFECTO,
         ];
     }
@@ -58,6 +66,7 @@ class ListadoPedidosRequest extends FormRequest
             'cliente' => $valores['cliente'],
             'telefono' => (string) preg_replace('/\D/', '', $valores['telefono']),
             'estado' => $valores['estado'],
+            'origen' => $valores['origen'],
             'desde' => $desde,
             'hasta' => $hasta,
         ];

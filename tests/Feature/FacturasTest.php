@@ -92,6 +92,7 @@ describe('acceso', function () {
         ['POST', '/cancelar'],
         ['GET', '/xml'],
         ['GET', '/pdf'],
+        ['GET', '/vista-previa'],
         ['POST', '/enviar'],
         ['POST', '/complemento-pago'],
     ]);

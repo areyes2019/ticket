@@ -7,6 +7,7 @@ use App\Enums\MetodoPago;
 use App\Enums\ObjetoImpuesto;
 use App\Models\Articulo;
 use App\Models\Cliente;
+use App\Models\Cotizacion;
 use App\Models\Factura;
 use App\Models\Pedido;
 use App\Models\PedidoLinea;
@@ -47,6 +48,13 @@ class Autofacturador
     {
         $preparada = DB::transaction(function () use ($pedido, $datos): Factura|string {
             $bloqueado = Pedido::whereKey($pedido->id)->lockForUpdate()->firstOrFail();
+
+            // Una sola factura entre la cotización aceptada y su venta (021):
+            // la fila de la cotización es la que comparten las dos vías.
+            if ($bloqueado->esDeCotizacion()) {
+                $bloqueado->setRelation('cotizacion', Cotizacion::whereKey($bloqueado->cotizacion_id)->lockForUpdate()->first());
+            }
+
             $motivo = $bloqueado->motivoAutofacturaNoDisponible();
 
             if ($motivo !== null) {

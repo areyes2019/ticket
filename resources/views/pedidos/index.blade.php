@@ -1,12 +1,12 @@
 @extends('layouts.app')
 
-@section('title', 'Pedidos · '.config('app.name'))
+@section('title', 'Ventas · '.config('app.name'))
 @section('contenido-clase', 'contenido-ancho')
 
 @section('content')
     <div class="encabezado">
-        <h1>Pedidos</h1>
-        <x-boton :href="route('pedidos.create')" icono="plus-lg">Nuevo pedido</x-boton>
+        <h1>Ventas</h1>
+        <x-boton :href="route('pedidos.create')" icono="plus-lg">Nueva venta</x-boton>
     </div>
 
     @include('documentos._mensajes')
@@ -14,6 +14,7 @@
     {{-- Los campos de filtro están en el encabezado de la tabla y se asocian con form="filtros-pedidos". --}}
     <form id="filtros-pedidos" method="GET" action="{{ route('pedidos.index') }}" class="buscador" data-busqueda-dinamica="{{ route('pedidos.buscar') }}">
         <x-campo nombre="periodo" etiqueta="Periodo" tipo="select" :opciones="$periodos" :valor="$filtros['periodo']" :vacia="false" />
+        <x-campo nombre="origen" etiqueta="Origen" tipo="select" :opciones="$origenes" :valor="$filtros['origen']" vacia="Todas" />
         {{-- La búsqueda es dinámica; el botón solo existe como respaldo cuando no hay JavaScript. --}}
         <noscript><x-boton icono="search">Buscar</x-boton></noscript>
         <x-boton :href="route('pedidos.index')" variante="secundario" icono="x-lg">Limpiar</x-boton>

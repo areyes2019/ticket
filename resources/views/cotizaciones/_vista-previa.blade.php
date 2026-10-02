@@ -1,10 +1,12 @@
-{{-- Visor de la bandeja: acciones, la hoja en HTML y sus ventanas (envío, pagos y
-     duplicar). Se pinta con la página o llega por AJAX (cotizaciones.vista-previa)
+{{-- Visor de la bandeja: acciones, la hoja en HTML y sus ventanas (envío, pagos,
+     duplicar, timbrar y aceptar). Se pinta con la página o llega por AJAX (cotizaciones.vista-previa)
      al elegir una fila. --}}
 @php
     $telefono = preg_replace('/\D/', '', (string) $cotizacion->cliente->telefono);
     $puedePagar = $cotizacion->puedeRegistrarPago();
     $tieneAnticipo = $cotizacion->tieneAnticipo();
+    $facturable = $cotizacion->motivoNoFacturable() === null;
+    $puedeAceptarse = $cotizacion->puedeAceptarse();
 @endphp
 
 <div class="bandeja-acciones">
@@ -19,8 +21,13 @@
         data-telefono="{{ $telefono }}"
         data-precargar="al-apuntar"
         data-texto="Cotización {{ $cotizacion->folio_formateado }} de {{ config('app.name') }} por ${{ number_format((float) $cotizacion->total, 2) }}" />
-    @if ($cotizacion->motivoNoFacturable() === null)
-        <x-boton :href="route('facturas.create', ['cotizacion' => $cotizacion->id])" variante="secundario" icono="receipt" descripcion="Facturar" title="Facturar" />
+    @if ($puedeAceptarse)
+        {{-- Crea la venta y lleva a ella (spec 021). --}}
+        <x-boton href="#dialogo-aceptar" icono="check2-circle" descripcion="Aceptar y crear venta" title="Aceptar y crear venta" data-abrir-dialogo />
+    @endif
+    @if ($facturable)
+        {{-- Timbra directo tras confirmar (spec 020); el detalle sigue llevando al formulario. --}}
+        <x-boton href="#dialogo-timbrar" variante="secundario" icono="receipt" descripcion="Timbrar factura" title="Timbrar factura" data-abrir-dialogo />
     @endif
     @if ($puedePagar && ! $tieneAnticipo)
         <x-boton href="#dialogo-anticipo" variante="secundario" icono="cash" descripcion="Registrar anticipo" title="Registrar anticipo" data-abrir-dialogo />
@@ -34,11 +41,14 @@
     <x-boton :href="route('cotizaciones.show', $cotizacion)" variante="suave" icono="box-arrow-up-right" class="bandeja-abrir-detalle">Abrir</x-boton>
 </div>
 
-<div class="bandeja-documento" data-vista-previa-de="{{ $cotizacion->id }}">
+<div class="bandeja-documento" data-vista-previa-de="{{ $cotizacion->id }}" data-documento="cotizacion">
     <p class="bandeja-documento-estado">
         <span @class(['etiqueta', $cotizacion->estado->claseEtiqueta()]) data-estado-documento>{{ $cotizacion->estado->etiqueta() }}</span>
         @if ($cotizacion->facturaVigente)
             <a href="{{ route('facturas.show', $cotizacion->facturaVigente) }}" class="etiqueta etiqueta-facturada">Facturada · {{ $cotizacion->facturaVigente->folioVisible() }}</a>
+        @endif
+        @if ($cotizacion->venta)
+            <a href="{{ route('pedidos.show', $cotizacion->venta) }}" class="etiqueta etiqueta-venta" data-venta-de-cotizacion>Venta · {{ $cotizacion->venta->folio_formateado }}</a>
         @endif
         @if ($cotizacion->mostrarAvisoCaducidad())
             <span class="etiqueta etiqueta-suspendido">{{ $cotizacion->textoCaducidad() }}</span>
@@ -72,3 +82,11 @@
 ])
 
 @include('cotizaciones._dialogos-pago', ['origen' => 'bandeja'])
+
+@if ($facturable)
+    @include('cotizaciones._dialogo-timbrar')
+@endif
+
+@if ($puedeAceptarse)
+    @include('cotizaciones._dialogo-aceptar')
+@endif

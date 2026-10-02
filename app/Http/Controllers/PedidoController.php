@@ -11,6 +11,7 @@ use App\Http\Requests\ListadoCotizacionesRequest;
 use App\Http\Requests\ListadoPedidosRequest;
 use App\Http\Requests\PedidoRequest;
 use App\Models\Articulo;
+use App\Models\Cotizacion;
 use App\Models\Existencia;
 use App\Models\Pedido;
 use App\Models\PedidoLinea;
@@ -89,7 +90,7 @@ class PedidoController extends Controller
             $this->exigirExistencias($request->lineas());
 
             $pedido = $request->user()->pedidos()->make($request->datosPedido());
-            $pedido->folio = $this->siguienteFolio($request->user());
+            $pedido->folio = Pedido::siguienteFolio($request->user());
             $pedido->aplicarTotales($request->totales());
             $pedido->save();
 
@@ -100,14 +101,14 @@ class PedidoController extends Controller
         });
 
         return redirect()->route('pedidos.show', $pedido)
-            ->with('exito', "Pedido {$pedido->folio_formateado} creado. Registra el pago para compartir el ticket.");
+            ->with('exito', "Venta {$pedido->folio_formateado} creada. Registra el pago para compartir el ticket.");
     }
 
     public function show(Pedido $pedido, MensajePedido $mensajes): View
     {
         Gate::authorize('view', $pedido);
 
-        $pedido->load(['lineas', 'pagos.cuenta', 'facturaVigente']);
+        $pedido->load(['lineas', 'pagos.cuenta', 'facturaVigente', 'cotizacion.facturaVigente', 'cliente']);
 
         $motivoAutofactura = $pedido->motivoAutofacturaNoDisponible();
 
@@ -119,7 +120,7 @@ class PedidoController extends Controller
             'mensajeListo' => $mensajes->resolver($pedido, ClaveConfiguracion::MensajeListo),
             'facturaTimbrada' => $pedido->facturaTimbrada(),
             'textoAutofactura' => $motivoAutofactura === null
-                ? "Para generar tu factura del pedido No. {$pedido->numero_ticket} entra a: {$pedido->urlAutofactura()} . El enlace vence el {$pedido->autofacturaVenceEl()->format('d/m/Y')}."
+                ? "Para generar tu factura de la venta No. {$pedido->numero_ticket} entra a: {$pedido->urlAutofactura()} . El enlace vence el {$pedido->autofacturaVenceEl()->format('d/m/Y')}."
                 : null,
         ]);
     }
@@ -134,7 +135,8 @@ class PedidoController extends Controller
     /**
      * PedidoRequest ya verificó que es del usuario y editable. Primero se
      * devuelve lo que el pedido sacó: así uno que se llevó las últimas piezas
-     * se puede editar sin que su propio descuento lo bloquee.
+     * se puede editar sin que su propio descuento lo bloquee. La venta de una
+     * cotización no se bloquea por existencia (021): deja faltante.
      */
     public function update(PedidoRequest $request, Pedido $pedido): RedirectResponse
     {
@@ -142,11 +144,14 @@ class PedidoController extends Controller
             $bloqueado = Pedido::whereKey($pedido->id)->lockForUpdate()->firstOrFail();
 
             if (! $bloqueado->esEditable()) {
-                throw ValidationException::withMessages(['lineas' => 'El pedido ya no se puede editar: '.mb_strtolower($bloqueado->estado->etiqueta()).'.']);
+                throw ValidationException::withMessages(['lineas' => 'La venta ya no se puede editar: '.mb_strtolower($bloqueado->estado->etiqueta()).'.']);
             }
 
             $this->inventario->revertirDocumento($bloqueado, MotivoMovimientoInventario::CorreccionPedido);
-            $this->exigirExistencias($request->lineas());
+
+            if (! $bloqueado->esDeCotizacion()) {
+                $this->exigirExistencias($request->lineas());
+            }
 
             $bloqueado->fill($request->datosPedido());
             $bloqueado->aplicarTotales($request->totales());
@@ -154,15 +159,17 @@ class PedidoController extends Controller
             $bloqueado->recalcularEstado();
             $bloqueado->save();
 
-            $this->inventario->salidaPorDocumento($bloqueado, $bloqueado->lineas()->get(), MotivoMovimientoInventario::VentaPedido, creaFila: false);
+            $this->inventario->salidaPorDocumento($bloqueado, $bloqueado->lineas()->get(), MotivoMovimientoInventario::VentaPedido, creaFila: $bloqueado->esDeCotizacion());
         });
 
         return redirect()->route('pedidos.show', $pedido)
-            ->with('exito', "Pedido {$pedido->folio_formateado} actualizado.");
+            ->with('exito', "Venta {$pedido->folio_formateado} actualizada.");
     }
 
     /**
-     * Borrado físico (se lleva las líneas) y devolución de existencias.
+     * Borrado físico (se lleva las líneas) y devolución de existencias. Si
+     * nació de una cotización, deshace la aceptación: la cotización vuelve a
+     * enviada (021).
      */
     public function destroy(Pedido $pedido): RedirectResponse
     {
@@ -176,13 +183,26 @@ class PedidoController extends Controller
             return back()->with('error', $respuesta->message());
         }
 
-        DB::transaction(function () use ($pedido) {
+        $cotizacion = DB::transaction(function () use ($pedido) {
             $this->inventario->revertirDocumento($pedido, MotivoMovimientoInventario::CorreccionPedido);
+
+            $cotizacion = $pedido->esDeCotizacion()
+                ? Cotizacion::whereKey($pedido->cotizacion_id)->lockForUpdate()->first()
+                : null;
+
             $pedido->delete();
+            $cotizacion?->revertirAceptacion();
+
+            return $cotizacion;
         });
 
-        return redirect()->route('pedidos.index')
-            ->with('exito', "Pedido {$pedido->folio_formateado} eliminado. Sus artículos regresaron a existencias.");
+        $mensaje = "Venta {$pedido->folio_formateado} eliminada. Sus artículos regresaron a existencias.";
+
+        if ($cotizacion !== null) {
+            $mensaje .= " La cotización {$cotizacion->folio_formateado} volvió a Enviada.";
+        }
+
+        return redirect()->route('pedidos.index')->with('exito', $mensaje);
     }
 
     /**
@@ -247,20 +267,6 @@ class PedidoController extends Controller
     }
 
     /**
-     * Consecutivo por usuario que nunca se reutiliza (mismo mecanismo que la
-     * cotización): es el "No. de ticket".
-     */
-    private function siguienteFolio(User $user): int
-    {
-        $bloqueado = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
-        $folio = max($bloqueado->ultimo_folio_pedido, (int) $bloqueado->pedidos()->max('folio')) + 1;
-
-        $bloqueado->forceFill(['ultimo_folio_pedido' => $folio])->save();
-
-        return $folio;
-    }
-
-    /**
      * Reemplaza las líneas. El costo se copia del artículo en este momento
      * (una sola consulta); importe e IVA salen de la calculadora.
      *
@@ -300,6 +306,7 @@ class PedidoController extends Controller
     private function pedidos(ListadoPedidosRequest $request): LengthAwarePaginator
     {
         return $request->user()->pedidos()
+            ->with('cotizacion:id,folio')
             ->withSum('pagos', 'monto')
             ->filtrar($request->filtros())
             ->orderByDesc('created_at')
@@ -318,6 +325,7 @@ class PedidoController extends Controller
             'pedidos' => $pedidos,
             'filtros' => $request->valores(),
             'estados' => EstadoPedido::opciones(),
+            'origenes' => ListadoPedidosRequest::ORIGENES,
             'periodos' => ListadoCotizacionesRequest::PERIODOS,
         ];
     }

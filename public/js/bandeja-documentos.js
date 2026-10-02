@@ -1,4 +1,5 @@
-// Bandeja de documentos: cotizaciones (spec 014) y órdenes de compra (017).
+// Bandeja de documentos: cotizaciones (spec 014), órdenes de compra (017) y el
+// dashboard, con cotizaciones y facturas en dos listas y un solo visor.
 //
 // Filtrar, buscar y paginar lo hace busqueda-dinamica.js. Este script muestra
 // en el visor el documento elegido sin recargar: pide su vista previa en HTML
@@ -9,6 +10,9 @@
 // Se activa en [data-bandeja-documentos]. Atributos:
 //   data-parametro      nombre del parámetro de la URL; las filas llevan
 //                       data-<parametro>="<id>" (data-cotizacion, data-orden).
+//                       Varios, separados por espacio, si hay varias listas
+//                       ("cotizacion factura"); la vista previa dice de cuál
+//                       es con data-documento.
 //   data-sin-seleccion  texto del visor vacío.
 // El visor es [data-visor-documento].
 (function () {
@@ -18,18 +22,25 @@
         return;
     }
 
-    const parametro = bandeja.dataset.parametro;
-    const selectorFila = '[data-' + parametro + ']';
+    const parametros = bandeja.dataset.parametro.split(' ');
+    const selectorFila = parametros.map(function (parametro) { return '[data-' + parametro + ']'; }).join(', ');
     const visor = bandeja.querySelector('[data-visor-documento]');
     const botonCarpetas = bandeja.querySelector('[data-mostrar-carpetas]');
     const alertaError = document.querySelector('[data-vista-previa-error]');
+    // La abierta es "<parametro>:<id>", para no confundir la cotización 3 con la factura 3.
     let abierta = idAbierta();
     let peticionActual = null;
 
     function idAbierta() {
         const documento = visor.querySelector('[data-vista-previa-de]');
 
-        return documento ? documento.dataset.vistaPreviaDe : null;
+        return documento ? (documento.dataset.documento || parametros[0]) + ':' + documento.dataset.vistaPreviaDe : null;
+    }
+
+    function clave(fila) {
+        const parametro = parametros.find(function (nombre) { return fila.dataset[nombre] !== undefined; });
+
+        return parametro + ':' + fila.dataset[parametro];
     }
 
     function filas() {
@@ -38,7 +49,7 @@
 
     function marcarActiva() {
         filas().forEach(function (fila) {
-            const activa = fila.dataset[parametro] === abierta;
+            const activa = clave(fila) === abierta;
             const enlace = fila.querySelector('[data-vista-previa]');
 
             fila.classList.toggle('bandeja-fila-activa', activa);
@@ -54,10 +65,14 @@
     function recordarEnUrl() {
         const url = new URL(window.location.href);
 
-        if (abierta) {
-            url.searchParams.set(parametro, abierta);
-        } else {
+        parametros.forEach(function (parametro) {
             url.searchParams.delete(parametro);
+        });
+
+        if (abierta) {
+            const [parametro, id] = abierta.split(':');
+
+            url.searchParams.set(parametro, id);
         }
 
         history.replaceState(null, '', url);
@@ -86,7 +101,7 @@
         }
 
         peticionActual = new AbortController();
-        abierta = fila.dataset[parametro];
+        abierta = clave(fila);
         marcarActiva();
         visor.setAttribute('aria-busy', 'true');
 
@@ -155,7 +170,7 @@
     document.addEventListener('busqueda:actualizada', function () {
         const lista = filas();
 
-        if (lista.some(function (fila) { return fila.dataset[parametro] === abierta; })) {
+        if (lista.some(function (fila) { return clave(fila) === abierta; })) {
             marcarActiva();
             recordarEnUrl();
         } else if (lista.length > 0) {
@@ -163,5 +178,38 @@
         } else {
             sinSeleccion();
         }
+    });
+
+    // Otro script cambió el documento abierto (p. ej. timbrar-cotizacion.js al
+    // facturarlo): se vuelve a pedir su vista previa.
+    document.addEventListener('documento:recargar', function () {
+        const fila = filas().find(function (candidata) { return clave(candidata) === abierta; });
+
+        if (fila) {
+            abrir(fila, bandeja.classList.contains('bandeja-leyendo'));
+        }
+    });
+
+    function normalizar(texto) {
+        return texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    }
+
+    // Listas [data-filtro-local] (dashboard): su buscador filtra las filas ya
+    // cargadas, sin ir al servidor, sin distinguir mayúsculas ni acentos.
+    bandeja.querySelectorAll('[data-filtro-local]').forEach(function (lista) {
+        const buscador = lista.querySelector('[data-buscar]');
+        const vacia = lista.querySelector('[data-vacia]');
+
+        buscador.addEventListener('input', function () {
+            const texto = normalizar(buscador.value.trim());
+            let visibles = 0;
+
+            lista.querySelectorAll(selectorFila).forEach(function (fila) {
+                fila.hidden = texto !== '' && !normalizar(fila.textContent).includes(texto);
+                visibles += fila.hidden ? 0 : 1;
+            });
+
+            vacia.hidden = visibles > 0;
+        });
     });
 })();

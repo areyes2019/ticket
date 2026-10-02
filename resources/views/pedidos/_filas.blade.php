@@ -7,6 +7,11 @@
         <tr>
             <td>
                 <a href="{{ route('pedidos.show', $pedido) }}">{{ $pedido->folio_formateado }}</a>
+                @if ($pedido->cotizacion)
+                    <span class="senal-origen" title="De la cotización {{ $pedido->cotizacion->folio_formateado }}">
+                        <x-icono nombre="file-earmark-text" /><span class="solo-lectores">De la cotización {{ $pedido->cotizacion->folio_formateado }}</span>
+                    </span>
+                @endif
                 @if (filled($pedido->autofactura_error))
                     <span class="senal-autofactura" title="El cliente intentó facturar y no pudo: {{ $pedido->autofactura_error }}">
                         <x-icono nombre="exclamation-triangle" /><span class="solo-lectores">El cliente intentó facturar y no pudo</span>
@@ -27,7 +32,7 @@
     @empty
         <tr>
             <td colspan="9">
-                {{ array_filter(Illuminate\Support\Arr::except($filtros, 'periodo')) !== [] ? 'Ningún pedido coincide con la búsqueda.' : 'No hay pedidos en este periodo.' }}
+                {{ array_filter(Illuminate\Support\Arr::except($filtros, 'periodo')) !== [] ? 'Ninguna venta coincide con la búsqueda.' : 'No hay ventas en este periodo.' }}
             </td>
         </tr>
     @endforelse

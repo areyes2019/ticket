@@ -113,7 +113,7 @@ it('timbra la factura del pedido con sus mismos importes, PUE y forma de pago de
 
     // Ya facturado: el enlace muestra la factura y no admite otra.
     $this->get($this->url)->assertSee('Descargar PDF')->assertDontSee('Generar mi factura');
-    $this->post($this->url, datosFiscales())->assertSessionHas('error', 'Este pedido ya se facturó.');
+    $this->post($this->url, datosFiscales())->assertSessionHas('error', 'Esta venta ya se facturó.');
 
     expect(Factura::count())->toBe(1);
 });

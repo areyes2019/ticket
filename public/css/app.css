@@ -64,6 +64,8 @@
 
     /* Imágenes de artículos */
     --ancho-ficha: 52rem;
+    --ancho-dialogo-documento: 72rem;
+    --sombra-dialogo: 0 24px 64px rgb(15 23 42 / 0.28), 0 4px 12px rgb(15 23 42 / 0.12);
     --lado-foto-ficha: 22rem;
     --lado-imagen-formulario: 12rem;
 
@@ -85,6 +87,17 @@
     --color-avatar-5: #be123c;
     --color-avatar-6: #4d7c0f;
     --color-estrella: #f59e0b;
+
+    /* Menú de aplicaciones (barra fija a la izquierda) */
+    --ancho-menu-apps: 5rem;
+    --alto-menu-apps-movil: 4.25rem;
+    --lado-menu-apps-opcion: 4rem;
+    --color-menu-apps: #16263d;
+    --color-menu-apps-texto: #cbd5e1;
+    --color-menu-apps-hover: rgb(255 255 255 / 0.08);
+    --color-menu-apps-activo: rgb(255 255 255 / 0.14);
+    --color-menu-apps-acento: #60a5fa;
+    --color-insignia: #dc2626;
 
     /* Menús desplegables de la barra */
     --ancho-menu-panel: 19rem;
@@ -186,7 +199,7 @@ a > .icono,
     margin: 0;
 }
 
-/* Grupos del menú (Compras, Ventas): <details> que despliega un panel. */
+/* Grupos de menú (Ventas, Compras, Inventario): <details> que despliega un panel. */
 .menu-grupo {
     position: relative;
 }
@@ -260,24 +273,25 @@ a > .icono,
     }
 }
 
-.menu .menu-panel a {
+.menu-panel a {
     display: flex;
     align-items: center;
     gap: var(--espacio-3);
     padding: var(--espacio-2) var(--espacio-3);
     color: var(--color-texto);
+    text-decoration: none;
     border-left: 2px solid transparent;
 }
 
-.menu .menu-panel a:hover,
-.menu .menu-panel a:focus-visible {
+.menu-panel a:hover,
+.menu-panel a:focus-visible {
     color: var(--color-texto);
     background: var(--color-superficie-suave);
     border-left-color: var(--color-primario);
     outline: none;
 }
 
-.menu .menu-panel a[aria-current="page"] {
+.menu-panel a[aria-current="page"] {
     background: var(--color-precargado);
     border-left-color: var(--color-primario);
 }
@@ -300,8 +314,8 @@ a > .icono,
     font-size: var(--texto-subtitulo);
 }
 
-.menu .menu-panel a:hover .menu-panel-icono,
-.menu .menu-panel a[aria-current="page"] .menu-panel-icono {
+.menu-panel a:hover .menu-panel-icono,
+.menu-panel a[aria-current="page"] .menu-panel-icono {
     color: var(--color-texto-invertido);
     background: var(--color-primario);
     border-color: var(--color-primario);
@@ -1029,6 +1043,19 @@ h1.tarjeta-titulo {
     background: var(--color-exito-fondo);
 }
 
+/* Cotización aceptada (021): su vida sigue en la venta */
+.etiqueta-aceptada {
+    color: var(--color-exito);
+    background: var(--color-exito-fondo);
+    border: 1px solid var(--color-exito);
+}
+
+.etiqueta-venta {
+    color: var(--color-primario-oscuro);
+    background: var(--color-menu);
+    text-decoration: none;
+}
+
 /* Marcas de facturación de la cotización (no son estados) */
 .etiqueta-facturada {
     color: var(--color-texto-invertido);
@@ -1322,6 +1349,233 @@ body:has(.contenido-bandeja) {
 
 .contenido-bandeja > .alerta {
     margin: var(--espacio-3) var(--espacio-4) 0;
+}
+
+/* Escritorio del dashboard: la aplicación abierta o el inicio con
+   cotizaciones y facturas (dashboard-apps.js). */
+.escritorio {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+}
+
+/* Menú de aplicaciones: barra fija a la izquierda de todo el sistema. La barra
+   superior y el contenido se recorren para dejarle su lugar. */
+.con-menu-apps {
+    padding-left: var(--ancho-menu-apps);
+}
+
+.menu-apps {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--espacio-1);
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 30;
+    width: var(--ancho-menu-apps);
+    padding: var(--espacio-3) 0;
+    background: var(--color-menu-apps);
+}
+
+.menu-apps-grupo {
+    position: relative;
+}
+
+.menu-apps-opcion {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--espacio-1);
+    position: relative;
+    width: var(--lado-menu-apps-opcion);
+    height: var(--lado-menu-apps-opcion);
+    padding: 0;
+    font: inherit;
+    color: var(--color-menu-apps-texto);
+    text-decoration: none;
+    list-style: none;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.menu-apps-opcion::-webkit-details-marker {
+    display: none;
+}
+
+/* Raya de acento a la izquierda en la opción donde está el usuario. */
+.menu-apps-opcion::before {
+    content: "";
+    position: absolute;
+    top: var(--espacio-2);
+    bottom: var(--espacio-2);
+    left: calc((var(--ancho-menu-apps) - var(--lado-menu-apps-opcion)) / -2);
+    width: 3px;
+    background: var(--color-menu-apps-acento);
+    transform: scaleY(0);
+    transition: transform 0.15s ease;
+}
+
+.menu-apps-opcion:hover {
+    color: var(--color-texto-invertido);
+    background: var(--color-menu-apps-hover);
+}
+
+.menu-apps-opcion[aria-current],
+.menu-apps-seccion-activa,
+.menu-apps-grupo[open] > .menu-apps-opcion {
+    color: var(--color-texto-invertido);
+    background: var(--color-menu-apps-activo);
+}
+
+.menu-apps-opcion[aria-current]::before,
+.menu-apps-seccion-activa::before {
+    transform: scaleY(1);
+}
+
+.menu-apps-opcion:focus-visible {
+    outline: 2px solid var(--color-menu-apps-acento);
+    outline-offset: 2px;
+}
+
+.menu-apps-icono {
+    position: relative;
+    font-size: 1.6rem;
+    line-height: 1;
+}
+
+.menu-apps-icono > .icono {
+    margin-right: 0;
+    font-size: inherit;
+}
+
+.menu-apps-abierto,
+.menu-apps-opcion[aria-current] .menu-apps-cerrado {
+    display: none;
+}
+
+.menu-apps-opcion[aria-current] .menu-apps-abierto {
+    display: inline-block;
+}
+
+.menu-apps-texto {
+    font-size: var(--texto-mini);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.menu-apps-insignia {
+    position: absolute;
+    top: -0.4rem;
+    right: -0.7rem;
+    min-width: 1.15rem;
+    padding: 0.1rem 0.25rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    color: var(--color-texto-invertido);
+    background: var(--color-insignia);
+    box-shadow: 0 0 0 2px var(--color-menu-apps);
+}
+
+/* El panel de cada grupo sale a la derecha de la barra, a la altura de su opción. */
+.menu-apps .menu-panel {
+    top: 0;
+    left: calc(100% + (var(--ancho-menu-apps) - var(--lado-menu-apps-opcion)) / 2 + var(--espacio-2));
+    border-top-width: 1px;
+    border-left: 3px solid var(--color-primario);
+    transform: none;
+    animation-name: menu-apps-panel-entrada;
+}
+
+.menu-apps .menu-panel::before {
+    top: var(--espacio-4);
+    right: 100%;
+    bottom: auto;
+    left: auto;
+    margin: 0 3px 0 0;
+    border-color: transparent;
+    border-right-color: var(--color-primario);
+}
+
+@keyframes menu-apps-panel-entrada {
+    from {
+        opacity: 0;
+        transform: translateX(-6px);
+    }
+}
+
+.menu-panel-titulo {
+    margin: 0;
+    padding: var(--espacio-1) var(--espacio-3) var(--espacio-2);
+    font-size: var(--texto-mini);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-texto-suave);
+}
+
+/* Celular: la barra pasa abajo, a lo ancho, y los paneles se abren encima. */
+@media (max-width: 767px) {
+    .con-menu-apps {
+        padding-left: 0;
+        padding-bottom: var(--alto-menu-apps-movil);
+    }
+
+    .menu-apps {
+        flex-direction: row;
+        justify-content: space-around;
+        top: auto;
+        right: 0;
+        width: auto;
+        height: var(--alto-menu-apps-movil);
+        padding: 0 var(--espacio-1);
+    }
+
+    .menu-apps-grupo {
+        position: static;
+    }
+
+    .menu-apps-opcion::before {
+        top: auto;
+        right: var(--espacio-2);
+        bottom: 0;
+        left: var(--espacio-2);
+        width: auto;
+        height: 3px;
+        transform: scaleX(0);
+    }
+
+    .menu-apps-opcion[aria-current]::before,
+    .menu-apps-seccion-activa::before {
+        transform: scaleX(1);
+    }
+
+    .menu-apps .menu-panel {
+        position: fixed;
+        top: auto;
+        right: var(--espacio-3);
+        bottom: calc(var(--alto-menu-apps-movil) + var(--espacio-2));
+        left: var(--espacio-3);
+        width: auto;
+        max-width: none;
+        border-left-width: 1px;
+        border-bottom: 3px solid var(--color-primario);
+        animation: none;
+    }
+
+    .menu-apps .menu-panel::before {
+        display: none;
+    }
 }
 
 .bandeja-vacia > .icono,
@@ -2015,6 +2269,387 @@ a.bandeja-abrir {
     }
 }
 
+/* Inicio del dashboard: cotizaciones y facturas recientes, cada una en su
+   lista, con un solo visor. Tableta: las dos listas, una sobre otra, junto al
+   visor. Celular: las listas apiladas y el visor a pantalla completa. */
+.bandeja-dashboard {
+    grid-template-columns: var(--ancho-bandeja-lista) var(--ancho-bandeja-lista) minmax(0, 1fr);
+}
+
+.bandeja-lista-titulo {
+    display: flex;
+    align-items: center;
+    gap: var(--icono-separacion);
+    margin: 0;
+    padding: var(--espacio-3) var(--espacio-3) 0;
+    font-size: var(--texto-subtitulo);
+}
+
+.bandeja-lista-titulo a {
+    margin-left: auto;
+    font-size: var(--texto-pequeno);
+    font-weight: 400;
+}
+
+.bandeja-lista-titulo + .bandeja-lista-encabezado {
+    padding-top: var(--espacio-2);
+}
+
+@media (max-width: 1023px) {
+    .bandeja-dashboard {
+        grid-template-columns: var(--ancho-bandeja-lista) minmax(0, 1fr);
+        grid-template-rows: repeat(2, minmax(0, 1fr));
+    }
+
+    .bandeja-dashboard .bandeja-visor {
+        grid-column: 2;
+        grid-row: 1 / span 2;
+    }
+
+    .bandeja-lista-facturas {
+        border-top: 1px solid var(--color-borde);
+    }
+}
+
+@media (max-width: 767px) {
+    .bandeja-dashboard {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .bandeja-dashboard .bandeja-visor {
+        grid-column: 1;
+    }
+}
+
+/* Botones pequeños de solo icono junto al título de una lista del dashboard
+   ("Ver todas" y "Nueva cotización"), cargados a la derecha. */
+.bandeja-lista-herramientas {
+    display: flex;
+    gap: var(--espacio-1);
+    margin-left: auto;
+}
+
+.bandeja-lista-herramientas .boton {
+    padding: var(--espacio-1) var(--espacio-2);
+    font-size: var(--texto-pequeno);
+    line-height: 1.2;
+}
+
+/* Ventana "Nueva cotización" del dashboard: encabezado y pie fijos, y el
+   cuerpo (tres pasos numerados) con su propio scroll. */
+.dialogo-documento {
+    width: min(var(--ancho-dialogo-documento), calc(100% - var(--espacio-4)));
+    max-height: calc(100% - var(--espacio-6));
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    border-top: 4px solid var(--color-primario);
+    box-shadow: var(--sombra-dialogo);
+}
+
+.dialogo-documento[open] {
+    display: flex;
+    flex-direction: column;
+    animation: dialogo-documento-entrada 0.2s ease-out;
+}
+
+.dialogo-documento::backdrop {
+    backdrop-filter: blur(2px);
+}
+
+@keyframes dialogo-documento-entrada {
+    from {
+        opacity: 0;
+        transform: translateY(0.75rem);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dialogo-documento[open] {
+        animation: none;
+    }
+}
+
+.documento-nuevo {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.documento-nuevo-encabezado {
+    display: flex;
+    align-items: center;
+    gap: var(--espacio-4);
+    padding: var(--espacio-5) var(--espacio-5) var(--espacio-4);
+    border-bottom: 1px solid var(--color-borde);
+}
+
+.documento-nuevo-sello {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 3rem;
+    height: 3rem;
+    font-size: 1.5rem;
+    color: var(--color-primario);
+    background: var(--color-menu);
+}
+
+.documento-nuevo-titulos {
+    flex: 1;
+    min-width: 0;
+}
+
+.documento-nuevo-titulos h2 {
+    margin: 0;
+    font-size: var(--texto-titulo);
+    letter-spacing: -0.01em;
+}
+
+.documento-nuevo-titulos p {
+    margin: var(--espacio-1) 0 0;
+    font-size: var(--texto-pequeno);
+    color: var(--color-texto-suave);
+}
+
+.documento-nuevo-cerrar {
+    flex: none;
+    align-self: flex-start;
+    background: transparent;
+}
+
+.documento-nuevo-cuerpo {
+    flex: 1;
+    min-height: 0;
+    padding: var(--espacio-2) var(--espacio-5) var(--espacio-4);
+    overflow-y: auto;
+    background: var(--color-superficie-suave);
+}
+
+.documento-nuevo-cuerpo > .alerta {
+    margin-top: var(--espacio-3);
+}
+
+.documento-nuevo-paso {
+    margin-top: var(--espacio-3);
+    padding: var(--espacio-4) var(--espacio-5);
+    background: var(--color-superficie);
+    border: 1px solid var(--color-borde);
+}
+
+.documento-nuevo-paso .campo:last-child {
+    margin-bottom: 0;
+}
+
+.documento-nuevo-paso-titulo {
+    display: flex;
+    align-items: center;
+    gap: var(--espacio-3);
+    margin: 0 0 var(--espacio-4);
+    font-size: var(--texto-pequeno);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-marca);
+}
+
+.documento-nuevo-numero {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    font-size: var(--texto-mini);
+    letter-spacing: 0;
+    color: var(--color-texto-invertido);
+    background: var(--color-marca);
+}
+
+.documento-nuevo-lineas .tabla-lineas th {
+    font-size: var(--texto-mini);
+    color: var(--color-texto-suave);
+}
+
+.documento-nuevo-vacio {
+    margin: var(--espacio-3) 0 0;
+    padding: var(--espacio-5) var(--espacio-4);
+    color: var(--color-texto-suave);
+    text-align: center;
+    border: 1px dashed var(--color-borde-campo);
+}
+
+.documento-nuevo-vacio > .icono {
+    margin-right: var(--icono-separacion);
+    color: var(--color-primario);
+}
+
+.documento-nuevo-cierre {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--espacio-4) var(--espacio-6);
+}
+
+.documento-nuevo-cierre .descuento-global {
+    flex: 1 1 20rem;
+}
+
+.documento-nuevo-resumen {
+    flex: 0 1 18rem;
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+.documento-nuevo-resumen div {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--espacio-4);
+    padding: var(--espacio-1) 0;
+    border-bottom: 1px dotted var(--color-borde-campo);
+}
+
+.documento-nuevo-resumen dt {
+    color: var(--color-texto-suave);
+}
+
+.documento-nuevo-resumen dd {
+    margin: 0;
+}
+
+.documento-nuevo-pie {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--espacio-3) var(--espacio-5);
+    padding: var(--espacio-4) var(--espacio-5);
+    background: var(--color-superficie);
+    border-top: 1px solid var(--color-borde);
+}
+
+.documento-nuevo-total {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+}
+
+.documento-nuevo-total span {
+    font-size: var(--texto-mini);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-texto-suave);
+}
+
+.documento-nuevo-total output {
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-marca);
+}
+
+@media (max-width: 767px) {
+    .dialogo-documento {
+        width: 100%;
+        max-width: 100%;
+        height: 100%;
+        max-height: 100%;
+    }
+
+    .documento-nuevo-encabezado,
+    .documento-nuevo-pie {
+        padding-right: var(--espacio-4);
+        padding-left: var(--espacio-4);
+    }
+
+    .documento-nuevo-cuerpo {
+        padding-right: var(--espacio-2);
+        padding-left: var(--espacio-2);
+    }
+
+    .documento-nuevo-paso {
+        padding: var(--espacio-3);
+    }
+
+    .documento-nuevo-pie .acciones {
+        width: 100%;
+    }
+
+    .documento-nuevo-pie .acciones .boton {
+        flex: 1;
+    }
+}
+
+/* Confirmación del timbrado directo (timbrar-cotizacion.js) y la factura
+   recién timbrada, que entra resaltada a la lista del dashboard. */
+.dialogo-timbrar {
+    width: min(38rem, calc(100% - var(--espacio-4)));
+}
+
+.timbrar-resumen {
+    margin: 0 0 var(--espacio-4);
+    padding: var(--espacio-3) var(--espacio-4);
+    background: var(--color-superficie-suave);
+    border: 1px solid var(--color-borde);
+}
+
+.timbrar-resumen div {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--espacio-4);
+    padding: var(--espacio-1) 0;
+}
+
+.timbrar-resumen dt {
+    color: var(--color-texto-suave);
+}
+
+.timbrar-resumen dd {
+    min-width: 0;
+    margin: 0;
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+.timbrar-resumen-total {
+    margin-top: var(--espacio-1);
+    border-top: 1px solid var(--color-borde-campo);
+    font-size: var(--texto-subtitulo);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.timbrar-campos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    gap: 0 var(--espacio-3);
+}
+
+.dialogo-timbrar .alerta ul {
+    margin: var(--espacio-1) 0 0;
+    padding-left: var(--espacio-5);
+}
+
+.bandeja-fila-nueva {
+    animation: bandeja-fila-nueva 2.5s ease-out;
+}
+
+@keyframes bandeja-fila-nueva {
+    from {
+        background: var(--color-exito-fondo);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bandeja-fila-nueva {
+        animation: none;
+        background: var(--color-exito-fondo);
+    }
+}
+
 /* Contabilidad (Tesorería) */
 .pestanas {
     display: flex;
@@ -2151,6 +2786,13 @@ a.bandeja-abrir {
 .senal-autofactura {
     margin-left: var(--espacio-1);
     color: var(--color-advertencia);
+    cursor: help;
+}
+
+/* La venta nació de una cotización aceptada (021) */
+.senal-origen {
+    margin-left: var(--espacio-1);
+    color: var(--color-texto-suave);
     cursor: help;
 }
 

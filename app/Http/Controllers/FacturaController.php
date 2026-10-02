@@ -14,22 +14,25 @@ use App\Http\Requests\CancelarFacturaRequest;
 use App\Http\Requests\FacturaRequest;
 use App\Http\Requests\ListadoCotizacionesRequest;
 use App\Http\Requests\ListadoFacturasRequest;
+use App\Http\Requests\TimbrarCotizacionRequest;
 use App\Models\Cotizacion;
 use App\Models\CotizacionLinea;
 use App\Models\Factura;
 use App\Models\FacturaLinea;
 use App\Models\User;
-use App\Services\Documentos\CalculadoraTotalesDocumento;
 use App\Services\Facturacion\CanceladorFacturas;
 use App\Services\Facturacion\FacturapiCliente;
 use App\Services\Facturacion\FacturapiException;
 use App\Services\Facturacion\GeneradorPdfFactura;
 use App\Services\Facturacion\ResultadoTimbrado;
 use App\Services\Facturacion\TimbradorFacturas;
+use Closure;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
@@ -55,6 +58,20 @@ class FacturaController extends Controller
         $facturas = $this->facturas($request)->withPath(route('facturas.index'));
 
         return view('facturas._resultados', $this->datosListado($request, $facturas));
+    }
+
+    /**
+     * La factura como hoja en HTML con sus acciones, para el visor del
+     * dashboard (AJAX). No consulta la cancelación en facturapi.io: muestra el
+     * último estado conocido; el detalle lo refresca.
+     */
+    public function vistaPrevia(Factura $factura): View
+    {
+        Gate::authorize('view', $factura);
+
+        return view('facturas._vista-previa', [
+            'factura' => $factura->load(['cliente', 'lineas']),
+        ]);
     }
 
     /**
@@ -88,28 +105,90 @@ class FacturaController extends Controller
      * Guarda la captura completa (folio, factura y líneas) y, ya confirmada la
      * transacción, intenta timbrar. Si el timbrado falla la factura queda
      * pendiente: la captura no se pierde.
-     *
-     * Si sale de una cotización, la fila de la cotización se bloquea y se
-     * vuelve a revisar: dos clics o dos pestañas no crean dos facturas.
      */
     public function store(FacturaRequest $request): RedirectResponse
     {
+        $resultado = $this->guardarNueva(
+            $request,
+            yaFacturada: fn (Factura $vigente) => redirect()->route('facturas.show', $vigente)
+                ->with('error', "Esta cotización ya se facturó en {$vigente->folioVisible()}."),
+            noFacturable: fn (string $motivo) => back()->withInput()->with('error', $motivo),
+        );
+
+        if ($resultado instanceof RedirectResponse) {
+            return $resultado;
+        }
+
+        return $this->respuestaTimbrado($resultado, $this->timbrador->timbrar($resultado));
+    }
+
+    /**
+     * Timbrado directo desde la vista previa de una cotización (spec 020): la
+     * factura nace con los datos de la cotización y los fiscales elegidos en
+     * la confirmación, y se timbra en ese momento. Con JavaScript responde
+     * JSON con las filas nuevas para la página; sin él, igual que store.
+     */
+    public function timbrarCotizacion(TimbrarCotizacionRequest $request, Cotizacion $cotizacion): JsonResponse|RedirectResponse
+    {
+        if (! $request->expectsJson()) {
+            return $this->store($request);
+        }
+
+        $resultado = $this->guardarNueva(
+            $request,
+            yaFacturada: fn (Factura $vigente) => response()->json([
+                'mensaje' => "Esta cotización ya se facturó en {$vigente->folioVisible()}.",
+                'url' => route('facturas.show', $vigente),
+            ], 409),
+            noFacturable: fn (string $motivo) => response()->json(['mensaje' => $motivo], 422),
+        );
+
+        if ($resultado instanceof JsonResponse) {
+            return $resultado;
+        }
+
+        $timbrado = $this->timbrador->timbrar($resultado);
+        $factura = $resultado->refresh()->load('cliente');
+        $cotizacion = $cotizacion->fresh('cliente')->loadExists('facturaVigente');
+
+        return response()->json([
+            'tipo' => $timbrado === ResultadoTimbrado::Timbrada ? 'exito' : 'error',
+            'mensaje' => $this->mensajeTimbrado($factura, $timbrado) ?? "Factura {$factura->folioVisible()} creada.",
+            'factura' => $factura->id,
+            'fila' => Blade::render('<x-facturas.fila :factura="$factura" />', ['factura' => $factura]),
+            'filaCotizacion' => Blade::render('<x-cotizaciones.fila :cotizacion="$cotizacion" :activa="true" />', ['cotizacion' => $cotizacion]),
+        ]);
+    }
+
+    /**
+     * Folio, factura y líneas en una transacción. Si sale de una cotización,
+     * su fila se bloquea y se vuelve a revisar: dos clics o dos pestañas no
+     * crean dos facturas. Si ya tiene factura vigente o no se puede facturar,
+     * devuelve la respuesta que arma quien llama.
+     *
+     * @template TRespuesta of Response|RedirectResponse|JsonResponse
+     *
+     * @param  Closure(Factura): TRespuesta  $yaFacturada
+     * @param  Closure(string): TRespuesta  $noFacturable
+     * @return Factura|TRespuesta
+     */
+    private function guardarNueva(FacturaRequest $request, Closure $yaFacturada, Closure $noFacturable): mixed
+    {
         $origen = $request->origen();
 
-        $resultado = DB::transaction(function () use ($request, $origen): Factura|RedirectResponse {
+        return DB::transaction(function () use ($request, $origen, $yaFacturada, $noFacturable) {
             if ($origen['cotizacion_id'] !== null) {
                 $cotizacion = Cotizacion::whereKey($origen['cotizacion_id'])->lockForUpdate()->firstOrFail();
                 $vigente = $cotizacion->facturaVigente()->first();
 
                 if ($vigente !== null) {
-                    return redirect()->route('facturas.show', $vigente)
-                        ->with('error', "Esta cotización ya se facturó en {$vigente->folioVisible()}.");
+                    return $yaFacturada($vigente);
                 }
 
                 $motivo = $cotizacion->motivoNoFacturable();
 
                 if ($motivo !== null) {
-                    return back()->withInput()->with('error', $motivo);
+                    return $noFacturable($motivo);
                 }
             }
 
@@ -123,12 +202,6 @@ class FacturaController extends Controller
 
             return $factura;
         });
-
-        if ($resultado instanceof RedirectResponse) {
-            return $resultado;
-        }
-
-        return $this->respuestaTimbrado($resultado, $this->timbrador->timbrar($resultado));
     }
 
     /**
@@ -304,16 +377,29 @@ class FacturaController extends Controller
     {
         $factura->refresh();
 
+        $ruta = $resultado === ResultadoTimbrado::ErrorDatos && $factura->esEditable() ? 'facturas.edit' : 'facturas.show';
+        $redireccion = redirect()->route($ruta, $factura);
+        $mensaje = $this->mensajeTimbrado($factura, $resultado);
+
         return match ($resultado) {
-            ResultadoTimbrado::Timbrada => redirect()->route('facturas.show', $factura)
-                ->with('exito', "Factura timbrada. Folio fiscal {$factura->folioFiscal()}, UUID {$factura->uuid_fiscal}."),
-            ResultadoTimbrado::ErrorDatos => redirect()->route($factura->esEditable() ? 'facturas.edit' : 'facturas.show', $factura)
-                ->with('error', "facturapi.io rechazó la factura {$factura->folio_formateado}: {$factura->error_timbrado} Corrige los datos y vuelve a timbrar."),
-            ResultadoTimbrado::ErrorPac => redirect()->route('facturas.show', $factura)
-                ->with('error', "No se pudo timbrar la factura {$factura->folio_formateado}: {$factura->error_timbrado} Quedó pendiente; reintenta el timbrado."),
-            ResultadoTimbrado::EnCurso => redirect()->route('facturas.show', $factura)
-                ->with('error', 'Esta factura ya se está timbrando. Espera unos segundos y vuelve a abrirla.'),
-            ResultadoTimbrado::SinCambio => redirect()->route('facturas.show', $factura),
+            ResultadoTimbrado::Timbrada => $redireccion->with('exito', $mensaje),
+            ResultadoTimbrado::SinCambio => $redireccion,
+            default => $redireccion->with('error', $mensaje),
+        };
+    }
+
+    /**
+     * El aviso de cada resultado del timbrado (null si no hubo cambio). Lo
+     * usan la redirección de store y la respuesta JSON del timbrado directo.
+     */
+    private function mensajeTimbrado(Factura $factura, ResultadoTimbrado $resultado): ?string
+    {
+        return match ($resultado) {
+            ResultadoTimbrado::Timbrada => "Factura timbrada. Folio fiscal {$factura->folioFiscal()}, UUID {$factura->uuid_fiscal}.",
+            ResultadoTimbrado::ErrorDatos => "facturapi.io rechazó la factura {$factura->folio_formateado}: {$factura->error_timbrado} Corrige los datos y vuelve a timbrar.",
+            ResultadoTimbrado::ErrorPac => "No se pudo timbrar la factura {$factura->folio_formateado}: {$factura->error_timbrado} Quedó pendiente; reintenta el timbrado.",
+            ResultadoTimbrado::EnCurso => 'Esta factura ya se está timbrando. Espera unos segundos y vuelve a abrirla.',
+            ResultadoTimbrado::SinCambio => null,
         };
     }
 
@@ -398,13 +484,6 @@ class FacturaController extends Controller
     private function precargaDeCotizacion(Cotizacion $cotizacion): array
     {
         $cotizacion->loadMissing('lineas.articulo');
-        $pesos = fn ($monto) => '$'.number_format((float) $monto, 2);
-
-        $avisos = $cotizacion->lineas
-            ->filter(fn (CotizacionLinea $linea) => CalculadoraTotalesDocumento::centavos($linea->precio_unitario) !== CalculadoraTotalesDocumento::centavos($linea->articulo->precio_unitario_sin_iva))
-            ->map(fn (CotizacionLinea $linea) => "{$linea->descripcion}: {$pesos($linea->precio_unitario)} en la cotización, {$pesos($linea->articulo->precio_unitario_sin_iva)} hoy en el catálogo.")
-            ->values()
-            ->all();
 
         return [
             'cabecera' => [
@@ -414,7 +493,7 @@ class FacturaController extends Controller
             ],
             'lineas' => $cotizacion->lineas->map($this->lineaFormulario(...))->all(),
             'cotizacion' => $cotizacion,
-            'avisosPrecio' => $avisos,
+            'avisosPrecio' => $cotizacion->avisosDePrecio(),
         ];
     }
 

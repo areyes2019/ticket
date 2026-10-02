@@ -15,7 +15,7 @@
 
         <x-card estrecha>
             <dl class="datos">
-                <div><dt>Pedido</dt><dd>No. {{ $pedido->numero_ticket }}</dd></div>
+                <div><dt>Venta</dt><dd>No. {{ $pedido->numero_ticket }}</dd></div>
                 <div><dt>Fecha</dt><dd>{{ $pedido->created_at->setTimezone(config('app.zona_negocio'))->format('d/m/Y') }}</dd></div>
                 <div><dt>Total</dt><dd><strong>{{ $pesos($pedido->total) }}</strong></dd></div>
             </dl>

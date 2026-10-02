@@ -9,6 +9,12 @@ tiene **una sola factura vigente, por el total**. El vínculo se guarda del lado
 (`facturas.cotizacion_id`), igual que en 043, para que las facturas parciales lleguen después sin
 voltear la relación ni migrar datos.
 
+> **Desde [020](020-dashboard-cotizaciones-facturas.md)**, en la vista previa de la cotización
+> (dashboard y `/cotizaciones`) "Facturar" **timbra directo**: una ventana confirma y pide uso de
+> CFDI, método y forma de pago, y la factura se crea con los datos de la cotización sin pasar por el
+> formulario. La asunción 3 sigue valiendo para el detalle de la cotización, cuyo "Facturar" lleva al
+> formulario como siempre. El bloqueo contra dos facturas de la misma cotización es el mismo.
+
 ## Historia de usuario
 
 Como usuario quiero convertir una cotización en factura, ya sea desde la cotización o jalándola desde
@@ -286,7 +292,9 @@ al enviar. El bloqueo de `store` cubre el caso de dos pestañas.
 - Facturas parciales o varias facturas vigentes por cotización
   ([remotas/043](remotas/043-facturas-parciales-cotizacion.md)).
 - Ver en la cotización el historial de sus facturas canceladas (solo se muestra la vigente).
-- Botón "Facturar" o "Duplicar" en la vista previa de la bandeja.
+- Botón "Facturar" o "Duplicar" en la vista previa de la bandeja. *(Retirado por
+  [020](020-dashboard-cotizaciones-facturas.md): la vista previa tiene "Facturar" con timbrado
+  directo.)*
 - Preferencias fiscales por cliente (uso de CFDI, método y forma de pago por defecto).
 - Actualizar precios con un botón desde el aviso de precios.
 - Convertir una factura en cotización.

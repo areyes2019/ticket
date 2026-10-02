@@ -61,7 +61,7 @@
 </head>
 <body>
     <div class="etiqueta">
-        <img src="{{ $qr }}" alt="Código QR del pedido {{ $pedido->numero_ticket }}">
+        <img src="{{ $qr }}" alt="Código QR de la venta {{ $pedido->numero_ticket }}">
         <div class="etiqueta-texto">
             <p>{{ $pedido->cliente_nombre }}</p>
             <p>{{ $pedido->telefono_legible }}</p>

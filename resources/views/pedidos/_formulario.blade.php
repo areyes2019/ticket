@@ -87,7 +87,7 @@
     </div>
 </form>
 
-@include('documentos._aviso-duplicado', ['documento' => 'el pedido'])
+@include('documentos._aviso-duplicado', ['documento' => 'la venta'])
 
 @push('scripts')
     <script src="{{ asset('js/totales-documento.js') }}"></script>

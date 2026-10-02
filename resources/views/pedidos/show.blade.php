@@ -7,15 +7,19 @@
     $zona = config('app.zona_negocio');
     $pesos = fn ($monto) => '$'.number_format((float) $monto, 2);
     $puedeEliminarPago = $pedido->puedeEliminarPago();
+    // Una sola factura entre la cotización aceptada y su venta (021).
+    $facturaDeLaCotizacion = $pedido->facturaDeLaCotizacion();
 @endphp
 
 @section('content')
     <div class="encabezado">
         <h1>
-            Pedido {{ $pedido->folio_formateado }}
+            Venta {{ $pedido->folio_formateado }}
             <span @class(['etiqueta', $pedido->estado->claseEtiqueta()])>{{ $pedido->estado->etiqueta() }}</span>
             @if ($facturaTimbrada)
-                <a href="{{ route('facturas.show', $facturaTimbrada) }}" class="etiqueta etiqueta-facturada" title="Ver la factura">Facturado · {{ $facturaTimbrada->folioVisible() }}</a>
+                <a href="{{ route('facturas.show', $facturaTimbrada) }}" class="etiqueta etiqueta-facturada" title="Ver la factura">Facturada · {{ $facturaTimbrada->folioVisible() }}</a>
+            @elseif ($facturaDeLaCotizacion)
+                <a href="{{ route('facturas.show', $facturaDeLaCotizacion) }}" class="etiqueta etiqueta-facturada" title="Ver la factura (desde la cotización)">Facturada · {{ $facturaDeLaCotizacion->folioVisible() }}</a>
             @endif
         </h1>
         <x-boton :href="route('pedidos.index')" variante="secundario" icono="arrow-left">Listado</x-boton>
@@ -82,13 +86,17 @@
                 <form method="POST" action="{{ route('pedidos.destroy', $pedido) }}">
                     @csrf
                     @method('DELETE')
-                    <x-boton variante="peligro" icono="trash" data-confirmar="¿Eliminar el pedido {{ $pedido->folio_formateado }}? Sus artículos regresan a existencias y el borrado es definitivo.">Eliminar</x-boton>
+                    <x-boton variante="peligro" icono="trash" data-confirmar="¿Eliminar la venta {{ $pedido->folio_formateado }}? Sus artículos regresan a existencias y el borrado es definitivo.{{ $pedido->cotizacion ? ' La cotización '.$pedido->cotizacion->folio_formateado.' volverá a Enviada.' : '' }}">Eliminar</x-boton>
                 </form>
             @endcan
         </div>
 
         <div class="detalle-principal">
-            <article class="hoja" aria-label="Pedido {{ $pedido->folio_formateado }}">
+            @if ($pedido->cotizacion)
+                <p class="ayuda" data-origen-cotizacion>Origen: cotización <a href="{{ route('cotizaciones.show', $pedido->cotizacion) }}">{{ $pedido->cotizacion->folio_formateado }}</a> aceptada.</p>
+            @endif
+
+            <article class="hoja" aria-label="Venta {{ $pedido->folio_formateado }}">
                 <header class="hoja-encabezado">
                     <p class="hoja-negocio">{{ config('negocio.nombre') }}</p>
                     <p class="hoja-folio">
@@ -98,7 +106,15 @@
                 </header>
 
                 <dl class="hoja-cliente">
-                    <div><dt>Cliente</dt><dd><strong>{{ $pedido->cliente_nombre }}</strong></dd></div>
+                    <div>
+                        <dt>Cliente</dt>
+                        <dd>
+                            <strong>{{ $pedido->cliente_nombre }}</strong>
+                            @if ($pedido->cliente)
+                                <br><span class="hoja-suave">{{ $pedido->cliente->razon_social }} · {{ $pedido->cliente->rfc }}</span>
+                            @endif
+                        </dd>
+                    </div>
                     <div><dt>Teléfono</dt><dd>{{ $pedido->telefono_legible }}</dd></div>
                     @if ($pedido->cliente_correo)
                         <div><dt>Correo</dt><dd>{{ $pedido->cliente_correo }}</dd></div>
@@ -195,7 +211,7 @@
             @endif
 
             <x-card titulo="Ticket">
-                <img src="{{ route('pedidos.ticket', $pedido) }}" alt="Ticket del pedido {{ $pedido->folio_formateado }}" class="ticket-vista-previa" loading="lazy">
+                <img src="{{ route('pedidos.ticket', $pedido) }}" alt="Ticket de la venta {{ $pedido->folio_formateado }}" class="ticket-vista-previa" loading="lazy">
                 @unless ($pedido->puedeCompartirTicket())
                     <p class="ayuda">Vista previa: el ticket se podrá compartir en cuanto se registre el primer pago.</p>
                 @endunless
