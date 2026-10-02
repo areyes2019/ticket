@@ -4,6 +4,7 @@ use App\Enums\EstadoCotizacion;
 use App\Models\Cliente;
 use App\Models\Cotizacion;
 use App\Models\CotizacionLinea;
+use App\Models\Cuenta;
 use App\Models\User;
 
 beforeEach(function () {
@@ -26,7 +27,7 @@ it('borra las borrador y enviadas sin pagos con más de 30 días sin movimiento'
     ($this->crear)(EstadoCotizacion::ProductoEntregado, 90);
 
     $conPago = Cotizacion::factory()->for($this->cliente)->conLinea()->enEstado(EstadoCotizacion::Enviada)->create(['user_id' => $this->user->id]);
-    $conPago->pagos()->create(['tipo' => 'anticipo', 'fecha_pago' => today(), 'monto' => '10.00', 'forma_pago' => '01']);
+    $conPago->pagos()->create(['tipo' => 'anticipo', 'fecha_pago' => today(), 'monto' => '10.00', 'cuenta_id' => Cuenta::factory()->for($this->user)->create()->id]);
     $conPago->forceFill(['updated_at' => now()->subDays(60)])->saveQuietly();
 
     $this->artisan('cotizaciones:purgar-vencidas')

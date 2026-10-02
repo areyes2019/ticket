@@ -7,6 +7,7 @@ use App\Models\Catalogo;
 use App\Models\Cliente;
 use App\Models\Cotizacion;
 use App\Models\CotizacionLinea;
+use App\Models\Cuenta;
 use App\Models\Proveedor;
 use App\Models\User;
 use Carbon\CarbonImmutable;
@@ -297,7 +298,7 @@ describe('edición', function () {
 
     it('no deja el total por debajo de lo ya pagado', function () {
         $cotizacion = Cotizacion::factory()->for($this->cliente)->conLinea(10)->enEstado(EstadoCotizacion::Enviada)->create(['user_id' => $this->user->id]);
-        $cotizacion->pagos()->create(['tipo' => 'anticipo', 'fecha_pago' => today(), 'monto' => '500.00', 'forma_pago' => '01']);
+        $cotizacion->pagos()->create(['tipo' => 'anticipo', 'fecha_pago' => today(), 'monto' => '500.00', 'cuenta_id' => Cuenta::factory()->for($this->user)->create()->id]);
 
         $this->actingAs($this->user)->put("/cotizaciones/{$cotizacion->id}", datosCotizacion($this->cliente))
             ->assertSessionHasErrors('lineas');
@@ -327,7 +328,7 @@ describe('borrado', function () {
         $cotizacion = Cotizacion::factory()->for($this->cliente)->conLinea()->enEstado($estado)->create(['user_id' => $this->user->id]);
 
         if ($conPago) {
-            $cotizacion->pagos()->create(['tipo' => 'anticipo', 'fecha_pago' => today(), 'monto' => '10.00', 'forma_pago' => '01']);
+            $cotizacion->pagos()->create(['tipo' => 'anticipo', 'fecha_pago' => today(), 'monto' => '10.00', 'cuenta_id' => Cuenta::factory()->for($this->user)->create()->id]);
         }
 
         $this->actingAs($this->user)->delete("/cotizaciones/{$cotizacion->id}")->assertSessionHas('error');
@@ -356,7 +357,7 @@ describe('entregar y duplicar', function () {
         $original = Cotizacion::factory()->for($this->cliente)->conLinea(3, '50.00')->enEstado(EstadoCotizacion::Pagada)
             ->create(['user_id' => $this->user->id, 'descuento_global_tipo' => 'porcentaje', 'descuento_global_valor' => '5']);
         $original->lineas()->update(['costo_unitario' => '20.00']);
-        $original->pagos()->create(['tipo' => 'pago_total', 'fecha_pago' => today(), 'monto' => '174.00', 'forma_pago' => '03']);
+        $original->pagos()->create(['tipo' => 'pago_total', 'fecha_pago' => today(), 'monto' => '174.00', 'cuenta_id' => Cuenta::factory()->for($this->user)->create()->id]);
 
         $this->actingAs($this->user)->post("/cotizaciones/{$original->id}/duplicar", ['cliente_id' => $this->cliente->id]);
 

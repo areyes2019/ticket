@@ -7,6 +7,7 @@ use App\Enums\MetodoPago;
 use App\Enums\UsoCfdi;
 use App\Models\Cliente;
 use App\Models\Cotizacion;
+use App\Models\Cuenta;
 use App\Models\Factura;
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
@@ -27,7 +28,7 @@ describe('duplicar cotización', function () {
         $original = Cotizacion::factory()->for($this->cliente)->conLinea(3, '50.00')->enEstado(EstadoCotizacion::Pagada)
             ->create(['user_id' => $this->user->id, 'descuento_global_tipo' => 'porcentaje', 'descuento_global_valor' => '5']);
         $original->lineas()->update(['costo_unitario' => '20.00']);
-        $original->pagos()->create(['tipo' => 'pago_total', 'fecha_pago' => today(), 'monto' => '174.00', 'forma_pago' => '03']);
+        $original->pagos()->create(['tipo' => 'pago_total', 'fecha_pago' => today(), 'monto' => '174.00', 'cuenta_id' => Cuenta::factory()->for($this->user)->create()->id]);
 
         $respuesta = $this->actingAs($this->user)->post("/cotizaciones/{$original->id}/duplicar", ['cliente_id' => $this->otroCliente->id]);
 

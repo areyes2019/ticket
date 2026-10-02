@@ -5,6 +5,7 @@ use App\Enums\EstadoFactura;
 use App\Models\Articulo;
 use App\Models\Cliente;
 use App\Models\Cotizacion;
+use App\Models\Cuenta;
 use App\Models\Factura;
 use App\Models\User;
 use App\Services\Documentos\CalculadoraTotalesDocumento;
@@ -226,7 +227,7 @@ describe('cotización facturada', function () {
 
     it('sí registra pagos', function () {
         $this->actingAs($this->user)->post("/cotizaciones/{$this->cotizacion->id}/pagos", [
-            'tipo' => 'pago_total', 'fecha_pago' => now(config('app.zona_negocio'))->toDateString(), 'forma_pago' => '03',
+            'tipo' => 'pago_total', 'fecha_pago' => now(config('app.zona_negocio'))->toDateString(), 'cuenta_id' => Cuenta::factory()->for($this->user)->create()->id,
         ])->assertSessionHasNoErrors();
 
         expect($this->cotizacion->fresh()->estado)->toBe(EstadoCotizacion::Pagada);
