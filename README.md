@@ -25,6 +25,23 @@ schtasks /Create /TN "ticket_factura scheduler" /SC MINUTE /MO 1 /TR "cmd /c cd 
   `php artisan cotizaciones:purgar-vencidas`.
 - `php artisan schedule:list` muestra qué está agendado y cuándo corre.
 
+## Despliegue a producción
+
+Producción vive en Hostinger. Los datos del servidor (alias SSH, rutas, URL) van en
+`deploy/config.sh`, que no se versiona: la primera vez, `cp deploy/config.example.sh deploy/config.sh`
+y llénalo. Se despliega siempre la rama `main`, ya empujada a GitHub, desde Git Bash:
+
+```bash
+bash deploy/deploy.sh               # detecta solo si hay migraciones (respalda la base antes)
+bash deploy/deploy.sh --sin-migrar  # sube el código sin tocar la base
+bash deploy/deploy.sh --verificar   # solo comprueba el sitio
+```
+
+- El script se detiene si cambió `.env.example`: primero hay que agregar las variables nuevas
+  al `.env` del servidor (en `REMOTE_APP`).
+- El commit desplegado queda en `REMOTE_APP/.desplegado`; los respaldos, en `~/backups/ticket-*.sql.gz`.
+- El scheduler corre con un cron dado de alta en hPanel (Hostinger no tiene `crontab` por SSH).
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
