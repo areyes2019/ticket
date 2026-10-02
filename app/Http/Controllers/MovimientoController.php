@@ -10,6 +10,7 @@ use App\Http\Requests\MovimientoRequest;
 use App\Models\CotizacionPago;
 use App\Models\Cuenta;
 use App\Models\Movimiento;
+use App\Models\OrdenCompra;
 use App\Services\Tesoreria\RegistradorMovimientos;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\RedirectResponse;
@@ -35,7 +36,7 @@ class MovimientoController extends Controller
             ->filtrar($filtros)
             ->with([
                 'cuenta',
-                'documentable' => fn (MorphTo $morph) => $morph->morphWith([CotizacionPago::class => ['cotizacion.lineas']]),
+                'documentable' => fn (MorphTo $morph) => $morph->morphWith([CotizacionPago::class => ['cotizacion.lineas'], OrdenCompra::class => []]),
             ])
             ->orderByDesc('fecha')
             ->orderByDesc('id')

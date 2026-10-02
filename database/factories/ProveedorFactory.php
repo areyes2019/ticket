@@ -28,14 +28,4 @@ class ProveedorFactory extends Factory
             'rfc' => (new RfcFaker)->mexicanRfc(),
         ];
     }
-
-    /**
-     * Indicate that the supplier has active purchase orders.
-     */
-    public function conOrdenesActivas(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'tiene_ordenes_activas' => true,
-        ]);
-    }
 }

@@ -12,6 +12,7 @@ use App\Http\Controllers\CuentaController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EnvioCotizacionController;
 use App\Http\Controllers\EnvioFacturaController;
+use App\Http\Controllers\EnvioOrdenCompraController;
 use App\Http\Controllers\EstilosController;
 use App\Http\Controllers\ExportacionArticulosController;
 use App\Http\Controllers\FacturaController;
@@ -20,6 +21,8 @@ use App\Http\Controllers\ImagenesArticulosController;
 use App\Http\Controllers\ImportacionArticulosController;
 use App\Http\Controllers\InicioController;
 use App\Http\Controllers\MovimientoController;
+use App\Http\Controllers\OrdenCompraController;
+use App\Http\Controllers\OrdenCompraPagoController;
 use App\Http\Controllers\ProveedorController;
 use App\Http\Controllers\SaldoController;
 use App\Http\Controllers\TransferenciaController;
@@ -96,6 +99,19 @@ Route::middleware(['auth', AsegurarUsuarioActivo::class])->group(function () {
 
     Route::resource('facturas', FacturaController::class)
         ->parameters(['facturas' => 'factura']);
+
+    Route::get('ordenes-compra/buscar', [OrdenCompraController::class, 'buscar'])->name('ordenes-compra.buscar');
+    Route::post('ordenes-compra/{ordenCompra}/enviar', [EnvioOrdenCompraController::class, 'correo'])->name('ordenes-compra.enviar');
+    Route::post('ordenes-compra/{ordenCompra}/marcar-enviada', [EnvioOrdenCompraController::class, 'marcarEnviada'])->name('ordenes-compra.marcar-enviada');
+    Route::get('ordenes-compra/{ordenCompra}/pdf', [OrdenCompraController::class, 'pdf'])->name('ordenes-compra.pdf');
+    Route::post('ordenes-compra/{ordenCompra}/duplicar', [OrdenCompraController::class, 'duplicar'])->name('ordenes-compra.duplicar');
+    Route::post('ordenes-compra/{ordenCompra}/recibir', [OrdenCompraController::class, 'recibir'])->name('ordenes-compra.recibir');
+    Route::post('ordenes-compra/{ordenCompra}/pago', [OrdenCompraPagoController::class, 'store'])->name('ordenes-compra.pago.store');
+    Route::delete('ordenes-compra/{ordenCompra}/pago', [OrdenCompraPagoController::class, 'destroy'])->name('ordenes-compra.pago.destroy');
+
+    // parameters(): sin él, Str::singular daría un parámetro en inglés y el binding fallaría.
+    Route::resource('ordenes-compra', OrdenCompraController::class)
+        ->parameters(['ordenes-compra' => 'ordenCompra']);
 
     // Tesorería: en el menú se llama "Contabilidad".
     Route::prefix('tesoreria')->name('tesoreria.')->group(function () {

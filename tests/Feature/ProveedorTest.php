@@ -1,5 +1,7 @@
 <?php
 
+use App\Enums\EstadoOrdenCompra;
+use App\Models\OrdenCompra;
 use App\Models\Proveedor;
 use App\Models\User;
 
@@ -89,7 +91,7 @@ describe('alta', function () {
             ->nombre_comercial->toBe('Aceros del Norte')
             ->telefono->toBe('+524491234567')
             ->rfc->toBe('ADE010101AB1')
-            ->tiene_ordenes_activas->toBeFalse();
+            ->tieneOrdenesActivas()->toBeFalse();
     });
 
     it('crea un proveedor solo con el nombre comercial', function () {
@@ -119,16 +121,6 @@ describe('alta', function () {
         'RFC inválido' => [['rfc' => 'ABC123'], 'rfc', 'El RFC no tiene un formato válido.'],
     ]);
 
-    it('ignora tiene_ordenes_activas enviado en el formulario', function () {
-        $usuario = User::factory()->create();
-
-        $this->actingAs($usuario)->post('/proveedores', [
-            'nombre_comercial' => 'Aceros del Norte',
-            'tiene_ordenes_activas' => '1',
-        ]);
-
-        expect($usuario->proveedores()->sole()->tiene_ordenes_activas)->toBeFalse();
-    });
 });
 
 describe('RFC único por usuario', function () {
@@ -218,8 +210,9 @@ describe('eliminación', function () {
         $this->assertSoftDeleted($proveedor);
     });
 
-    it('no elimina un proveedor con órdenes de compra activas', function () {
-        $proveedor = Proveedor::factory()->conOrdenesActivas()->create();
+    it('no elimina un proveedor con una orden de compra no recibida', function (EstadoOrdenCompra $estado) {
+        $proveedor = Proveedor::factory()->create();
+        OrdenCompra::factory()->for($proveedor)->enEstado($estado)->create();
 
         $this->actingAs($proveedor->user)
             ->delete(route('proveedores.destroy', $proveedor))
@@ -227,6 +220,21 @@ describe('eliminación', function () {
             ->assertSessionHas('error', 'No se puede eliminar: tiene órdenes de compra activas');
 
         $this->assertNotSoftDeleted($proveedor);
+    })->with([
+        'borrador' => EstadoOrdenCompra::Borrador,
+        'enviada' => EstadoOrdenCompra::Enviada,
+        'pagada' => EstadoOrdenCompra::Pagada,
+    ]);
+
+    it('elimina un proveedor cuyas órdenes ya se recibieron', function () {
+        $proveedor = Proveedor::factory()->create();
+        OrdenCompra::factory()->for($proveedor)->enEstado(EstadoOrdenCompra::Recibida)->count(2)->create();
+
+        $this->actingAs($proveedor->user)
+            ->delete(route('proveedores.destroy', $proveedor))
+            ->assertSessionHas('exito');
+
+        $this->assertSoftDeleted($proveedor);
     });
 
     it('pide confirmación en el botón de eliminar', function () {

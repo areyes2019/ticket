@@ -864,7 +864,8 @@ h1.tarjeta-titulo {
 }
 
 .etiqueta-pagada,
-.etiqueta-producto-entregado {
+.etiqueta-producto-entregado,
+.etiqueta-recibida {
     color: var(--color-exito);
     background: var(--color-exito-fondo);
 }

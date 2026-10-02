@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\CotizacionPago;
+use App\Models\OrdenCompra;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Gate;
@@ -35,6 +36,7 @@ class AppServiceProvider extends ServiceProvider
         // un modelo no rompe los movimientos guardados.
         Relation::enforceMorphMap([
             'cotizacion_pago' => CotizacionPago::class,
+            'orden_compra' => OrdenCompra::class,
         ]);
     }
 }

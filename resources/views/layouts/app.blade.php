@@ -19,6 +19,7 @@
                 <a href="{{ route('dashboard') }}"><x-icono nombre="speedometer2" />Dashboard</a>
                 <a href="{{ route('clientes.index') }}"><x-icono nombre="people" />Clientes</a>
                 <a href="{{ route('proveedores.index') }}"><x-icono nombre="truck" />Proveedores</a>
+                <a href="{{ route('ordenes-compra.index') }}"><x-icono nombre="cart" />Órdenes de compra</a>
                 <a href="{{ route('catalogos.index') }}"><x-icono nombre="collection" />Catálogos</a>
                 <a href="{{ route('articulos.index') }}"><x-icono nombre="box-seam" />Artículos</a>
                 <a href="{{ route('cotizaciones.index') }}"><x-icono nombre="file-earmark-text" />Cotizaciones</a>

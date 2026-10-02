@@ -42,6 +42,8 @@
                     <option value="{{ $valorOpcion }}" @selected((string) old($nombre, $valor) === (string) $valorOpcion)>{{ $textoOpcion }}</option>
                 @endforeach
             </select>
+        @elseif ($tipo === 'textarea')
+            <textarea id="{{ $id }}" name="{{ $nombre }}" {{ $attributes }}>{{ old($nombre, $valor) }}</textarea>
         @else
             <input id="{{ $id }}" type="{{ $tipo }}" name="{{ $nombre }}" value="{{ old($nombre, $valor) }}" {{ $attributes }}>
         @endif

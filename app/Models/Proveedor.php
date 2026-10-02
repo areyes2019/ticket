@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\EstadoOrdenCompra;
 use Database\Factories\ProveedorFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -22,15 +23,6 @@ class Proveedor extends Model
      * @var string
      */
     protected $table = 'proveedores';
-
-    /**
-     * The model's default values for attributes.
-     *
-     * @var array<string, mixed>
-     */
-    protected $attributes = [
-        'tiene_ordenes_activas' => false,
-    ];
 
     /**
      * @return BelongsTo<User, $this>
@@ -57,14 +49,23 @@ class Proveedor extends Model
     }
 
     /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
+     * @return HasMany<OrdenCompra, $this>
      */
-    protected function casts(): array
+    public function ordenesCompra(): HasMany
     {
-        return [
-            'tiene_ordenes_activas' => 'boolean',
-        ];
+        return $this->hasMany(OrdenCompra::class);
+    }
+
+    /**
+     * Toda orden no recibida (incluido el borrador) impide eliminarlo. Usa
+     * ordenes_activas_exists si el listado lo precargó con withExists().
+     */
+    public function tieneOrdenesActivas(): bool
+    {
+        if (array_key_exists('ordenes_activas_exists', $this->attributes)) {
+            return (bool) $this->attributes['ordenes_activas_exists'];
+        }
+
+        return $this->ordenesCompra()->whereIn('estado', EstadoOrdenCompra::activos())->exists();
     }
 }

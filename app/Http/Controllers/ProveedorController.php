@@ -71,7 +71,7 @@ class ProveedorController extends Controller
     {
         Gate::authorize('delete', $proveedor);
 
-        if ($proveedor->tiene_ordenes_activas) {
+        if ($proveedor->tieneOrdenesActivas()) {
             return redirect()->route('proveedores.index')
                 ->with('error', 'No se puede eliminar: tiene órdenes de compra activas');
         }

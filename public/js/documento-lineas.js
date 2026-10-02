@@ -7,6 +7,11 @@
 // quita líneas, avisa cuando un artículo ya está en el documento y muestra los
 // totales en vivo con TotalesDocumento. Los totales son informativos: los que
 // cuentan los calcula el servidor al guardar.
+//
+// Con un select[data-proveedor-orden] (orden de compra), el buscador solo
+// ofrece artículos de ese proveedor (manda proveedor_id), queda deshabilitado
+// mientras no haya proveedor, y cambiar de proveedor pide confirmar antes de
+// quitar las líneas de artículos (las libres se quedan).
 (function () {
     const ESPERA_MS = 300;
     const formulario = document.querySelector('form[data-documento-lineas]');
@@ -21,6 +26,7 @@
     const buscador = formulario.querySelector('[data-buscar-articulo]');
     const dialogo = document.getElementById('aviso-duplicado');
     const formato = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
+    const selectorProveedor = formulario.querySelector('select[data-proveedor-orden]');
     let lineaDuplicada = null;
 
     function filas() {
@@ -258,7 +264,13 @@
 
             peticionActual = new AbortController();
 
-            axios.get(formulario.dataset.sugerencias, { params: { q: termino }, signal: peticionActual.signal })
+            const parametros = { q: termino };
+
+            if (selectorProveedor) {
+                parametros.proveedor_id = selectorProveedor.value;
+            }
+
+            axios.get(formulario.dataset.sugerencias, { params: parametros, signal: peticionActual.signal })
                 .then(function (respuesta) {
                     mostrar(Array.isArray(respuesta.data) ? respuesta.data : []);
                 })
@@ -304,6 +316,45 @@
         buscador.addEventListener('blur', cerrar);
     }
 
+    // Proveedor de la orden de compra: sin él no hay a quién buscarle artículos.
+    function iniciarProveedor() {
+        const textoNormal = buscador.placeholder;
+        let anterior = selectorProveedor.value;
+
+        function actualizarBuscador() {
+            const sinProveedor = selectorProveedor.value === '';
+
+            buscador.disabled = sinProveedor;
+            buscador.placeholder = sinProveedor ? (buscador.dataset.sinProveedor || '') : textoNormal;
+        }
+
+        selectorProveedor.addEventListener('change', function () {
+            const deArticulo = lineasDeArticulo();
+
+            if (deArticulo.length && !window.confirm('Cambiar de proveedor quitará ' + (deArticulo.length === 1 ? 'la línea de artículo capturada' : 'las ' + deArticulo.length + ' líneas de artículos capturadas') + '. ¿Continuar?')) {
+                selectorProveedor.value = anterior;
+                return;
+            }
+
+            deArticulo.forEach(function (fila) {
+                fila.remove();
+            });
+            anterior = selectorProveedor.value;
+            buscador.value = '';
+            actualizarBuscador();
+            renumerar();
+            recalcular();
+        });
+
+        actualizarBuscador();
+    }
+
+    function lineasDeArticulo() {
+        return filas().filter(function (fila) {
+            return campo(fila, 'articulo_id').value !== '';
+        });
+    }
+
     // Arranque: sin JavaScript la tabla trae filas vacías para capturar líneas
     // libres; con él se quitan y aparecen el buscador y los botones. Un
     // documento sin líneas libres (factura) no trae filas vacías ni el botón.
@@ -334,6 +385,10 @@
         renumerar();
         recalcular();
     });
+
+    if (selectorProveedor) {
+        iniciarProveedor();
+    }
 
     formulario.addEventListener('input', recalcular);
     formulario.addEventListener('change', recalcular);

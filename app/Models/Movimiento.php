@@ -91,7 +91,10 @@ class Movimiento extends Model
      * El documento que generó el movimiento, listo para la vista; null en los
      * manuales. Los módulos que se enganchen a Tesorería agregan su caso aquí.
      *
-     * @return array{etiqueta: string, url: string, utilidad: string|null, utilidad_parcial: bool}|null
+     * muestra_utilidad dice si la columna de utilidad aplica: un egreso no tiene
+     * utilidad de venta.
+     *
+     * @return array{etiqueta: string, url: string, utilidad: string|null, utilidad_parcial: bool, muestra_utilidad: bool}|null
      */
     public function documentoOrigen(): ?array
     {
@@ -106,6 +109,17 @@ class Movimiento extends Model
                 'url' => route('cotizaciones.show', $cotizacion),
                 'utilidad' => $utilidad['utilidad'],
                 'utilidad_parcial' => $utilidad['parcial'],
+                'muestra_utilidad' => true,
+            ];
+        }
+
+        if ($documento instanceof OrdenCompra) {
+            return [
+                'etiqueta' => $documento->folio_formateado,
+                'url' => route('ordenes-compra.show', $documento),
+                'utilidad' => null,
+                'utilidad_parcial' => false,
+                'muestra_utilidad' => false,
             ];
         }
 

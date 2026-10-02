@@ -1,4 +1,5 @@
-{{-- Una fila de la tabla de líneas. $i es el índice (o "__i__" en la plantilla), $linea sus datos. --}}
+{{-- Una fila de la tabla de líneas. $i es el índice (o "__i__" en la plantilla), $linea sus datos.
+     $etiquetaPrecio (opcional) cambia la etiqueta del precio: la orden de compra captura costo. --}}
 @php
     $error = fn (string ...$campos) => is_int($i) && collect($campos)->contains(fn ($campo) => $errors->has("lineas.{$i}.{$campo}"));
     $nombre = fn (string $campo) => "lineas[{$i}][{$campo}]";
@@ -17,7 +18,7 @@
         <x-celda :nombre="$nombre('modelo')" etiqueta="Modelo" :valor="$linea['modelo'] ?? null" :error="$error('modelo')" maxlength="255" data-campo="modelo" />
     </td>
     <td @class(['campo-error' => $error('precio_unitario')])>
-        <x-celda :nombre="$nombre('precio_unitario')" etiqueta="Precio unitario sin IVA" tipo="number" :valor="$linea['precio_unitario'] ?? null" :error="$error('precio_unitario')"
+        <x-celda :nombre="$nombre('precio_unitario')" :etiqueta="$etiquetaPrecio ?? 'Precio unitario sin IVA'" tipo="number" :valor="$linea['precio_unitario'] ?? null" :error="$error('precio_unitario')"
             min="0.01" :max="App\Http\Requests\CotizacionRequest::MAX_PRECIO" step="0.01" inputmode="decimal" data-campo="precio_unitario" />
     </td>
     <td @class(['campo-error' => $error('descuento_tipo', 'descuento_valor')])>

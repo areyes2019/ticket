@@ -73,7 +73,7 @@
                         <td><span class="celda-truncada" title="{{ $movimiento->concepto }}">{{ $movimiento->concepto }}</span></td>
                         <td @class(['numero', 'monto-positivo' => $movimiento->sumaAlSaldo(), 'monto-negativo' => ! $movimiento->sumaAlSaldo()])>{{ $conSigno($movimiento->monto) }}</td>
                         <td class="numero">
-                            @if ($origen !== null)
+                            @if ($origen !== null && $origen['muestra_utilidad'])
                                 @if ($origen['utilidad'] === null)
                                     <span class="texto-discreto" title="La cotización no tiene costo capturado en sus líneas.">— No disponible</span>
                                 @else

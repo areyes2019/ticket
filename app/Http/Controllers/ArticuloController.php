@@ -55,8 +55,13 @@ class ArticuloController extends Controller
             return response()->json([]);
         }
 
+        // Órdenes de compra: solo artículos del proveedor (copia del proveedor
+        // del catálogo) y con su costo en lugar del precio de venta.
+        $costo = $request->query('precio') === 'costo';
+
         $articulos = $request->user()->articulos()
             ->where(fn ($consulta) => $consulta->where('nombre', 'like', "%{$termino}%")->orWhere('modelo', 'like', "%{$termino}%"))
+            ->when($request->filled('proveedor_id'), fn ($consulta) => $consulta->where('proveedor_id', $request->integer('proveedor_id')))
             ->orderBy('nombre')
             ->limit(20)
             ->get();
@@ -65,7 +70,7 @@ class ArticuloController extends Controller
             'id' => $articulo->id,
             'nombre' => $articulo->nombre,
             'modelo' => $articulo->modelo,
-            'precio_unitario' => $articulo->precio_unitario_sin_iva,
+            'precio_unitario' => $costo ? $articulo->costo_con_descuento : $articulo->precio_unitario_sin_iva,
             'tasa_iva' => $articulo->objeto_imp === ObjetoImpuesto::SiObjeto ? TasaIva::Dieciseis->value : TasaIva::Exento->value,
         ])->values());
     }
