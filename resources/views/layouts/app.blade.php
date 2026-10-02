@@ -25,11 +25,18 @@
                 @can('ver-historial-accesos')
                     <a href="{{ route('historial-accesos.index') }}"><x-icono nombre="clock-history" />Historial de accesos</a>
                 @endcan
-                <span class="menu-usuario">{{ auth()->user()->name }}</span>
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <x-boton variante="secundario" icono="box-arrow-right">Cerrar sesión</x-boton>
-                </form>
+                <details class="menu-grupo menu-usuario" data-menu-grupo>
+                    <summary><x-icono nombre="person-circle" />{{ auth()->user()->name }}<x-icono nombre="chevron-down" class="menu-grupo-flecha" /></summary>
+                    <div class="menu-panel menu-panel-derecha">
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+                            <x-boton variante="menu">
+                                <span class="menu-panel-icono"><x-icono nombre="box-arrow-right" /></span>
+                                <span class="menu-panel-texto"><strong>Cerrar sesión</strong></span>
+                            </x-boton>
+                        </form>
+                    </div>
+                </details>
             @else
                 <a href="{{ route('login') }}"><x-icono nombre="box-arrow-in-right" />Iniciar sesión</a>
                 <a href="{{ route('register') }}"><x-icono nombre="person-plus" />Crear cuenta</a>

@@ -273,7 +273,8 @@ a > .icono,
     }
 }
 
-.menu-panel a {
+.menu-panel a,
+.menu-panel button {
     display: flex;
     align-items: center;
     gap: var(--espacio-3);
@@ -284,7 +285,9 @@ a > .icono,
 }
 
 .menu-panel a:hover,
-.menu-panel a:focus-visible {
+.menu-panel a:focus-visible,
+.menu-panel button:hover,
+.menu-panel button:focus-visible {
     color: var(--color-texto);
     background: var(--color-superficie-suave);
     border-left-color: var(--color-primario);
@@ -315,6 +318,7 @@ a > .icono,
 }
 
 .menu-panel a:hover .menu-panel-icono,
+.menu-panel button:hover .menu-panel-icono,
 .menu-panel a[aria-current="page"] .menu-panel-icono {
     color: var(--color-texto-invertido);
     background: var(--color-primario);
@@ -334,6 +338,40 @@ a > .icono,
 .menu-panel-texto small {
     font-size: var(--texto-mini);
     color: var(--color-texto-suave);
+}
+
+/* Elementos del panel que son botones (p. ej. cerrar sesión dentro de un form). */
+.menu-panel button {
+    width: 100%;
+    font: inherit;
+    text-align: left;
+    background: none;
+    border-top: 0;
+    border-right: 0;
+    border-bottom: 0;
+    cursor: pointer;
+}
+
+/* Panel pegado al borde derecho de la barra (menú del usuario): se alinea a la
+   derecha de su título para no salirse de la pantalla. */
+.menu-panel.menu-panel-derecha {
+    right: 0;
+    left: auto;
+    width: 14rem;
+    transform: none;
+    animation-name: menu-panel-entrada-derecha;
+}
+
+.menu-panel.menu-panel-derecha::before {
+    right: var(--espacio-4);
+    left: auto;
+}
+
+@keyframes menu-panel-entrada-derecha {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
 }
 
 /* En pantallas angostas la barra se parte en renglones: el panel se alinea a
