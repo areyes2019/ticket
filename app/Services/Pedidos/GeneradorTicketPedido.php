@@ -24,8 +24,6 @@ class GeneradorTicketPedido
      */
     public const ANCHO = 576;
 
-    public const LADO_QR = 300;
-
     public const ANCHO_LOGO = 240;
 
     public const CALIDAD = 85;
@@ -43,7 +41,7 @@ class GeneradorTicketPedido
 
     private string $fuenteNegrita;
 
-    public function __construct(private readonly CodigoQrPedido $qr)
+    public function __construct()
     {
         $this->fuente = resource_path('fonts/DejaVuSansMono.ttf');
         $this->fuenteNegrita = resource_path('fonts/DejaVuSansMono-Bold.ttf');
@@ -148,12 +146,6 @@ class GeneradorTicketPedido
         $renglones[] = $this->par('Saldo pendiente', $pesos($pedido->saldoPendiente()), negrita: true);
 
         $renglones[] = ['tipo' => 'espacio', 'alto' => 16];
-        $qr = $this->codigoQr($pedido);
-
-        if ($qr !== null) {
-            $renglones[] = ['tipo' => 'imagen', 'imagen' => $qr, 'margen' => 4];
-        }
-
         $renglones[] = $this->texto('No. '.$pedido->numero_ticket, centro: true, negrita: true, tamano: self::TAM_GRANDE);
 
         return $renglones;
@@ -327,35 +319,6 @@ class GeneradorTicketPedido
             return $logo;
         } catch (Throwable $error) {
             Log::warning('No se pudo dibujar el logo del ticket.', ['error' => $error->getMessage()]);
-
-            return null;
-        }
-    }
-
-    /**
-     * El QR en un cuadro blanco de LADO_QR. Cada módulo mide un número entero
-     * de pixeles (sin reescalar): un código con los bordes suavizados es un
-     * código que el lector rechaza. El ticket nunca falla por su QR: queda el
-     * número debajo, con el que se busca el pedido a mano.
-     */
-    private function codigoQr(Pedido $pedido): ?GdImage
-    {
-        try {
-            $muestra = imagecreatefromstring($this->qr->png($pedido, escala: 1));
-            $modulos = imagesx($muestra);
-            imagedestroy($muestra);
-
-            $codigo = imagecreatefromstring($this->qr->png($pedido, escala: max(1, intdiv(self::LADO_QR, $modulos))));
-
-            $cuadro = imagecreatetruecolor(self::LADO_QR, self::LADO_QR);
-            imagefill($cuadro, 0, 0, imagecolorallocate($cuadro, 255, 255, 255));
-            $desfase = intdiv(self::LADO_QR - imagesx($codigo), 2);
-            imagecopy($cuadro, $codigo, $desfase, $desfase, 0, 0, imagesx($codigo), imagesy($codigo));
-            imagedestroy($codigo);
-
-            return $cuadro;
-        } catch (Throwable $error) {
-            Log::warning('No se pudo dibujar el QR del ticket.', ['pedido' => $pedido->id, 'error' => $error->getMessage()]);
 
             return null;
         }

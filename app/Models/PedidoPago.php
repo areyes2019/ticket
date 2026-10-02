@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\MorphOne;
  * Pago de un pedido: el monto que se recibió, en la cuenta que se eligió.
  * Cada uno tiene su ingreso en Tesorería (documentable). Sin tipo: puede
  * haber varios y ninguno depende de otro. registrado_al_entregar lo escribe
- * solo la entrega por escaneo.
+ * solo la entrega (botón "Entregado").
  */
 #[Fillable([
     'cuenta_id',

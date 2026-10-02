@@ -2900,6 +2900,11 @@ a.bandeja-abrir {
     background: var(--color-exito-fondo);
 }
 
+.etiqueta-orden-entregado {
+    color: var(--color-texto);
+    background: var(--color-neutro);
+}
+
 /* Venta cobrada que todavía no tiene orden de trabajo, o línea sin color */
 .etiqueta-sin-orden {
     margin-left: var(--espacio-1);
@@ -2940,100 +2945,6 @@ a.bandeja-abrir {
 .huecos-mensaje summary {
     cursor: pointer;
     color: var(--color-primario-oscuro);
-}
-
-/* Pantalla de entrega (destino del QR): de pie, con el pulgar y de lejos */
-.contenido-entrega {
-    max-width: 30rem;
-}
-
-.entrega {
-    text-align: center;
-}
-
-.entrega-ticket {
-    margin: 0;
-    color: var(--color-texto-suave);
-    font-size: var(--texto-subtitulo);
-    font-weight: 600;
-}
-
-.entrega-cliente {
-    margin: var(--espacio-1) 0 0;
-    font-size: 2rem;
-    line-height: 1.2;
-}
-
-.entrega-telefono {
-    margin: var(--espacio-1) 0 var(--espacio-5);
-    color: var(--color-texto-suave);
-    font-size: var(--texto-subtitulo);
-}
-
-.entrega-estado {
-    padding: var(--espacio-4);
-    color: var(--color-exito);
-    background: var(--color-exito-fondo);
-    font-size: var(--texto-titulo);
-    font-weight: 600;
-}
-
-.entrega-montos {
-    display: grid;
-    gap: var(--espacio-2);
-    margin: 0 0 var(--espacio-5);
-    font-size: var(--texto-titulo);
-}
-
-.entrega-montos div {
-    display: flex;
-    justify-content: space-between;
-    gap: var(--espacio-3);
-    font-variant-numeric: tabular-nums;
-}
-
-.entrega-montos dt {
-    color: var(--color-texto-suave);
-}
-
-.entrega-montos dd {
-    margin: 0;
-    font-weight: 600;
-}
-
-.entrega-saldo {
-    padding-top: var(--espacio-2);
-    border-top: 2px solid var(--color-texto);
-    font-size: 2rem;
-}
-
-.entrega-saldo dt,
-.entrega-saldo dd {
-    color: var(--color-texto);
-    font-weight: 700;
-}
-
-.entrega form {
-    display: grid;
-    gap: var(--espacio-4);
-    text-align: left;
-}
-
-.entrega .boton {
-    padding-block: var(--espacio-4);
-    font-size: var(--texto-subtitulo);
-}
-
-.entrega select {
-    font-size: var(--texto-subtitulo);
-}
-
-.entrega-deshacer {
-    margin-top: var(--espacio-4);
-}
-
-.entrega-detalle {
-    margin-top: var(--espacio-6);
 }
 
 /* Páginas públicas (portal de autofacturación): solo la marca del negocio */

@@ -6,39 +6,29 @@ use App\Enums\TipoMovimiento;
 use App\Exceptions\OperacionTesoreriaRechazada;
 use App\Http\Requests\EntregarPedidoRequest;
 use App\Models\Cuenta;
+use App\Models\OrdenTrabajo;
 use App\Models\Pedido;
 use App\Models\PedidoPago;
 use App\Services\Tesoreria\RegistradorMovimientos;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
-use Illuminate\View\View;
 
 /**
- * Destino del QR del ticket y de la etiqueta. La pantalla se resuelve en el
- * servidor según el estado: ya entregado (solo informa), saldo en cero (se
- * cierra solo, con "Deshacer") o saldo pendiente (pide la cuenta y confirma).
+ * El botón "Entregado" de la venta, de su orden de trabajo y del visor del
+ * dashboard (022, corrección 1). Regresa a donde se pulsó (origen).
  */
 class PedidoEntregaController extends Controller
 {
     public function __construct(private readonly RegistradorMovimientos $registrador) {}
 
-    public function show(Pedido $pedido): View
-    {
-        Gate::authorize('operar', $pedido);
-
-        return view('pedidos.entregar', [
-            'pedido' => $pedido,
-            'cuentas' => $pedido->user->cuentas()->activas()->orderBy('nombre')->pluck('nombre', 'id')->all(),
-            'puedeDeshacer' => session('entrega_sin_cobro') === $pedido->id && $pedido->puedeDeshacerEntrega(),
-        ]);
-    }
-
     /**
-     * Idempotente: con el pedido bloqueado, uno ya entregado no se toca. Con
-     * saldo, registra un pago por el saldo exacto (el monto no viaja en la
-     * petición) en la cuenta elegida.
+     * Idempotente: con el pedido bloqueado, uno ya entregado no se toca. Una
+     * venta con orden de trabajo sin terminar tampoco. Con saldo, registra un
+     * pago por el saldo exacto (el monto no viaja en la petición) en la
+     * cuenta elegida.
      */
     public function store(EntregarPedidoRequest $request, Pedido $pedido): RedirectResponse
     {
@@ -49,11 +39,20 @@ class PedidoEntregaController extends Controller
                 return ['ya' => $bloqueado];
             }
 
+            // Bloqueo venta → orden, el mismo orden que "avanzar".
+            $orden = OrdenTrabajo::where('pedido_id', $bloqueado->id)->lockForUpdate()->first();
+            $bloqueado->setRelation('ordenTrabajo', $orden);
+            $motivo = $bloqueado->motivoNoEntrega();
+
+            if ($motivo !== null) {
+                return ['motivo' => $motivo];
+            }
+
             $cobro = null;
 
             if ($bloqueado->tieneSaldo()) {
                 if (! $request->filled('cuenta_id')) {
-                    throw ValidationException::withMessages(['cuenta_id' => 'Elige la cuenta a la que entra el cobro.']);
+                    throw ValidationException::withMessages(['cuenta_id' => 'Elige la cuenta a la que entra el cobro.'])->errorBag('entrega');
                 }
 
                 $cobro = $this->cobrarSaldo($bloqueado, $request->user()->cuentas()->findOrFail($request->integer('cuenta_id')));
@@ -67,26 +66,31 @@ class PedidoEntregaController extends Controller
             return ['cobro' => $cobro];
         });
 
-        $destino = redirect()->route('pedidos.entregar', $pedido);
+        // Desde el dashboard regresa sin ?ot=: la orden entregada ya no está en la lista.
+        $destino = redirect($this->destino($request, $pedido, conOrden: false));
+
+        if (isset($resultado['motivo'])) {
+            return $destino->with('error', $resultado['motivo']);
+        }
 
         if (isset($resultado['ya'])) {
-            return $destino->with('error', 'Este pedido ya se entregó el '.$resultado['ya']->entregado_en->setTimezone(config('app.zona_negocio'))->format('d/m/Y \a \l\a\s H:i').'.');
+            return $destino->with('error', 'Esta venta ya se entregó el '.$resultado['ya']->entregado_en->setTimezone(config('app.zona_negocio'))->format('d/m/Y \a \l\a\s H:i').'.');
         }
 
         if ($resultado['cobro'] === null) {
-            return $destino->with('exito', "Pedido {$pedido->folio_formateado} entregado.")->with('entrega_sin_cobro', $pedido->id);
+            return $destino->with('exito', "{$pedido->folio_formateado} entregado.");
         }
 
         $cobro = $resultado['cobro'];
 
-        return $destino->with('exito', 'Cobro de $'.number_format((float) $cobro->monto, 2)." registrado en {$cobro->cuenta->nombre}. Pedido entregado.");
+        return $destino->with('exito', 'Cobro de $'.number_format((float) $cobro->monto, 2)." registrado en {$cobro->cuenta->nombre}. {$pedido->folio_formateado} entregado.");
     }
 
     /**
      * Solo las entregas que no cobraron, dentro de la ventana del servidor:
      * así nunca hay un movimiento de Tesorería que revertir.
      */
-    public function destroy(Pedido $pedido): RedirectResponse
+    public function destroy(Request $request, Pedido $pedido): RedirectResponse
     {
         Gate::authorize('operar', $pedido);
 
@@ -111,12 +115,31 @@ class PedidoEntregaController extends Controller
             return null;
         });
 
+        // La orden regresó a terminado: desde el dashboard vuelve abierta.
+        $destino = redirect($this->destino($request, $pedido, conOrden: true));
+
         if ($motivo !== null) {
-            return redirect()->route('pedidos.show', $pedido)->with('error', $motivo);
+            return $destino->with('error', $motivo);
         }
 
-        return redirect()->route('pedidos.show', $pedido)
-            ->with('exito', "Se deshizo la entrega del pedido {$pedido->folio_formateado}.");
+        return $destino->with('exito', "Se deshizo la entrega de {$pedido->folio_formateado}.");
+    }
+
+    /**
+     * Regresa a donde se pulsó el botón: la venta (por omisión), su orden de
+     * trabajo o el dashboard.
+     */
+    private function destino(Request $request, Pedido $pedido, bool $conOrden): string
+    {
+        $orden = $pedido->ordenTrabajo()->first();
+
+        return match (true) {
+            $request->input('origen') === 'dashboard' => $conOrden && $orden !== null
+                ? route('dashboard', ['ot' => $orden->id])
+                : route('dashboard'),
+            $request->input('origen') === 'orden' && $orden !== null => route('pedidos.orden-trabajo.show', $pedido),
+            default => route('pedidos.show', $pedido),
+        };
     }
 
     /**
@@ -138,7 +161,7 @@ class PedidoEntregaController extends Controller
         try {
             $this->registrador->registrar($cuenta, TipoMovimiento::Ingreso, $pago->monto, $pago->fecha_pago->toDateString(), $pago->conceptoMovimiento(), $pago);
         } catch (OperacionTesoreriaRechazada $rechazo) {
-            throw ValidationException::withMessages(['cuenta_id' => $rechazo->getMessage()]);
+            throw ValidationException::withMessages(['cuenta_id' => $rechazo->getMessage()])->errorBag('entrega');
         }
 
         return $pago;

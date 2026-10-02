@@ -58,6 +58,11 @@ registro de supuestos, sujetas a corrección):
 > como **Venta** (el folio sigue siendo `PED-0042`) y también nace de una cotización aceptada (`cotizacion_id`,
 > `cliente_id`). Esa venta no se bloquea por existencia. Tablas, clases y rutas `pedidos` no cambian.
 
+> **Desde [022, corrección 1](022-ordenes-trabajo.md#corrección-1-estado-entregado-y-fin-de-la-entrega-por-escaneo)**
+> (pendiente): se elimina la **entrega por escaneo** (pantalla de tres caminos y QR del ticket y la
+> etiqueta). La venta se entrega con un botón **"Entregado"**, y una venta con orden de trabajo solo
+> se entrega con la orden terminada. `POST pedidos/{pedido}/entregar` y "Deshacer entrega" siguen.
+
 ## Historia de usuario
 
 Como usuario registrado, quiero atender al cliente que entra al local y compra directo —sin

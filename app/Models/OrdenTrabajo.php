@@ -110,7 +110,8 @@ class OrdenTrabajo extends Model
         $sinColor = $this->lineasSinColor();
 
         return match (true) {
-            $this->estado->siguiente() === null => 'La orden ya está terminada.',
+            $this->estado === EstadoOrdenTrabajo::Entregado => 'La orden ya se entregó.',
+            $this->estado === EstadoOrdenTrabajo::Terminado => 'La orden ya está terminada: usa «Entregado».',
             ! $this->esEditable() => 'La venta ya se entregó.',
             $sinColor->isNotEmpty() => 'Falta el color de tinta de: '.$sinColor->pluck('descripcion')->join(', ').'.',
             default => null,

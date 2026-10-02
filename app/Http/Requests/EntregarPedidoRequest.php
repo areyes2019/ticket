@@ -12,15 +12,21 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Validator;
 
 /**
- * Cerrar un pedido al escanear su QR. Con saldo pendiente exige la cuenta a
- * la que entra el dinero; sin saldo la prohíbe, porque no entra nada. El
- * monto no viaja: lo calcula el servidor como el saldo exacto. Un pedido ya
- * entregado no exige nada: el controlador responde sin tocarlo (doble
- * escaneo).
+ * El botón "Entregado" (022, corrección 1). Con saldo pendiente exige la
+ * cuenta a la que entra el dinero; sin saldo la prohíbe, porque no entra
+ * nada. El monto no viaja: lo calcula el servidor como el saldo exacto. Una
+ * venta que no se puede entregar (ya entregada, u orden sin terminar) no
+ * exige nada: el controlador responde con el motivo sin tocarla (doble clic).
+ * Los errores van a su propia bolsa, para no mezclarse con "Agregar pago".
  */
 class EntregarPedidoRequest extends FormRequest
 {
     use ValidaCuentas;
+
+    /**
+     * @var string
+     */
+    protected $errorBag = 'entrega';
 
     public function authorize(): Response
     {
@@ -35,7 +41,7 @@ class EntregarPedidoRequest extends FormRequest
         /** @var Pedido $pedido */
         $pedido = $this->route('pedido');
 
-        if ($pedido->estaEntregado()) {
+        if (! $pedido->puedeEntregarse()) {
             return [];
         }
 

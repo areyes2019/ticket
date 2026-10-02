@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\EstadoFactura;
+use App\Enums\EstadoOrdenTrabajo;
 use App\Enums\EstadoPedido;
 use App\Enums\TipoDescuento;
 use App\Models\Concerns\CalculaUtilidadVenta;
@@ -61,16 +62,10 @@ class Pedido extends Model
     public const TOTALES = ['subtotal', 'total_descuento', 'base_iva_16', 'total_iva_16', 'base_iva_0', 'base_exento', 'total'];
 
     /**
-     * Ventana del servidor para deshacer una entrega sin cobro. El botón solo
-     * se ofrece 10 segundos; esto evita que una pestaña olvidada la revierta
-     * mañana.
+     * Ventana del servidor para deshacer una entrega sin cobro: evita que una
+     * pestaña olvidada la revierta mañana.
      */
     public const MINUTOS_DESHACER_ENTREGA = 5;
-
-    /**
-     * Segundos que se ofrece el botón "Deshacer".
-     */
-    public const SEGUNDOS_BOTON_DESHACER = 10;
 
     /**
      * @return BelongsTo<User, $this>
@@ -318,23 +313,48 @@ class Pedido extends Model
         }
     }
 
+    public function puedeEntregarse(): bool
+    {
+        return $this->motivoNoEntrega() === null;
+    }
+
     /**
-     * No guarda.
+     * Una venta con orden de trabajo se entrega con la orden terminada (022,
+     * corrección 1). Sin orden se entrega en cualquier estado: hay ventas
+     * anteriores a 022.
+     */
+    public function motivoNoEntrega(): ?string
+    {
+        return match (true) {
+            $this->estaEntregado() => 'La venta ya se entregó.',
+            $this->ordenTrabajo !== null && $this->ordenTrabajo->estado !== EstadoOrdenTrabajo::Terminado => 'La orden de trabajo todavía no está terminada.',
+            default => null,
+        };
+    }
+
+    /**
+     * La venta no se guarda; su orden de trabajo, si tiene, pasa a entregado
+     * en ese momento (llamar dentro de la transacción de la entrega).
      */
     public function marcarEntregado(): void
     {
         $this->estado = EstadoPedido::Entregado;
         $this->entregado_en = now();
+        $this->ordenTrabajo()->update(['estado' => EstadoOrdenTrabajo::Entregado->value]);
+        $this->unsetRelation('ordenTrabajo');
     }
 
     /**
-     * No guarda.
+     * La venta no se guarda; su orden de trabajo regresa a terminado en ese
+     * momento (llamar dentro de la transacción).
      */
     public function deshacerEntrega(): void
     {
         $this->estado = EstadoPedido::Pendiente;
         $this->entregado_en = null;
         $this->recalcularEstado();
+        $this->ordenTrabajo()->where('estado', EstadoOrdenTrabajo::Entregado->value)->update(['estado' => EstadoOrdenTrabajo::Terminado->value]);
+        $this->unsetRelation('ordenTrabajo');
     }
 
     /**

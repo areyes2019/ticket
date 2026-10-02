@@ -124,39 +124,6 @@ window.copiarTexto = function (texto) {
     });
 })();
 
-// Un formulario con data-enviar-al-cargar se envía solo al abrir la página, una
-// vez (la entrega de un pedido sin saldo: no hay nada que decidir). Sin
-// JavaScript queda su botón.
-document.querySelectorAll('form[data-enviar-al-cargar]').forEach(function (formulario) {
-    const boton = formulario.querySelector('[type="submit"]');
-
-    if (boton) {
-        boton.disabled = true;
-    }
-
-    HTMLFormElement.prototype.submit.call(formulario);
-});
-
-// Un formulario con data-cuenta-regresiva="N" se ofrece N segundos: cuenta
-// hacia atrás en [data-cuenta-regresiva-numero] y al llegar a 0 se oculta.
-document.querySelectorAll('[data-cuenta-regresiva]').forEach(function (elemento) {
-    const numero = elemento.querySelector('[data-cuenta-regresiva-numero]');
-    let restantes = parseInt(elemento.dataset.cuentaRegresiva, 10) || 0;
-
-    const intervalo = setInterval(function () {
-        restantes -= 1;
-
-        if (numero) {
-            numero.textContent = String(Math.max(restantes, 0));
-        }
-
-        if (restantes <= 0) {
-            clearInterval(intervalo);
-            elemento.hidden = true;
-        }
-    }, 1000);
-});
-
 // Un botón con data-habilitar-con="#id" queda deshabilitado mientras ese campo
 // esté vacío (p. ej. cobrar sin haber elegido la cuenta).
 document.querySelectorAll('[data-habilitar-con]').forEach(function (boton) {

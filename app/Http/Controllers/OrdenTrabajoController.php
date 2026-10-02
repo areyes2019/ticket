@@ -105,6 +105,8 @@ class OrdenTrabajoController extends Controller
             'mensajeListo' => $orden->estado === EstadoOrdenTrabajo::Terminado
                 ? app(MensajePedido::class)->resolver($pedido, ClaveConfiguracion::MensajeListo)
                 : null,
+            // El diálogo de "Entregado" cuando queda saldo (022, corrección 1).
+            'cuentas' => $pedido->user->cuentas()->activas()->orderBy('nombre')->pluck('nombre', 'id')->all(),
         ];
     }
 

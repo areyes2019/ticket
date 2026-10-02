@@ -245,7 +245,7 @@ it('avanza en dibujo → en proceso → terminado, sin regreso', function () {
     $avanzar()->assertSessionHas('exito', 'PED-0001 pasó a Terminado.');
     expect(OrdenTrabajo::sole()->estado)->toBe(EstadoOrdenTrabajo::Terminado);
 
-    $avanzar()->assertSessionHas('error', 'La orden ya está terminada.');
+    $avanzar()->assertSessionHas('error', 'La orden ya está terminada: usa «Entregado».');
     expect(OrdenTrabajo::sole()->estado)->toBe(EstadoOrdenTrabajo::Terminado);
 
     $this->actingAs($this->user)->get("/pedidos/{$this->pedido->id}/orden-trabajo")
@@ -285,10 +285,10 @@ it('avanzar desde el dashboard regresa a él con la orden abierta', function () 
 });
 
 it('una venta entregada deja la orden solo para consulta, y deshacer la entrega la libera', function () {
-    ($this->pagar)($this->pedido);
+    ($this->pagar)($this->pedido, '1160.00');
     ($this->crearOrden)($this->pedido);
-    $this->pedido->refresh()->marcarEntregado();
-    $this->pedido->save();
+    OrdenTrabajo::sole()->forceFill(['estado' => EstadoOrdenTrabajo::Terminado])->save();
+    $this->actingAs($this->user)->post("/pedidos/{$this->pedido->id}/entregar")->assertSessionHas('exito');
 
     $this->actingAs($this->user)->get("/pedidos/{$this->pedido->id}/orden-trabajo")->assertOk()->assertDontSee('Editar');
     $this->actingAs($this->user)->get("/pedidos/{$this->pedido->id}/orden-trabajo/vista-previa")->assertOk()
@@ -297,14 +297,68 @@ it('una venta entregada deja la orden solo para consulta, y deshacer la entrega 
     $this->actingAs($this->user)->get("/pedidos/{$this->pedido->id}/orden-trabajo/imprimir")->assertOk();
     $this->actingAs($this->user)->get("/pedidos/{$this->pedido->id}/orden-trabajo/editar")->assertForbidden();
     $this->actingAs($this->user)->put("/pedidos/{$this->pedido->id}/orden-trabajo", ['colores' => ($this->colores)($this->pedido, 'rojo')])->assertForbidden();
-    $this->actingAs($this->user)->post("/pedidos/{$this->pedido->id}/orden-trabajo/avanzar")->assertSessionHas('error', 'La venta ya se entregó.');
+    $this->actingAs($this->user)->post("/pedidos/{$this->pedido->id}/orden-trabajo/avanzar")->assertSessionHas('error', 'La orden ya se entregó.');
 
-    $this->pedido->deshacerEntrega();
-    $this->pedido->save();
+    $this->actingAs($this->user)->post("/pedidos/{$this->pedido->id}/deshacer-entrega", ['origen' => 'orden'])
+        ->assertRedirect("/pedidos/{$this->pedido->id}/orden-trabajo")
+        ->assertSessionHas('exito');
 
+    expect(OrdenTrabajo::sole()->estado)->toBe(EstadoOrdenTrabajo::Terminado);
     $this->actingAs($this->user)->get("/pedidos/{$this->pedido->id}/orden-trabajo/editar")
         ->assertOk()
         ->assertSee('value="azul" selected', false);
+});
+
+it('entregar la venta pasa la orden terminada a Entregado y regresa a la orden', function () {
+    ($this->pagar)($this->pedido);
+    ($this->crearOrden)($this->pedido);
+    OrdenTrabajo::sole()->forceFill(['estado' => EstadoOrdenTrabajo::Terminado])->save();
+
+    $this->actingAs($this->user)->get("/pedidos/{$this->pedido->id}/orden-trabajo")
+        ->assertSee('Cobrar $1,060.00 y entregar')
+        ->assertSee('name="origen" value="orden"', false);
+
+    $this->actingAs($this->user)->post("/pedidos/{$this->pedido->id}/entregar", ['origen' => 'orden', 'cuenta_id' => $this->cuenta->id])
+        ->assertRedirect("/pedidos/{$this->pedido->id}/orden-trabajo")
+        ->assertSessionHas('exito');
+
+    expect(OrdenTrabajo::sole()->estado)->toBe(EstadoOrdenTrabajo::Entregado)
+        ->and($this->pedido->fresh()->estaEntregado())->toBeTrue()
+        ->and($this->pedido->fresh()->saldoPendiente())->toBe('0.00');
+
+    $this->actingAs($this->user)->get("/pedidos/{$this->pedido->id}/orden-trabajo")
+        ->assertSee('etiqueta-orden-entregado', false)
+        ->assertDontSee('Cobrar $', false);
+});
+
+it('una venta con orden sin terminar no se entrega', function (string $estado) {
+    ($this->pagar)($this->pedido);
+    ($this->crearOrden)($this->pedido);
+    OrdenTrabajo::sole()->forceFill(['estado' => $estado])->save();
+
+    $this->actingAs($this->user)->post("/pedidos/{$this->pedido->id}/entregar", ['cuenta_id' => $this->cuenta->id])
+        ->assertRedirect("/pedidos/{$this->pedido->id}")
+        ->assertSessionHas('error', 'La orden de trabajo todavía no está terminada.');
+
+    expect($this->pedido->fresh()->estaEntregado())->toBeFalse()
+        ->and($this->pedido->pagos()->count())->toBe(1)
+        ->and(OrdenTrabajo::sole()->estado->value)->toBe($estado);
+
+    // La venta lo explica en el botón deshabilitado; la orden todavía no lo ofrece.
+    $this->actingAs($this->user)->get("/pedidos/{$this->pedido->id}")
+        ->assertSee('title="La orden de trabajo todavía no está terminada."', false);
+    $this->actingAs($this->user)->get("/pedidos/{$this->pedido->id}/orden-trabajo")
+        ->assertDontSee('Cobrar $', false);
+})->with(['en_dibujo', 'en_proceso']);
+
+it('la migración entrega las órdenes de las ventas ya entregadas', function () {
+    ($this->pagar)($this->pedido);
+    ($this->crearOrden)($this->pedido);
+    $this->pedido->forceFill(['estado' => 'entregado', 'entregado_en' => now()])->saveQuietly();
+
+    (require database_path('migrations/2026_10_07_100000_entregar_ordenes_trabajo_de_ventas_entregadas.php'))->up();
+
+    expect(OrdenTrabajo::sole()->estado)->toBe(EstadoOrdenTrabajo::Entregado);
 });
 
 it('editar las líneas de la venta conserva los colores de las que siguen', function () {

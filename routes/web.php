@@ -139,7 +139,6 @@ Route::middleware(['auth', AsegurarUsuarioActivo::class])->group(function () {
     Route::get('pedidos/cliente-por-telefono', [PedidoController::class, 'clientePorTelefono'])->name('pedidos.cliente-por-telefono');
     Route::get('pedidos/{pedido}/ticket', [PedidoController::class, 'ticket'])->name('pedidos.ticket');
     Route::get('pedidos/{pedido}/etiqueta', [PedidoController::class, 'etiqueta'])->name('pedidos.etiqueta');
-    Route::get('pedidos/{pedido}/entregar', [PedidoEntregaController::class, 'show'])->name('pedidos.entregar');
     Route::post('pedidos/{pedido}/entregar', [PedidoEntregaController::class, 'store'])->name('pedidos.entregar.store');
     Route::post('pedidos/{pedido}/deshacer-entrega', [PedidoEntregaController::class, 'destroy'])->name('pedidos.deshacer-entrega');
     Route::post('pedidos/{pedido}/pagos', [PedidoPagoController::class, 'store'])->name('pedidos.pagos.store');

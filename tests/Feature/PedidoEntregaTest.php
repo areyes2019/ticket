@@ -18,19 +18,16 @@ beforeEach(function () {
     $this->entregar = fn (array $datos = []) => $this->actingAs($this->user)->post("/pedidos/{$this->pedido->id}/entregar", $datos);
 });
 
-it('sin sesión, el escaneo manda al login y regresa al pedido', function () {
-    $url = "/pedidos/{$this->pedido->id}/entregar";
-
-    $this->get($url)->assertRedirect('/login');
-    $this->post('/login', ['email' => $this->user->email, 'password' => 'password'])->assertRedirect($url);
+it('ya no existe la pantalla de escaneo', function () {
+    $this->actingAs($this->user)->get("/pedidos/{$this->pedido->id}/entregar")->assertMethodNotAllowed();
 });
 
 it('con saldo, cobra el saldo exacto en la cuenta elegida y entrega', function () {
     ($this->pagar)('500.00');
 
     ($this->entregar)(['cuenta_id' => $this->cuenta->id, 'monto' => '1.00'])
-        ->assertRedirect("/pedidos/{$this->pedido->id}/entregar")
-        ->assertSessionHas('exito');
+        ->assertRedirect("/pedidos/{$this->pedido->id}")
+        ->assertSessionHas('exito', 'Cobro de $660.00 registrado en '.$this->cuenta->nombre.'. PED-0001 entregado.');
 
     $pedido = $this->pedido->fresh();
     $cobro = $pedido->pagos()->reorder()->latest('id')->first();
@@ -46,7 +43,7 @@ it('con saldo, cobra el saldo exacto en la cuenta elegida y entrega', function (
 });
 
 it('con saldo y sin cuenta no toca nada', function () {
-    ($this->entregar)()->assertSessionHasErrors('cuenta_id');
+    ($this->entregar)()->assertSessionHasErrors('cuenta_id', null, 'entrega');
 
     expect($this->pedido->fresh()->estado)->toBe(EstadoPedido::Pendiente)
         ->and(Movimiento::count())->toBe(0);
@@ -55,8 +52,8 @@ it('con saldo y sin cuenta no toca nada', function () {
 it('sin saldo marca entregado sin registrar pago ni movimiento, y no acepta cuenta', function () {
     ($this->pagar)('1160.00');
 
-    ($this->entregar)(['cuenta_id' => $this->cuenta->id])->assertSessionHasErrors('cuenta_id');
-    ($this->entregar)()->assertSessionHas('entrega_sin_cobro', $this->pedido->id);
+    ($this->entregar)(['cuenta_id' => $this->cuenta->id])->assertSessionHasErrors('cuenta_id', null, 'entrega');
+    ($this->entregar)()->assertSessionHas('exito', 'PED-0001 entregado.');
 
     expect($this->pedido->fresh()->estado)->toBe(EstadoPedido::Entregado)
         ->and($this->pedido->pagos()->count())->toBe(1)
@@ -100,30 +97,30 @@ it('no deshace pasados 5 minutos', function () {
     expect($this->pedido->fresh()->estado)->toBe(EstadoPedido::Entregado);
 });
 
-it('pinta el camino que corresponde al estado', function () {
-    $url = "/pedidos/{$this->pedido->id}/entregar";
+it('el detalle de la venta ofrece "Entregado": con confirmación sin saldo, con diálogo de cobro con saldo', function () {
+    $url = "/pedidos/{$this->pedido->id}";
 
-    // Saldo pendiente: pide cuenta, sin preseleccionar, y no toca nada.
+    // Saldo pendiente: diálogo que pide la cuenta sin preseleccionar.
     $this->actingAs($this->user)->get($url)
-        ->assertSee('Cobrar y entregar $1,160.00')
+        ->assertSee('Cobrar $1,160.00 y entregar')
         ->assertSee('Elige la cuenta…')
-        ->assertDontSee('selected', false)
-        ->assertDontSee('data-enviar-al-cargar', false);
+        ->assertSee('name="origen" value="venta"', false);
 
-    expect($this->pedido->fresh()->estado)->toBe(EstadoPedido::Pendiente);
-
-    // Saldo en cero: se envía solo al cargar.
+    // Saldo en cero: un formulario con confirmación, sin cuenta.
     ($this->pagar)('1160.00');
-    $this->actingAs($this->user)->get($url)->assertSee('data-enviar-al-cargar', false)->assertDontSee('cuenta_id', false);
+    $this->actingAs($this->user)->get($url)
+        ->assertSee('¿Marcar PED-0001 como entregado?')
+        ->assertDontSee('Cobrar $', false);
 
-    // Ya entregado: solo informa (el Deshacer solo justo después de entregar).
+    // Entregado: ofrece deshacer dentro de la ventana, después nada.
     ($this->entregar)();
-    $this->actingAs($this->user)->withSession(['entrega_sin_cobro' => $this->pedido->id])->get($url)->assertSee('Entregado el')->assertSee('Deshacer');
-    $this->actingAs($this->user)->get($url)->assertSee('Entregado el')->assertDontSee('Deshacer')->assertDontSee('<form method="POST" action="'.route('pedidos.entregar.store', $this->pedido), false);
+    $this->actingAs($this->user)->get($url)->assertSee('Deshacer entrega')->assertDontSee('¿Marcar PED-0001 como entregado?');
+    $this->travel(6)->minutes();
+    $this->actingAs($this->user)->get($url)->assertDontSee('Deshacer entrega');
 });
 
-it('sin cuentas activas, la entrega con saldo manda a Contabilidad', function () {
+it('sin cuentas activas, el diálogo de entrega con saldo manda a Contabilidad', function () {
     $this->cuenta->update(['activa' => false]);
 
-    $this->actingAs($this->user)->get("/pedidos/{$this->pedido->id}/entregar")->assertSee('Da de alta una cuenta en Contabilidad');
+    $this->actingAs($this->user)->get("/pedidos/{$this->pedido->id}")->assertSee('Da de alta una cuenta en Contabilidad');
 });

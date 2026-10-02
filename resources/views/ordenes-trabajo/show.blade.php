@@ -35,6 +35,10 @@
                 </form>
             @endif
 
+            @if (in_array($orden->estado, [App\Enums\EstadoOrdenTrabajo::Terminado, App\Enums\EstadoOrdenTrabajo::Entregado], true))
+                @include('pedidos._entregar', ['origen' => 'orden'])
+            @endif
+
             @if ($mensajeListo !== null)
                 <x-boton href="https://wa.me/?text={{ rawurlencode($mensajeListo) }}" variante="secundario" icono="bell" target="_blank" rel="noopener">Avisar que está listo</x-boton>
             @endif

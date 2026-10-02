@@ -1,7 +1,9 @@
 <?php
 
+use App\Enums\EstadoOrdenTrabajo;
 use App\Models\Cliente;
 use App\Models\Cotizacion;
+use App\Models\Cuenta;
 use App\Models\Factura;
 use App\Models\OrdenTrabajo;
 use App\Models\Pedido;
@@ -195,6 +197,35 @@ describe('documentos en acordeón y órdenes de trabajo', function () {
             ->assertSee('data-ot="'.$enDibujo->id.'"', false)
             ->assertSee(route('pedidos.produccion'), false)
             ->assertDontSee('Cliente ajeno');
+    });
+
+    it('saca de la lista las órdenes entregadas, pero ?ot= todavía las abre', function () {
+        ($this->ordenDe)($this->user, 'Cliente terminado', 'terminado');
+        $entregada = ($this->ordenDe)($this->user, 'Cliente entregado', 'entregado');
+
+        $this->actingAs($this->user)->get('/dashboard')
+            ->assertSee('Cliente terminado')
+            ->assertDontSee('data-ot="'.$entregada->id.'"', false);
+
+        $this->actingAs($this->user)->get('/dashboard?ot='.$entregada->id)
+            ->assertSee('data-vista-previa-de="'.$entregada->id.'" data-documento="ot"', false)
+            ->assertDontSee('data-ot="'.$entregada->id.'"', false);
+    });
+
+    it('entregar desde el visor regresa al dashboard sin la orden, que sale de la lista', function () {
+        $orden = ($this->ordenDe)($this->user, 'Cliente por entregar', 'terminado');
+        $cuenta = Cuenta::factory()->for($this->user)->create();
+
+        $this->actingAs($this->user)->get('/dashboard?ot='.$orden->id)
+            ->assertSee('Entregado')
+            ->assertSee('name="origen" value="dashboard"', false);
+
+        $this->actingAs($this->user)->post("/pedidos/{$orden->pedido_id}/entregar", ['origen' => 'dashboard', 'cuenta_id' => $cuenta->id])
+            ->assertRedirect(route('dashboard'))
+            ->assertSessionHas('exito');
+
+        expect($orden->fresh()->estado)->toBe(EstadoOrdenTrabajo::Entregado);
+        $this->actingAs($this->user)->get('/dashboard')->assertDontSee('data-ot="'.$orden->id.'"', false);
     });
 
     it('marca las órdenes con líneas sin color', function () {

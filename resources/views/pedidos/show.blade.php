@@ -82,9 +82,7 @@
                 <x-boton href="https://wa.me/?text={{ rawurlencode($textoAutofactura) }}" variante="secundario" icono="receipt" target="_blank" rel="noopener">Compartir enlace de autofactura</x-boton>
             @endif
 
-            @unless ($pedido->estaEntregado())
-                <x-boton :href="route('pedidos.entregar', $pedido)" variante="secundario" icono="box-arrow-right">Entregar</x-boton>
-            @endunless
+            @include('pedidos._entregar', ['origen' => 'venta'])
 
             @can('update', $pedido)
                 <x-boton :href="route('pedidos.edit', $pedido)" variante="secundario" icono="pencil">Editar</x-boton>

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\EstadoOrdenTrabajo;
 use App\Models\Cotizacion;
 use App\Models\Factura;
 use App\Models\OrdenTrabajo;
@@ -45,9 +46,11 @@ class DashboardController extends Controller
             ->limit(self::RECIENTES)
             ->get();
 
-        // De todos los estados; la venta y sus líneas, para el folio, el
+        // Todas menos las entregadas, que salen de la lista (022, corrección
+        // 1); ?ot= todavía las abre. La venta y sus líneas, para el folio, el
         // cliente y "Falta color" sin una consulta por fila.
         $ordenesTrabajo = $user->ordenesTrabajo()
+            ->where('estado', '!=', EstadoOrdenTrabajo::Entregado->value)
             ->with(['pedido.lineas', 'lineas'])
             ->orderByDesc('created_at')
             ->orderByDesc('id')

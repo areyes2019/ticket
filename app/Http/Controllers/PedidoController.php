@@ -18,7 +18,6 @@ use App\Models\PedidoLinea;
 use App\Models\User;
 use App\Services\Inventario\RegistradorInventario;
 use App\Services\OrdenesTrabajo\ConservadorColores;
-use App\Services\Pedidos\CodigoQrPedido;
 use App\Services\Pedidos\GeneradorTicketPedido;
 use App\Services\Pedidos\MensajePedido;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -233,14 +232,11 @@ class PedidoController extends Controller
     /**
      * Vista de impresión de 50 × 25 mm, sin el layout de la aplicación.
      */
-    public function etiqueta(Pedido $pedido, CodigoQrPedido $qr): View
+    public function etiqueta(Pedido $pedido): View
     {
         Gate::authorize('operar', $pedido);
 
-        return view('pedidos.etiqueta', [
-            'pedido' => $pedido,
-            'qr' => $qr->dataUri($pedido),
-        ]);
+        return view('pedidos.etiqueta', ['pedido' => $pedido]);
     }
 
     /**

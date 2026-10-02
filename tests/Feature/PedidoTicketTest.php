@@ -7,8 +7,6 @@ use App\Models\Pedido;
 use App\Models\User;
 use App\Services\Pedidos\GeneradorTicketPedido;
 use App\Services\Pedidos\MensajePedido;
-use chillerlan\QRCode\Common\GDLuminanceSource;
-use chillerlan\QRCode\QRCode;
 use Illuminate\Support\Facades\File;
 
 beforeEach(function () {
@@ -46,30 +44,16 @@ it('el ticket es un JPEG de 576 px que no se guarda en ningún lado', function (
         ->and(archivosAlmacenados())->toBe($antes);
 });
 
-it('el ticket lleva al pie un QR legible con la URL absoluta de la entrega', function () {
-    $jpeg = app(GeneradorTicketPedido::class)->generar($this->pedido);
-    $imagen = imagecreatefromstring($jpeg);
-
-    // El QR ocupa el cuadro de 300 px sobre el número de ticket, al final.
-    $pie = imagecreatetruecolor(imagesx($imagen), 420);
-    imagecopy($pie, $imagen, 0, 0, 0, imagesy($imagen) - 420, imagesx($imagen), 420);
-
-    $leido = trim((string) (new QRCode)->readFromSource(new GDLuminanceSource($pie)));
-
-    expect($leido)->toBe(route('pedidos.entregar', $this->pedido))
-        ->and($leido)->toStartWith('http');
-});
-
 it('el ticket se dibuja aunque el logo configurado no exista', function () {
     config(['negocio.logo' => 'negocio/no-existe.png', 'negocio.telefono' => '449 000 0000', 'negocio.domicilio' => 'Calle Uno 123, Centro']);
 
     expect(imagecreatefromstring(app(GeneradorTicketPedido::class)->generar($this->pedido)))->not->toBeFalse();
 });
 
-it('la etiqueta lleva QR, nombre, teléfono, número y saldo', function () {
+it('la etiqueta lleva nombre, teléfono, número y saldo, sin QR', function () {
     $this->actingAs($this->user)->get("/pedidos/{$this->pedido->id}/etiqueta")
         ->assertOk()
-        ->assertSee('data:image/png;base64,', false)
+        ->assertDontSee('<img', false)
         ->assertSee('Juan Pérez')
         ->assertSee($this->pedido->telefono_legible)
         ->assertSee('No. 0001')

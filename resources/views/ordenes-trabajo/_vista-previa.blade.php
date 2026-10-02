@@ -1,7 +1,8 @@
 {{-- Visor del dashboard (spec 020, corrección 1): acciones, estado y el cuerpo
      de la orden. Se pinta con la página o llega por AJAX
      (pedidos.orden-trabajo.vista-previa) al elegir una fila. "Avanzar" regresa
-     al dashboard con la orden abierta (origen=dashboard). --}}
+     al dashboard con la orden abierta (origen=dashboard); "Entregado", sin
+     ella, porque la orden entregada sale de la lista (022, corrección 1). --}}
 @php
     $siguiente = $orden->estado->siguiente();
     $sinColor = $orden->lineasSinColor();
@@ -16,6 +17,9 @@
             <x-boton icono="arrow-right-circle" data-enviar-una-vez
                 data-confirmar="¿Pasar la orden de {{ $pedido->folio_formateado }} a {{ $siguiente->etiqueta() }}? No se puede regresar.">Pasar a {{ $siguiente->etiqueta() }}</x-boton>
         </form>
+    @endif
+    @if (in_array($orden->estado, [App\Enums\EstadoOrdenTrabajo::Terminado, App\Enums\EstadoOrdenTrabajo::Entregado], true))
+        @include('pedidos._entregar', ['origen' => 'dashboard'])
     @endif
     @if ($mensajeListo !== null)
         <x-boton href="https://wa.me/?text={{ rawurlencode($mensajeListo) }}" variante="secundario" icono="bell" descripcion="Avisar que está listo" title="Avisar que está listo" target="_blank" rel="noopener" />

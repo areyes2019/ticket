@@ -14,6 +14,16 @@
 - [019](019-pedidos-mostrador.md) (listado de ventas): etiqueta "Sin orden" y botón "Hoja de
   producción".
 
+- [019](019-pedidos-mostrador.md) (por la **Corrección 1**): se elimina la **entrega por escaneo**
+  (la pantalla `GET /pedidos/{pedido}/entregar`, su envío automático y el QR del ticket y de la
+  etiqueta). La venta se entrega con un botón **"Entregado"**.
+- [020](020-dashboard-cotizaciones-facturas.md) (por la **Corrección 1**): la columna de órdenes de
+  trabajo deja de mostrar las entregadas.
+
+> **Corrección 1 (2026-10-02, implementada):** un cuarto estado, **Entregado**, que es la entrega de la
+> venta; al marcarlo, la orden **desaparece de la columna del dashboard**. Ver la sección
+> "Corrección 1". Donde esa sección contradiga lo de arriba, manda la corrección.
+
 **No modifica:** Cotizaciones (011), Facturación (012), Tesorería (016), Inventario (018) ni la
 aceptación de cotizaciones (021). Las imágenes de artículos (010) solo ceden su conversión a WEBP a
 una clase compartida, sin cambiar de comportamiento.
@@ -470,3 +480,189 @@ revisaron uno por uno.
 2. Etiqueta "Sin orden" en el listado de ventas: **aceptada**.
 3. Reducir la imagen al subirla, igual que las fotos de artículos: **aceptada**.
 4. Miniatura del diseño en la hoja de producción: **aceptada**.
+
+## Corrección 1: estado "Entregado" y fin de la entrega por escaneo
+
+> **Estado: implementada** el 2026-10-02 (ver "Estado de implementación de la corrección 1"). Los
+> puntos marcados **[decidir]** se asumieron al redactar y el usuario los aprobó en bloque.
+
+### Historia de usuario
+
+Como usuario, quiero un paso más en la orden, **Entregado**, que marco con un botón cuando el
+cliente se lleva su trabajo. Al marcarlo, la orden sale de la columna de órdenes del dashboard, que
+así solo muestra el trabajo pendiente. Ya no quiero entregar escaneando el QR: la entrega es ese
+botón.
+
+```
+En dibujo → En proceso → Terminado → [Entregado]   ← la entrega de la venta (019)
+                                          │
+                                          ├── saldo en cero: confirma y entrega
+                                          ├── con saldo: pide la cuenta, cobra el saldo y entrega
+                                          └── la orden sale de la columna del dashboard
+```
+
+### Qué cambia
+
+| Antes | Ahora |
+|---|---|
+| Tres estados: En dibujo → En proceso → Terminado | Cuatro: … → Terminado → **Entregado** |
+| La venta se entrega escaneando el QR (019, tres caminos) | La venta se entrega con el botón **"Entregado"** |
+| El ticket y la etiqueta llevan el QR de entrega | Sin QR **[decidir]** |
+| La entrega de la venta no depende de la orden (022, "Fuera de alcance") | Una venta **con orden** solo se entrega con la orden en Terminado |
+| La columna del dashboard muestra todos los estados (020, corrección 1) | Muestra todos **menos Entregado** |
+
+### Un solo "entregado": la orden sigue a la venta
+
+Entregar la orden **es** entregar la venta. No hay dos entregas que puedan no coincidir:
+
+- `EstadoOrdenTrabajo` gana el caso `Entregado` (`entregado`, "Entregado", clase nueva
+  `etiqueta-orden-entregado` en `app.css`). `siguiente()` **no** cambia: de `Terminado` sigue
+  devolviendo `null`, porque "avanzar" no entrega. A `Entregado` solo se llega por la entrega de la
+  venta.
+- `Pedido::marcarEntregado()` también pone su orden (si tiene) en `entregado`, y
+  `Pedido::deshacerEntrega()` la regresa a `terminado`. Las dos dentro de la transacción del
+  controlador, con el bloqueo venta → orden.
+- `OrdenTrabajo::esEditable()` no cambia (la venta no está entregada), así que una orden entregada
+  queda solo para consulta, como hoy.
+- `motivoNoAvanza()` en `Terminado`: "La orden ya está terminada: usa «Entregado»."
+- **Regla nueva** `Pedido::motivoNoEntrega(): ?string`, el primer motivo en este orden:
+  - "La venta ya se entregó." (entregada);
+  - "La orden de trabajo todavía no está terminada." (tiene orden y no está en `terminado`)
+    **[decidir]**.
+
+  Una venta **sin orden** se entrega como hoy, en cualquier estado (hay ventas anteriores a esta
+  spec, ver supuesto 19).
+
+### El botón "Entregado"
+
+Aparece en el **detalle de la venta** (donde sustituye al enlace "Entregar" de 019) y, con la orden
+en Terminado o Entregado, en el **detalle de la orden** y en su **vista previa del dashboard**. Lo
+pinta el parcial `pedidos/_entregar` (parámetro `origen`):
+
+- Con `motivoNoEntrega() === null`: activo. Con motivo: deshabilitado con el motivo en `title`.
+  En una venta entregada no aparece.
+- **Saldo en cero:** formulario `POST` a `pedidos.entregar.store` con `data-confirmar`
+  "¿Marcar PED-0004 como entregado?".
+- **Saldo pendiente:** abre un `<dialog>` (como "Agregar pago" de 019) con cliente, total, pagado y
+  saldo, el `select` de cuentas activas **sin preselección** y `required`, y un solo botón
+  **"Cobrar $250.00 y entregar"** con `data-enviar-una-vez`. Sin cuentas activas, el aviso de 019
+  con el enlace a Tesorería. El monto sigue sin viajar en la petición.
+- Sin AJAX: es un envío normal.
+
+**`POST /pedidos/{pedido}/entregar`** (`PedidoEntregaController::store`) conserva los pasos 1 a 4 de
+019 (bloqueo, idempotencia, cobro del saldo exacto con `registrado_al_entregar`, `marcarEntregado()`)
+y agrega, con la fila bloqueada, la revisión de `motivoNoEntrega()`: si hay motivo, regresa con él y
+no toca nada. Ya no redirige a la pantalla de escaneo: regresa a **donde se pulsó** (`origen` =
+`venta`, `orden` o `dashboard`, como el `origen=dashboard` de "avanzar"), con el flash "PED-0004
+entregado." o "Cobro de $250.00 registrado en {cuenta}. PED-0004 entregado.". Desde el dashboard
+regresa **sin `?ot=`**, porque esa orden ya no está en la lista.
+
+### Deshacer la entrega **[decidir]**
+
+Se conserva la regla del servidor (`puedeDeshacerEntrega()`: sin cobro al entregar y dentro de 5
+minutos) y la ruta `pedidos.deshacer-entrega`. Cambia dónde se ofrece: un botón **"Deshacer
+entrega"** en el detalle de la venta y en el de la orden mientras `puedeDeshacerEntrega()`, con
+`data-confirmar`, **sin** la cuenta regresiva de 10 s (que existía porque el escaneo entregaba sin
+preguntar). Deshacer regresa la orden a `terminado` y la devuelve a la columna del dashboard.
+
+### Se elimina la entrega por escaneo (019)
+
+- La ruta `GET /pedidos/{pedido}/entregar` (`pedidos.entregar`), `PedidoEntregaController::show` y la
+  vista `pedidos/entregar.blade.php` con sus tres caminos, el flash `entrega_sin_cobro` y la clase
+  `contenido-entrega`.
+- En `app.js`, los manejadores `data-enviar-al-cargar` y `data-cuenta-regresiva` si nadie más los
+  usa, y `Pedido::SEGUNDOS_BOTON_DESHACER`.
+- **[decidir]** El QR del **ticket** y de la **etiqueta**: su único uso era abrir la entrega.
+  `CodigoQrPedido` se borra; el ticket termina en "No. 0042" y la etiqueta conserva folio, cliente y
+  saldo. El QR fiscal de las facturas no se toca. [remotas/029](remotas/029-pwa-mostrador.md) (lector
+  de la app instalada) pierde el formato de QR que 019 le guardaba.
+- `POST /pedidos/{pedido}/entregar` **se queda** (es lo que envía el botón), igual que
+  `EntregarPedidoRequest`.
+
+### Columna del dashboard (020)
+
+- La consulta de `$ordenesTrabajo` excluye `estado = entregado`; las 25 se cuentan después de
+  excluir.
+- `?ot=` de una orden entregada **sigue abriéndola** en el visor (sirve de consulta), aunque no esté
+  en la lista.
+- No cambian la hoja de producción (solo `en_proceso`) ni la etiqueta "Sin orden" (no marca ventas
+  entregadas).
+
+### Migración de datos
+
+Migración nueva que pasa a `entregado` toda orden cuya venta ya esté `entregado`, sin importar su
+estado actual (las ventas pudieron entregarse por escaneo antes de esta corrección). `down()` no la
+revierte. La columna `estado` es `string(20)`: no hay cambio de esquema.
+
+### Pruebas
+
+- **`OrdenTrabajoTest`:**
+  - entregar una venta con orden `terminado` pone la orden en `entregado`; con la orden en otro
+    estado → rechazado, sin pago ni movimiento;
+  - "avanzar" desde `terminado` sigue rechazado (no entrega);
+  - deshacer la entrega regresa la orden a `terminado`;
+  - la prueba 8 de arriba (venta entregada solo consulta; deshacer la vuelve editable) se ajusta al
+    nuevo camino;
+  - el botón "Entregado" aparece en la orden, la vista previa y la venta, deshabilitado con motivo
+    cuando la orden no está terminada.
+- **`PedidoEntregaTest`:** se borran las pruebas de la pantalla de escaneo (tres caminos, envío
+  automático, cuenta regresiva); se conservan las de `POST entregar` (saldo exacto, sin cuenta →
+  error, idempotencia) y las de deshacer; el destino de la redirección se prueba por `origen`.
+- **`PedidoTicketTest`:** se retira la lectura del QR del ticket (prueba 20 de 019); el ticket y la
+  etiqueta se generan sin QR.
+- **`DashboardTest`:** la columna no muestra órdenes entregadas; `?ot=` de una entregada la abre;
+  entregar desde el visor regresa al dashboard sin `?ot=`.
+- Migración de datos: una orden en `en_dibujo` de una venta entregada queda `entregado`.
+
+### Criterios de aceptación
+
+1. La orden tiene cuatro estados; Entregado solo se alcanza con el botón "Entregado".
+2. "Entregado" entrega la venta: con saldo, cobra el saldo completo a la cuenta elegida.
+3. Una venta con orden no se entrega hasta que la orden está Terminada.
+4. Al quedar Entregada, la orden sale de la columna del dashboard.
+5. Ya no existe la pantalla de escaneo ni el QR de entrega en ticket y etiqueta.
+6. `php artisan test`, `pint` y `node --test "tests/js/*.test.js"` en verde.
+
+### Supuestos de la corrección
+
+1. Entregar la orden y entregar la venta son **la misma acción** (decidido por el usuario: se
+   elimina el escaneo y queda un botón "Entregado").
+2. La orden desaparece **solo de la columna del dashboard** (decidido por el usuario). El listado de
+   ventas no cambia.
+3. **[decidir]** Una venta con orden no se entrega si la orden no está Terminada.
+4. **[decidir]** Se quita el QR del ticket y de la etiqueta.
+5. **[decidir]** Se conserva "Deshacer entrega" (5 min, sin cobro), ahora como botón con
+   confirmación y sin cuenta regresiva.
+6. **[decidir]** Las órdenes de ventas ya entregadas pasan a Entregado con una migración de datos.
+
+### Estado de implementación de la corrección 1
+
+Implementada el 2026-10-02.
+
+- **Archivos nuevos**: migración de datos `2026_10_07_100000_entregar_ordenes_trabajo_de_ventas_entregadas`
+  (**aplicada en la base local**) y el parcial `pedidos/_entregar` (botón, diálogo de cobro y
+  "Deshacer entrega").
+- **Archivos borrados**: `pedidos/entregar.blade.php` y `App\Services\Pedidos\CodigoQrPedido`.
+- **Archivos modificados**:
+  - `EstadoOrdenTrabajo` (`Entregado`), `OrdenTrabajo::motivoNoAvanza()`,
+  - `Pedido` (`motivoNoEntrega()`, `puedeEntregarse()`; `marcarEntregado()` y `deshacerEntrega()`
+    mueven la orden; se quita `SEGUNDOS_BOTON_DESHACER`), `PedidoPago` (comentario),
+  - `PedidoEntregaController` (sin `show`; regla con la orden bloqueada; regreso por `origen`),
+    `EntregarPedidoRequest` (bolsa de errores `entrega`), `OrdenTrabajoController::datosVistaPrevia()`
+    (cuentas), `DashboardController` (excluye entregadas), `PedidoController::etiqueta`,
+    `GeneradorTicketPedido` (sin QR), `routes/web.php`,
+  - vistas `pedidos/show`, `pedidos/etiqueta`, `ordenes-trabajo/show` y `_vista-previa`,
+  - `app.js` (sin `data-enviar-al-cargar` ni `data-cuenta-regresiva`) y `app.css` (sin
+    `contenido-entrega`/`entrega-*`; `etiqueta-orden-entregado`).
+- **Decisiones al implementar**:
+  - En la orden y en el visor el botón solo aparece desde Terminado: ahí "Pasar a …" ya ocupa ese
+    lugar en los estados anteriores. En la venta sí aparece deshabilitado con el motivo.
+  - Los errores del diálogo de entrega van a la bolsa `entrega`, para no mezclarse con los de "Agregar
+    pago" (los dos tienen `cuenta_id`). El diálogo se reabre solo con errores.
+  - Si la venta no se puede entregar, `EntregarPedidoRequest` no exige cuenta y el controlador responde
+    con el motivo, en lugar de pedir una cuenta que no se va a usar.
+- **Verificación**: `php artisan test` con 1055 pruebas en verde, `node --test "tests/js/*.test.js"`
+  (37) y Pint sin cambios.
+
+  **No se revisó la UI en un navegador real.** Falta probar el diálogo de cobro en el visor del
+  dashboard (llega por AJAX) y la etiqueta impresa sin QR.

@@ -4,8 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Etiqueta {{ $pedido->folio_formateado }}</title>
-    {{-- Etiqueta adhesiva de 50 × 25 mm: QR de 20 mm a la izquierda y cuatro
-         renglones a la derecha. Estilos propios: no usa el layout de la aplicación. --}}
+    {{-- Etiqueta adhesiva de 50 × 25 mm con cuatro renglones. Sin QR: la venta
+         se entrega con el botón "Entregado" (022, corrección 1). Estilos propios:
+         no usa el layout de la aplicación. --}}
     <style>
         @page { size: 50mm 25mm; margin: 0; }
 
@@ -29,18 +30,11 @@
             overflow: hidden;
         }
 
-        .etiqueta img {
-            flex: 0 0 20mm;
-            width: 20mm;
-            height: 20mm;
-            image-rendering: pixelated;
-        }
-
         .etiqueta-texto {
             flex: 1;
             min-width: 0;
-            font-size: 8pt;
-            line-height: 1.25;
+            font-size: 10pt;
+            line-height: 1.3;
         }
 
         /* El nombre se recorta antes de partirse: un renglón partido empuja el saldo fuera. */
@@ -51,7 +45,7 @@
             text-overflow: ellipsis;
         }
 
-        .etiqueta-saldo { font-weight: bold; font-size: 9pt; }
+        .etiqueta-saldo { font-weight: bold; font-size: 11pt; }
 
         @media screen {
             body { padding: 1rem; background: #eee; }
@@ -61,7 +55,6 @@
 </head>
 <body>
     <div class="etiqueta">
-        <img src="{{ $qr }}" alt="Código QR de la venta {{ $pedido->numero_ticket }}">
         <div class="etiqueta-texto">
             <p>{{ $pedido->cliente_nombre }}</p>
             <p>{{ $pedido->telefono_legible }}</p>
