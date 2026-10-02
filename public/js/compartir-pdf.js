@@ -14,16 +14,24 @@
 //   data-precargar opcional: "al-cargar" o "al-apuntar". El menú del sistema
 //                  solo abre mientras dura el gesto del usuario, y esperar una
 //                  descarga ahí lo agota: se baja antes. Sin él, al hacer clic.
+//   data-tipo      opcional: MIME del archivo (por defecto application/pdf; el
+//                  ticket de pedido es image/jpeg).
+//   data-sufijo    opcional: lo que se agrega al texto en wa.me (por defecto
+//                  ". Te adjunto el PDF.").
+//   data-descargar-sin-menu  opcional: sin texto y sin menú de compartir, el
+//                  archivo se descarga en lugar de ocultar el botón.
 // El servidor nunca manda mensajes de WhatsApp.
 (function () {
-    // Si este navegador tiene menú de compartir y acepta archivos PDF en él.
-    function puedeCompartirArchivos(navegador) {
+    // Si este navegador tiene menú de compartir y acepta archivos de ese tipo en él.
+    function puedeCompartirArchivos(navegador, tipo) {
+        const mime = tipo || 'application/pdf';
+
         if (!navegador || typeof navegador.share !== 'function' || typeof navegador.canShare !== 'function' || typeof File !== 'function') {
             return false;
         }
 
         try {
-            return navegador.canShare({ files: [new File([''], 'prueba.pdf', { type: 'application/pdf' })] }) === true;
+            return navegador.canShare({ files: [new File([''], mime === 'application/pdf' ? 'prueba.pdf' : 'prueba.jpg', { type: mime })] }) === true;
         } catch (error) {
             return false;
         }
@@ -37,7 +45,17 @@
         return;
     }
 
-    const conMenu = puedeCompartirArchivos(navigator);
+    function tipoDe(boton) {
+        return boton.dataset.tipo || 'application/pdf';
+    }
+
+    function conMenu(boton) {
+        return puedeCompartirArchivos(navigator, tipoDe(boton));
+    }
+
+    function nombreDe(boton) {
+        return tipoDe(boton) === 'application/pdf' ? 'el PDF' : 'el archivo';
+    }
     const pendientes = new WeakMap();
     const listos = new WeakMap();
 
@@ -62,7 +80,7 @@
 
                 return respuesta.blob();
             }).then(function (blob) {
-                const archivo = new File([blob], boton.dataset.archivo, { type: 'application/pdf' });
+                const archivo = new File([blob], boton.dataset.archivo, { type: tipoDe(boton) });
 
                 listos.set(boton, archivo);
 
@@ -94,7 +112,8 @@
 
     function abrirWhatsApp(boton) {
         const telefono = boton.dataset.telefono || '';
-        const texto = encodeURIComponent(boton.dataset.texto + '. Te adjunto el PDF.');
+        const sufijo = boton.dataset.sufijo !== undefined ? boton.dataset.sufijo : '. Te adjunto el PDF.';
+        const texto = encodeURIComponent(boton.dataset.texto + sufijo);
 
         window.open('https://wa.me/' + telefono + '?text=' + texto, '_blank', 'noopener');
     }
@@ -139,6 +158,13 @@
             return Promise.resolve(marcar(boton));
         }
 
+        // Sin menú (escritorio) y con permiso de descargar: el archivo se baja.
+        if (!conMenu(boton)) {
+            guardarArchivo(archivo);
+
+            return Promise.resolve(marcar(boton));
+        }
+
         return navigator.share({ files: [archivo] }).then(function () {
             return marcar(boton);
         }, function (error) {
@@ -147,7 +173,7 @@
             }
 
             guardarArchivo(archivo);
-            mostrarAviso('No se pudo abrir el menú de compartir; el PDF se descargó.');
+            mostrarAviso('No se pudo abrir el menú de compartir; ' + nombreDe(boton) + ' se descargó.');
         });
     }
 
@@ -210,7 +236,7 @@
                     return;
                 }
 
-                mostrarAviso('No se pudo compartir el PDF. Intenta de nuevo.');
+                mostrarAviso('No se pudo compartir ' + nombreDe(boton) + '. Intenta de nuevo.');
             })
             .finally(function () {
                 if (boton.getAttribute('aria-busy') === 'true') {
@@ -228,8 +254,9 @@
 
         boton.dataset.compartirListo = '1';
 
-        // Sin texto no hay respaldo que valga la pena: sin menú, no hay botón.
-        if (!boton.dataset.texto && !conMenu) {
+        // Sin texto no hay respaldo que valga la pena: sin menú, no hay botón
+        // (salvo que el botón pida descargar).
+        if (!boton.dataset.texto && !conMenu(boton) && !('descargarSinMenu' in boton.dataset)) {
             return;
         }
 

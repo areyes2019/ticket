@@ -1,0 +1,66 @@
+<?php
+
+namespace App\Policies;
+
+use App\Enums\EstadoPedido;
+use App\Models\Pedido;
+use App\Models\User;
+use Illuminate\Auth\Access\Response;
+
+/**
+ * Un pedido ajeno responde 404 en todas las acciones. Las reglas de estado
+ * viven en el modelo; aquí solo se convierten en una respuesta con motivo.
+ */
+class PedidoPolicy
+{
+    public function view(User $user, Pedido $pedido): Response
+    {
+        return $this->esDueno($user, $pedido);
+    }
+
+    public function update(User $user, Pedido $pedido): Response
+    {
+        $dueno = $this->esDueno($user, $pedido);
+
+        if ($dueno->denied()) {
+            return $dueno;
+        }
+
+        return match (true) {
+            $pedido->esEditable() => Response::allow(),
+            $pedido->estado === EstadoPedido::Pagado => Response::deny('Un pedido pagado ya no se edita: el ticket ya salió con esas líneas.'),
+            default => Response::deny('Un pedido entregado ya no se edita.'),
+        };
+    }
+
+    public function delete(User $user, Pedido $pedido): Response
+    {
+        $dueno = $this->esDueno($user, $pedido);
+
+        if ($dueno->denied()) {
+            return $dueno;
+        }
+
+        return match (true) {
+            $pedido->tienePagos() => Response::deny('El pedido tiene pagos registrados: elimínalos antes de borrarlo.'),
+            ! $pedido->puedeEliminarse() => Response::deny('Un pedido '.mb_strtolower($pedido->estado->etiqueta()).' no se puede eliminar.'),
+            default => Response::allow(),
+        };
+    }
+
+    /**
+     * Ticket, etiqueta, pagos, entrega y deshacer: la regla de estado de cada
+     * acción la revisa su controlador.
+     */
+    public function operar(User $user, Pedido $pedido): Response
+    {
+        return $this->esDueno($user, $pedido);
+    }
+
+    private function esDueno(User $user, Pedido $pedido): Response
+    {
+        return $pedido->user_id === $user->id
+            ? Response::allow()
+            : Response::denyAsNotFound();
+    }
+}

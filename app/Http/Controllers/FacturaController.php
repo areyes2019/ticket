@@ -115,7 +115,7 @@ class FacturaController extends Controller
 
             $factura = $request->user()->facturas()->make($request->datosFactura());
             $factura->forceFill($origen);
-            $factura->folio = $this->siguienteFolio($request->user());
+            $factura->folio = Factura::siguienteFolio($request->user());
             $factura->aplicarTotales($request->totales());
             $factura->save();
 
@@ -165,7 +165,7 @@ class FacturaController extends Controller
 
         $sinConsulta = $factura->cancelacionEnCurso() && ! $cancelador->refrescar($factura);
 
-        $factura->load(['cliente', 'lineas', 'complementoPago', 'sustituta', 'cotizacion', 'duplicadaDe']);
+        $factura->load(['cliente', 'lineas', 'complementoPago', 'sustituta', 'cotizacion', 'pedido', 'duplicadaDe']);
 
         return view('facturas.show', [
             'factura' => $factura,
@@ -307,7 +307,7 @@ class FacturaController extends Controller
         return match ($resultado) {
             ResultadoTimbrado::Timbrada => redirect()->route('facturas.show', $factura)
                 ->with('exito', "Factura timbrada. Folio fiscal {$factura->folioFiscal()}, UUID {$factura->uuid_fiscal}."),
-            ResultadoTimbrado::ErrorDatos => redirect()->route('facturas.edit', $factura)
+            ResultadoTimbrado::ErrorDatos => redirect()->route($factura->esEditable() ? 'facturas.edit' : 'facturas.show', $factura)
                 ->with('error', "facturapi.io rechazó la factura {$factura->folio_formateado}: {$factura->error_timbrado} Corrige los datos y vuelve a timbrar."),
             ResultadoTimbrado::ErrorPac => redirect()->route('facturas.show', $factura)
                 ->with('error', "No se pudo timbrar la factura {$factura->folio_formateado}: {$factura->error_timbrado} Quedó pendiente; reintenta el timbrado."),
@@ -315,20 +315,6 @@ class FacturaController extends Controller
                 ->with('error', 'Esta factura ya se está timbrando. Espera unos segundos y vuelve a abrirla.'),
             ResultadoTimbrado::SinCambio => redirect()->route('facturas.show', $factura),
         };
-    }
-
-    /**
-     * Consecutivo por usuario que nunca se reutiliza (mismo mecanismo que el
-     * folio de cotización).
-     */
-    private function siguienteFolio(User $user): int
-    {
-        $bloqueado = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
-        $folio = max($bloqueado->ultimo_folio_factura, (int) $bloqueado->facturas()->max('folio')) + 1;
-
-        $bloqueado->forceFill(['ultimo_folio_factura' => $folio])->save();
-
-        return $folio;
     }
 
     /**

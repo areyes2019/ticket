@@ -113,6 +113,19 @@ class Movimiento extends Model
             ];
         }
 
+        if ($documento instanceof PedidoPago) {
+            $pedido = $documento->pedido;
+            $utilidad = $pedido->utilidadVenta();
+
+            return [
+                'etiqueta' => $pedido->folio_formateado,
+                'url' => route('pedidos.show', $pedido),
+                'utilidad' => $utilidad['utilidad'],
+                'utilidad_parcial' => $utilidad['parcial'],
+                'muestra_utilidad' => true,
+            ];
+        }
+
         if ($documento instanceof OrdenCompra) {
             return [
                 'etiqueta' => $documento->folio_formateado,

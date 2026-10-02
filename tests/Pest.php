@@ -161,3 +161,35 @@ function marcarExistencia(Articulo $articulo, int $existencia, int $faltante = 0
 
     return $fila;
 }
+
+/**
+ * Línea del formulario de pedido: de catálogo si hay artículo, libre si no.
+ *
+ * @return array<string, mixed>
+ */
+function lineaPedido(?Articulo $articulo, int $cantidad = 1, string $precio = '100.00'): array
+{
+    return [
+        'articulo_id' => $articulo?->id,
+        'cantidad' => $cantidad,
+        'descripcion' => $articulo->nombre ?? 'Diseño especial',
+        'modelo' => $articulo->modelo ?? '',
+        'precio_unitario' => $precio,
+        'tasa_iva' => '16',
+    ];
+}
+
+/**
+ * @param  list<array<string, mixed>>  $lineas
+ * @return array<string, mixed>
+ */
+function datosPedido(array $lineas, array $cambios = []): array
+{
+    return [
+        'cliente_nombre' => 'Juan Pérez',
+        'cliente_telefono' => '449 123 4567',
+        'cliente_correo' => 'juan@example.com',
+        'lineas' => $lineas,
+        ...$cambios,
+    ];
+}

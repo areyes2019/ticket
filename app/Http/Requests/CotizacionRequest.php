@@ -7,6 +7,7 @@ use App\Enums\TipoDescuento;
 use App\Models\Cotizacion;
 use App\Models\Factura;
 use App\Models\OrdenCompra;
+use App\Models\Pedido;
 use App\Services\Documentos\CalculadoraTotalesDocumento;
 use Closure;
 use Illuminate\Auth\Access\Response;
@@ -207,10 +208,10 @@ class CotizacionRequest extends FormRequest
     }
 
     /**
-     * Documento que se edita (null en el alta). FacturaRequest y
-     * OrdenCompraRequest lo redefinen.
+     * Documento que se edita (null en el alta). FacturaRequest,
+     * OrdenCompraRequest y PedidoRequest lo redefinen.
      */
-    protected function documento(): Cotizacion|Factura|OrdenCompra|null
+    protected function documento(): Cotizacion|Factura|OrdenCompra|Pedido|null
     {
         $cotizacion = $this->route('cotizacion');
 

@@ -1,0 +1,9 @@
+DejaVu Sans Mono (DejaVuSansMono.ttf, DejaVuSansMono-Bold.ttf)
+
+Copiadas de vendor/dompdf/dompdf/lib/fonts/ para dibujar el ticket de pedido
+(spec 019) sin depender de la estructura interna de dompdf.
+
+Las fuentes DejaVu son libres: derivan de Bitstream Vera y se distribuyen
+bajo la licencia de Bitstream Vera más las extensiones de dominio público de
+DejaVu. Texto completo de la licencia:
+https://dejavu-fonts.github.io/License.html

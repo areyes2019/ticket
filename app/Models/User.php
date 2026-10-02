@@ -121,6 +121,22 @@ class User extends Authenticatable
     }
 
     /**
+     * @return HasMany<Pedido, $this>
+     */
+    public function pedidos(): HasMany
+    {
+        return $this->hasMany(Pedido::class);
+    }
+
+    /**
+     * @return HasMany<Configuracion, $this>
+     */
+    public function configuraciones(): HasMany
+    {
+        return $this->hasMany(Configuracion::class);
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>

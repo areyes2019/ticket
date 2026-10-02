@@ -27,7 +27,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * Solo la cabecera que captura el usuario es asignable. El folio lo pone
  * FacturaController al crear; el estado, los sellos, las copias fiscales y el
  * error solo los escriben los métodos de timbrado y cancelación; los totales,
- * aplicarTotales() con la calculadora. cotizacion_id y duplicada_de_id (el
+ * aplicarTotales() con la calculadora. cotizacion_id, pedido_id y duplicada_de_id (el
  * origen) los pone FacturaController::store y no cambian después.
  */
 #[Fillable([
@@ -113,6 +113,41 @@ class Factura extends Model
     }
 
     /**
+     * El pedido de mostrador del que salió (autofactura, 019).
+     *
+     * @return BelongsTo<Pedido, $this>
+     */
+    public function pedido(): BelongsTo
+    {
+        return $this->belongsTo(Pedido::class);
+    }
+
+    /**
+     * Consecutivo por usuario que nunca se reutiliza (mismo mecanismo que el
+     * folio de cotización). Va dentro de la transacción del alta: el bloqueo
+     * de la fila del usuario evita que dos altas tomen el mismo folio. Lo usan
+     * FacturaController y la autofactura de pedidos.
+     */
+    public static function siguienteFolio(User $user): int
+    {
+        $bloqueado = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+        $folio = max($bloqueado->ultimo_folio_factura, (int) $bloqueado->facturas()->max('folio')) + 1;
+
+        $bloqueado->forceFill(['ultimo_folio_factura' => $folio])->save();
+
+        return $folio;
+    }
+
+    /**
+     * Solo la venta directa mueve existencias al timbrar y al cancelar: la de
+     * una cotización descuenta al entregarse y la de un pedido, al crearse.
+     */
+    public function mueveInventario(): bool
+    {
+        return $this->cotizacion_id === null && $this->pedido_id === null;
+    }
+
+    /**
      * @return BelongsTo<Factura, $this>
      */
     public function duplicadaDe(): BelongsTo
@@ -146,6 +181,12 @@ class Factura extends Model
      */
     public function esEditable(): bool
     {
+        // La autofactura de un pedido se corrige desde el portal: sus líneas
+        // pueden ser libres y el formulario las rechazaría.
+        if ($this->pedido_id !== null) {
+            return false;
+        }
+
         return $this->estado === EstadoFactura::Borrador
             || ($this->estado === EstadoFactura::Pendiente && $this->tipo_error_timbrado === TipoErrorTimbrado::Datos);
     }

@@ -42,3 +42,19 @@ test('con menú que acepta un PDF se puede', function () {
     assert.equal(recibido.files[0].type, 'application/pdf');
     assert.equal(recibido.text, undefined);
 });
+
+test('con el tipo del ticket pregunta por una imagen JPEG', function () {
+    let recibido = null;
+    const navegador = {
+        share: function () {},
+        canShare: function (datos) {
+            recibido = datos;
+
+            return true;
+        },
+    };
+
+    assert.equal(puedeCompartirArchivos(navegador, 'image/jpeg'), true);
+    assert.equal(recibido.files[0].type, 'image/jpeg');
+    assert.equal(recibido.files[0].name, 'prueba.jpg');
+});

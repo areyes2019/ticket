@@ -1,10 +1,12 @@
 <?php
 
 use App\Http\Controllers\ArticuloController;
+use App\Http\Controllers\AutofacturaController;
 use App\Http\Controllers\CatalogoController;
 use App\Http\Controllers\CatalogoSatController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\ComplementoPagoController;
+use App\Http\Controllers\ConfiguracionController;
 use App\Http\Controllers\ConstanciaController;
 use App\Http\Controllers\CotizacionController;
 use App\Http\Controllers\CotizacionPagoController;
@@ -25,6 +27,9 @@ use App\Http\Controllers\InicioController;
 use App\Http\Controllers\MovimientoController;
 use App\Http\Controllers\OrdenCompraController;
 use App\Http\Controllers\OrdenCompraPagoController;
+use App\Http\Controllers\PedidoController;
+use App\Http\Controllers\PedidoEntregaController;
+use App\Http\Controllers\PedidoPagoController;
 use App\Http\Controllers\ProveedorController;
 use App\Http\Controllers\SaldoController;
 use App\Http\Controllers\TransferenciaController;
@@ -35,6 +40,13 @@ Route::get('/', [InicioController::class, 'index'])->name('inicio');
 Route::get('/estado', [InicioController::class, 'estado'])->name('estado');
 Route::post('/eco', [InicioController::class, 'eco'])->name('eco');
 Route::get('/estilos', EstilosController::class)->name('estilos');
+
+// Portal de autofacturación (019): público, sin sesión. El token de 64
+// caracteres es la autorización; son las únicas rutas que cualquiera puede llamar.
+Route::middleware('throttle:autofactura')->group(function () {
+    Route::get('autofactura/{token}', [AutofacturaController::class, 'show'])->where('token', '[A-Za-z0-9]{64}')->name('autofactura.show');
+    Route::post('autofactura/{token}', [AutofacturaController::class, 'store'])->where('token', '[A-Za-z0-9]{64}')->name('autofactura.store');
+});
 
 Route::middleware(['auth', AsegurarUsuarioActivo::class])->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
@@ -115,6 +127,25 @@ Route::middleware(['auth', AsegurarUsuarioActivo::class])->group(function () {
     // parameters(): sin él, Str::singular daría un parámetro en inglés y el binding fallaría.
     Route::resource('ordenes-compra', OrdenCompraController::class)
         ->parameters(['ordenes-compra' => 'ordenCompra']);
+
+    // Pedidos de mostrador (019). Las rutas estáticas van antes del resource.
+    Route::get('pedidos/buscar', [PedidoController::class, 'buscar'])->name('pedidos.buscar');
+    Route::get('pedidos/cliente-por-telefono', [PedidoController::class, 'clientePorTelefono'])->name('pedidos.cliente-por-telefono');
+    Route::get('pedidos/{pedido}/ticket', [PedidoController::class, 'ticket'])->name('pedidos.ticket');
+    Route::get('pedidos/{pedido}/etiqueta', [PedidoController::class, 'etiqueta'])->name('pedidos.etiqueta');
+    Route::get('pedidos/{pedido}/entregar', [PedidoEntregaController::class, 'show'])->name('pedidos.entregar');
+    Route::post('pedidos/{pedido}/entregar', [PedidoEntregaController::class, 'store'])->name('pedidos.entregar.store');
+    Route::post('pedidos/{pedido}/deshacer-entrega', [PedidoEntregaController::class, 'destroy'])->name('pedidos.deshacer-entrega');
+    Route::post('pedidos/{pedido}/pagos', [PedidoPagoController::class, 'store'])->name('pedidos.pagos.store');
+    Route::delete('pedidos/{pedido}/pagos/{pago}', [PedidoPagoController::class, 'destroy'])
+        ->scopeBindings()
+        ->name('pedidos.pagos.destroy');
+
+    Route::resource('pedidos', PedidoController::class)
+        ->parameters(['pedidos' => 'pedido']);
+
+    Route::get('configuracion', [ConfiguracionController::class, 'edit'])->name('configuracion.edit');
+    Route::put('configuracion', [ConfiguracionController::class, 'update'])->name('configuracion.update');
 
     // Inventario. Las rutas estáticas van antes de {articulo}, o se tomarían
     // por un artículo.

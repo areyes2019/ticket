@@ -33,10 +33,14 @@
                     </div>
                 </details>
                 <details class="menu-grupo" data-menu-grupo>
-                    <summary @if (request()->routeIs('facturas.*', 'cotizaciones.*', 'clientes.*')) class="menu-grupo-activo" @endif>
+                    <summary @if (request()->routeIs('pedidos.*', 'facturas.*', 'cotizaciones.*', 'clientes.*')) class="menu-grupo-activo" @endif>
                         <x-icono nombre="graph-up-arrow" />Ventas<x-icono nombre="chevron-down" class="menu-grupo-flecha" />
                     </summary>
                     <div class="menu-panel">
+                        <a href="{{ route('pedidos.index') }}" @if (request()->routeIs('pedidos.*')) aria-current="page" @endif>
+                            <span class="menu-panel-icono"><x-icono nombre="ticket-perforated" /></span>
+                            <span class="menu-panel-texto"><strong>Pedidos</strong><small>Ventas de mostrador y tickets</small></span>
+                        </a>
                         <a href="{{ route('facturas.index') }}" @if (request()->routeIs('facturas.*')) aria-current="page" @endif>
                             <span class="menu-panel-icono"><x-icono nombre="receipt" /></span>
                             <span class="menu-panel-texto"><strong>Facturas</strong><small>Comprobantes emitidos y timbrado</small></span>
@@ -71,6 +75,7 @@
                     </div>
                 </details>
                 <a href="{{ route('tesoreria.movimientos.index') }}"><x-icono nombre="cash-coin" />Contabilidad</a>
+                <a href="{{ route('configuracion.edit') }}" @if (request()->routeIs('configuracion.*')) aria-current="page" @endif><x-icono nombre="gear" />Configuración</a>
                 @can('ver-historial-accesos')
                     <a href="{{ route('historial-accesos.index') }}"><x-icono nombre="clock-history" />Historial de accesos</a>
                 @endcan

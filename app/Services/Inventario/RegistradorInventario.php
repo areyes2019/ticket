@@ -48,7 +48,7 @@ class RegistradorInventario
      * Regla 1 por artículo (recepción de orden de compra). Un artículo sin
      * fila entra en 0 antes de sumar: comprarlo es decidir almacenarlo.
      *
-     * @param  iterable<Model>  $lineas  con articulo_id y cantidad
+     * @param  iterable<object>  $lineas  con articulo_id y cantidad
      */
     public function entradaPorDocumento(Model $documento, iterable $lineas, MotivoMovimientoInventario $motivo): void
     {
@@ -66,7 +66,7 @@ class RegistradorInventario
      * bloquea. Con $creaFila = false (factura), un artículo sin fila viva no
      * genera movimiento ni se da de alta.
      *
-     * @param  iterable<Model>  $lineas  con articulo_id y cantidad
+     * @param  iterable<object>  $lineas  con articulo_id y cantidad
      */
     public function salidaPorDocumento(Model $documento, iterable $lineas, MotivoMovimientoInventario $motivo, bool $creaFila): void
     {
@@ -86,12 +86,12 @@ class RegistradorInventario
     /**
      * Devuelve, como entradas normales, lo que la factura sacó al timbrarse:
      * sus movimientos venta_factura, no sus líneas. Así no devuelve lo que no
-     * salió ni da de alta artículos al cancelar. Una factura con cotización
-     * nunca movió nada. Si ya devolvió, no hace nada.
+     * salió ni da de alta artículos al cancelar. Una factura con cotización o
+     * con pedido nunca movió nada. Si ya devolvió, no hace nada.
      */
     public function devolverFactura(Factura $factura): void
     {
-        if ($factura->cotizacion_id !== null) {
+        if (! $factura->mueveInventario()) {
             return;
         }
 
@@ -110,6 +110,30 @@ class RegistradorInventario
                 MotivoMovimientoInventario::CancelacionFactura,
             );
         });
+    }
+
+    /**
+     * Devuelve, como entradas normales, el neto que el documento sacó (sus
+     * salidas menos sus entradas, por artículo): sus movimientos, no sus
+     * líneas. Así no devuelve lo que no salió ni da de alta artículos, y un
+     * documento editado varias veces no descuenta varias veces (pedidos, 019).
+     */
+    public function revertirDocumento(Model $documento, MotivoMovimientoInventario $motivo): void
+    {
+        $netos = MovimientoInventario::whereMorphedTo('documentable', $documento)
+            ->whereIn('tipo', [TipoMovimientoInventario::Salida, TipoMovimientoInventario::Entrada])
+            ->get()
+            ->groupBy('articulo_id')
+            ->map(fn ($movimientos) => $movimientos->sum(
+                fn (MovimientoInventario $movimiento) => $movimiento->tipo === TipoMovimientoInventario::Salida ? $movimiento->cantidad : -$movimiento->cantidad
+            ))
+            ->filter(fn (int $neto) => $neto > 0);
+
+        $this->entradaPorDocumento(
+            $documento,
+            $netos->map(fn (int $neto, int $articuloId) => (object) ['articulo_id' => $articuloId, 'cantidad' => $neto])->values(),
+            $motivo,
+        );
     }
 
     /**
@@ -162,7 +186,7 @@ class RegistradorInventario
      * Suma por artículo, sin líneas libres. Red defensiva: dos líneas del
      * mismo artículo no se pisan y dejan un solo movimiento.
      *
-     * @param  iterable<Model>  $lineas
+     * @param  iterable<object>  $lineas
      * @return array<int, int> articulo_id => cantidad
      */
     private static function cantidadesPorArticulo(iterable $lineas): array

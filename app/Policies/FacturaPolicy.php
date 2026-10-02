@@ -28,6 +28,7 @@ class FacturaPolicy
 
         return match (true) {
             $factura->esEditable() => Response::allow(),
+            $factura->pedido_id !== null => Response::deny('La factura de un pedido se corrige desde su enlace de autofactura o reintentando el timbrado.'),
             $factura->estado === EstadoFactura::Pendiente => Response::deny('El timbrado falló por facturapi.io, no por los datos: reintenta el timbrado sin cambios.'),
             default => Response::deny('Una factura '.mb_strtolower($factura->estado->etiqueta()).' no se puede modificar.'),
         };

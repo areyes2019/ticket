@@ -110,6 +110,9 @@
             @if ($factura->cotizacion)
                 <div><dt>Origen</dt><dd><a href="{{ route('cotizaciones.show', $factura->cotizacion) }}">{{ $factura->cotizacion->folio_formateado }}</a></dd></div>
             @endif
+            @if ($factura->pedido)
+                <div><dt>Origen</dt><dd><a href="{{ route('pedidos.show', $factura->pedido) }}">Pedido {{ $factura->pedido->folio_formateado }}</a> (autofactura)</dd></div>
+            @endif
             @if ($factura->duplicadaDe)
                 <div><dt>Duplicada de</dt><dd><a href="{{ route('facturas.show', $factura->duplicadaDe) }}">{{ $factura->duplicadaDe->folioVisible() }}</a></dd></div>
             @endif

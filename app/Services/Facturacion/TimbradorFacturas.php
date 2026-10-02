@@ -53,12 +53,13 @@ class TimbradorFacturas
             }
 
             // El timbrado y la salida de existencias se guardan juntos. Una
-            // factura que viene de una cotización no descuenta: lo hace la
-            // cotización al entregarse (018). Un artículo sin fila no se mueve.
+            // factura que viene de una cotización o de un pedido no descuenta:
+            // lo hizo (o lo hará) su documento de origen (018, 019). Un
+            // artículo sin fila no se mueve.
             DB::transaction(function () use ($factura, $respuesta, $receptor) {
                 $factura->aplicarRespuestaTimbrado($respuesta, $receptor, $this->emisor($respuesta));
 
-                if ($factura->cotizacion_id === null) {
+                if ($factura->mueveInventario()) {
                     $this->inventario->salidaPorDocumento($factura, $factura->lineas, MotivoMovimientoInventario::VentaFactura, creaFila: false);
                 }
             });

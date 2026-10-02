@@ -7,6 +7,8 @@ enum MotivoMovimientoInventario: string
     case RecepcionOrden = 'recepcion_orden';
     case VentaFactura = 'venta_factura';
     case VentaCotizacion = 'venta_cotizacion';
+    case VentaPedido = 'venta_pedido';
+    case CorreccionPedido = 'correccion_pedido';
     case CancelacionFactura = 'cancelacion_factura';
     case ConteoFisico = 'conteo_fisico';
     case Merma = 'merma';
@@ -20,6 +22,8 @@ enum MotivoMovimientoInventario: string
             self::RecepcionOrden => 'Recepción de orden de compra',
             self::VentaFactura => 'Venta facturada',
             self::VentaCotizacion => 'Cotización entregada',
+            self::VentaPedido => 'Venta de mostrador',
+            self::CorreccionPedido => 'Corrección de pedido',
             self::CancelacionFactura => 'Cancelación de factura',
             self::ConteoFisico => 'Conteo físico',
             self::Merma => 'Merma',
