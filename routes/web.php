@@ -8,6 +8,7 @@ use App\Http\Controllers\ComplementoPagoController;
 use App\Http\Controllers\ConstanciaController;
 use App\Http\Controllers\CotizacionController;
 use App\Http\Controllers\CotizacionPagoController;
+use App\Http\Controllers\CuentaController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EnvioCotizacionController;
 use App\Http\Controllers\EnvioFacturaController;
@@ -18,7 +19,10 @@ use App\Http\Controllers\HistorialAccesoController;
 use App\Http\Controllers\ImagenesArticulosController;
 use App\Http\Controllers\ImportacionArticulosController;
 use App\Http\Controllers\InicioController;
+use App\Http\Controllers\MovimientoController;
 use App\Http\Controllers\ProveedorController;
+use App\Http\Controllers\SaldoController;
+use App\Http\Controllers\TransferenciaController;
 use App\Http\Middleware\AsegurarUsuarioActivo;
 use Illuminate\Support\Facades\Route;
 
@@ -92,6 +96,15 @@ Route::middleware(['auth', AsegurarUsuarioActivo::class])->group(function () {
 
     Route::resource('facturas', FacturaController::class)
         ->parameters(['facturas' => 'factura']);
+
+    // Tesorería: en el menú se llama "Contabilidad".
+    Route::prefix('tesoreria')->name('tesoreria.')->group(function () {
+        Route::patch('cuentas/{cuenta}/activa', [CuentaController::class, 'alternarActiva'])->name('cuentas.activa');
+        Route::resource('cuentas', CuentaController::class)->except('show');
+        Route::resource('movimientos', MovimientoController::class)->except(['create', 'show']);
+        Route::post('transferencias', [TransferenciaController::class, 'store'])->name('transferencias.store');
+        Route::get('saldos', SaldoController::class)->name('saldos');
+    });
 
     Route::get('catalogos-sat/claves-prod-serv', [CatalogoSatController::class, 'clavesProdServ'])->name('catalogos-sat.claves-prod-serv');
     Route::get('catalogos-sat/claves-unidad', [CatalogoSatController::class, 'clavesUnidad'])->name('catalogos-sat.claves-unidad');

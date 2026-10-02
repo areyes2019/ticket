@@ -9,8 +9,6 @@
     $tieneAnticipo = $cotizacion->tieneAnticipo();
     $puedePagar = $cotizacion->puedeRegistrarPago();
     $ultimoPago = $cotizacion->pagos->sortBy('id')->last();
-    $tipoLiquidar = $tieneAnticipo ? App\Enums\TipoPago::Saldo : App\Enums\TipoPago::PagoTotal;
-    $errorPago = $errors->pago->any() ? old('tipo') : null;
     $telefono = preg_replace('/\D/', '', (string) $cotizacion->cliente->telefono);
     $facturaVigente = $cotizacion->facturaVigente;
     $motivoNoFacturable = $cotizacion->motivoNoFacturable();
@@ -122,7 +120,7 @@
                             <tr>
                                 <th>Fecha</th>
                                 <th>Tipo</th>
-                                <th>Forma de pago</th>
+                                <th>Cuenta</th>
                                 <th class="numero">Monto</th>
                                 <th><span class="solo-lectores">Acciones</span></th>
                             </tr>
@@ -132,14 +130,14 @@
                                 <tr>
                                     <td>{{ $pago->fecha_pago->format('d/m/Y') }}</td>
                                     <td>{{ $pago->tipo->etiqueta() }}</td>
-                                    <td>{{ $pago->forma_pago->descripcion() }}</td>
+                                    <td>{{ $pago->cuenta->nombre }}</td>
                                     <td class="numero">{{ $pesos($pago->monto) }}</td>
                                     <td>
                                         @if ($pago->is($ultimoPago) && $cotizacion->estado !== App\Enums\EstadoCotizacion::ProductoEntregado)
                                             <form method="POST" action="{{ route('cotizaciones.pagos.destroy', [$cotizacion, $pago]) }}">
                                                 @csrf
                                                 @method('DELETE')
-                                                <x-boton variante="secundario" icono="trash" title="Eliminar pago" descripcion="Eliminar pago de {{ $pesos($pago->monto) }}" data-confirmar="¿Eliminar este pago de {{ $pesos($pago->monto) }}?" />
+                                                <x-boton variante="secundario" icono="trash" title="Eliminar pago" descripcion="Eliminar pago de {{ $pesos($pago->monto) }}" data-confirmar="¿Eliminar este pago de {{ $pesos($pago->monto) }}? También se eliminará su ingreso en Contabilidad y, si la cotización estaba pagada, regresará a Enviada." />
                                             </form>
                                         @endif
                                     </td>
@@ -179,40 +177,7 @@
         'ayuda' => 'La copia nace en borrador, con las mismas líneas y precios.',
     ])
 
-    @if ($puedePagar && ! $tieneAnticipo)
-        <dialog id="dialogo-anticipo" class="ficha dialogo" aria-labelledby="dialogo-anticipo-titulo" @if ($errorPago === App\Enums\TipoPago::Anticipo->value) data-abrir-al-cargar @endif>
-            <form method="POST" action="{{ route('cotizaciones.pagos.store', $cotizacion) }}">
-                @csrf
-                <input type="hidden" name="tipo" value="{{ App\Enums\TipoPago::Anticipo->value }}">
-                <h2 id="dialogo-anticipo-titulo">Registrar anticipo</h2>
-                <p>Saldo pendiente: <strong>{{ $pesos($cotizacion->saldoPendiente()) }}</strong></p>
-                <x-campo nombre="fecha_pago" id="anticipo-fecha" etiqueta="Fecha de pago" tipo="date" :valor="$hoy" :max="$hoy" required />
-                <x-campo nombre="forma_pago" id="anticipo-forma" etiqueta="Forma de pago" tipo="select" :opciones="$formasPago" vacia="Selecciona la forma de pago" required />
-                <x-campo nombre="monto" id="anticipo-monto" etiqueta="Monto" tipo="number" min="0.01" :max="$cotizacion->saldoPendiente()" step="0.01" inputmode="decimal" required />
-                <div class="acciones">
-                    <x-boton icono="save">Registrar</x-boton>
-                    <x-boton href="#" variante="secundario" icono="x-lg" data-cerrar-dialogo>Cancelar</x-boton>
-                </div>
-            </form>
-        </dialog>
-    @endif
-
-    @if ($puedePagar)
-        <dialog id="dialogo-liquidar" class="ficha dialogo" aria-labelledby="dialogo-liquidar-titulo" @if ($errorPago === $tipoLiquidar->value) data-abrir-al-cargar @endif>
-            <form method="POST" action="{{ route('cotizaciones.pagos.store', $cotizacion) }}">
-                @csrf
-                <input type="hidden" name="tipo" value="{{ $tipoLiquidar->value }}">
-                <h2 id="dialogo-liquidar-titulo">{{ $tieneAnticipo ? 'Registrar saldo' : 'Pago total' }}</h2>
-                <p>Se registrará el saldo pendiente: <strong data-saldo-pendiente>{{ $pesos($cotizacion->saldoPendiente()) }}</strong></p>
-                <x-campo nombre="fecha_pago" id="liquidar-fecha" etiqueta="Fecha de pago" tipo="date" :valor="$hoy" :max="$hoy" required />
-                <x-campo nombre="forma_pago" id="liquidar-forma" etiqueta="Forma de pago" tipo="select" :opciones="$formasPago" vacia="Selecciona la forma de pago" required />
-                <div class="acciones">
-                    <x-boton icono="save">Registrar</x-boton>
-                    <x-boton href="#" variante="secundario" icono="x-lg" data-cerrar-dialogo>Cancelar</x-boton>
-                </div>
-            </form>
-        </dialog>
-    @endif
+    @include('cotizaciones._dialogos-pago')
 @endsection
 
 @push('scripts')

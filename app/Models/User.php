@@ -97,6 +97,22 @@ class User extends Authenticatable
     }
 
     /**
+     * @return HasMany<Cuenta, $this>
+     */
+    public function cuentas(): HasMany
+    {
+        return $this->hasMany(Cuenta::class);
+    }
+
+    /**
+     * @return HasMany<Movimiento, $this>
+     */
+    public function movimientos(): HasMany
+    {
+        return $this->hasMany(Movimiento::class);
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>

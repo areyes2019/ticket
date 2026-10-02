@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests;
 
-use App\Enums\FormaPago;
 use App\Enums\TipoPago;
+use App\Http\Requests\Concerns\ValidaCuentas;
 use App\Models\Cotizacion;
 use Closure;
 use Illuminate\Auth\Access\Response;
@@ -15,6 +15,8 @@ use Illuminate\Validation\Validator;
 
 class CotizacionPagoRequest extends FormRequest
 {
+    use ValidaCuentas;
+
     /**
      * Bolsa propia: el detalle reabre el diálogo del pago con sus errores.
      *
@@ -35,7 +37,7 @@ class CotizacionPagoRequest extends FormRequest
         return [
             'tipo' => ['required', Rule::enum(TipoPago::class)],
             'fecha_pago' => ['required', 'date_format:Y-m-d', 'before_or_equal:'.now(config('app.zona_negocio'))->toDateString()],
-            'forma_pago' => ['required', Rule::enum(FormaPago::class)],
+            'cuenta_id' => ['required', 'integer', $this->cuentaDelUsuario()],
             'monto' => ['exclude_unless:tipo,anticipo', 'required', 'numeric', 'gt:0', 'decimal:0,2'],
         ];
     }
@@ -50,6 +52,8 @@ class CotizacionPagoRequest extends FormRequest
     {
         return [
             function (Validator $validator) {
+                $this->exigirCuentaActiva($validator, 'cuenta_id');
+
                 if ($validator->errors()->isNotEmpty()) {
                     return;
                 }
@@ -78,6 +82,7 @@ class CotizacionPagoRequest extends FormRequest
         return [
             'fecha_pago.before_or_equal' => 'La fecha de pago no puede ser futura.',
             'monto.gt' => 'El monto debe ser mayor a 0.',
+            'cuenta_id.exists' => 'Selecciona una de tus cuentas.',
         ];
     }
 
@@ -89,7 +94,7 @@ class CotizacionPagoRequest extends FormRequest
         return [
             'tipo' => 'tipo de pago',
             'fecha_pago' => 'fecha de pago',
-            'forma_pago' => 'forma de pago',
+            'cuenta_id' => 'cuenta',
             'monto' => 'monto',
         ];
     }

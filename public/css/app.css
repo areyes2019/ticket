@@ -1590,6 +1590,18 @@ a.bandeja-abrir {
     max-width: var(--ancho-hoja);
     margin-left: auto;
     margin-right: auto;
+    gap: var(--espacio-1);
+}
+
+/* Barra compacta: botones más chicos que en el resto de la aplicación. */
+.bandeja-visor-documento .bandeja-acciones .boton {
+    padding: var(--espacio-1) var(--espacio-3);
+    font-size: 0.875rem;
+}
+
+.bandeja-visor-documento .bandeja-acciones .boton-icono {
+    padding-right: var(--espacio-2);
+    padding-left: var(--espacio-2);
 }
 
 .bandeja-abrir-detalle {
@@ -1841,4 +1853,67 @@ a.bandeja-abrir {
         display: inline-block;
         margin-right: auto;
     }
+}
+
+/* Contabilidad (Tesorería) */
+.pestanas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--espacio-1);
+    margin-bottom: var(--espacio-4);
+    border-bottom: 1px solid var(--color-borde);
+}
+
+.pestanas a {
+    padding: var(--espacio-2) var(--espacio-4);
+    color: var(--color-texto-suave);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+}
+
+.pestanas a:hover {
+    color: var(--color-texto);
+}
+
+.pestanas a[aria-current="page"] {
+    color: var(--color-primario-oscuro);
+    border-bottom-color: var(--color-primario);
+}
+
+.etiqueta-activa {
+    color: var(--color-exito);
+    background: var(--color-exito-fondo);
+}
+
+.etiqueta-inactiva {
+    color: var(--color-texto);
+    background: var(--color-neutro);
+}
+
+.etiqueta-automatico {
+    color: var(--color-primario-oscuro);
+    background: var(--color-menu);
+}
+
+.monto-positivo {
+    color: var(--color-exito);
+}
+
+.monto-negativo {
+    color: var(--color-error);
+}
+
+.texto-discreto {
+    color: var(--color-texto-suave);
+    font-size: var(--texto-mini);
+}
+
+.fila-automatica td {
+    background: var(--color-superficie-suave);
+}
+
+.tabla .fila-total th,
+.tabla .fila-total td {
+    font-weight: 600;
+    border-top: 2px solid var(--color-borde-campo);
 }

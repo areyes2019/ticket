@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\RegresaABandeja;
 use App\Http\Requests\EnviarCotizacionRequest;
 use App\Mail\CotizacionMail;
 use App\Models\Cotizacion;
@@ -14,6 +15,8 @@ use Throwable;
 
 class EnvioCotizacionController extends Controller
 {
+    use RegresaABandeja;
+
     /**
      * Envía el correo con el PDF adjunto (síncrono) y marca la cotización como
      * enviada. Si el correo falla, el estado no cambia. Enviada desde la
@@ -33,18 +36,7 @@ class EnvioCotizacionController extends Controller
 
         $cotizacion->marcarEnviada();
 
-        $destino = route('cotizaciones.show', $cotizacion);
-
-        if ($request->input('origen') === 'bandeja') {
-            // La página anterior conserva carpeta, etiqueta y búsqueda; solo se
-            // acepta si es la bandeja misma.
-            $anterior = url()->previous();
-            $destino = str_starts_with($anterior, route('cotizaciones.index').'?')
-                ? $anterior
-                : route('cotizaciones.index', ['cotizacion' => $cotizacion->id]);
-        }
-
-        return redirect()->to($destino)
+        return redirect()->to($this->destinoCotizacion($request, $cotizacion))
             ->with('exito', 'Cotización enviada a '.implode(', ', $destinatarios).'.');
     }
 

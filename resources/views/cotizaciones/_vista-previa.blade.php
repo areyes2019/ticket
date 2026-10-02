@@ -1,15 +1,42 @@
-{{-- Visor de la bandeja: acciones, la hoja en HTML y la ventana de envío. Se pinta
-     con la página o llega por AJAX (cotizaciones.vista-previa) al elegir una fila. --}}
+{{-- Visor de la bandeja: acciones, la hoja en HTML y sus ventanas (envío, pagos y
+     duplicar). Se pinta con la página o llega por AJAX (cotizaciones.vista-previa)
+     al elegir una fila. --}}
+@php
+    $telefono = preg_replace('/\D/', '', (string) $cotizacion->cliente->telefono);
+    $puedePagar = $cotizacion->puedeRegistrarPago();
+    $tieneAnticipo = $cotizacion->tieneAnticipo();
+@endphp
+
 <div class="bandeja-acciones">
     <x-boton variante="suave" tipo="button" icono="arrow-left" class="bandeja-volver" data-volver>Volver</x-boton>
-    <x-boton href="#dialogo-envio" icono="send" data-abrir-dialogo>Enviar</x-boton>
-    <x-boton :href="route('cotizaciones.pdf', [$cotizacion, 'descargar' => 1])" variante="secundario" icono="download">Descargar</x-boton>
+    <x-boton href="#dialogo-envio" icono="send" descripcion="Enviar" title="Enviar" data-abrir-dialogo />
+    {{-- El PDF se baja al apuntar al botón, no con cada cotización que se abre. --}}
+    <x-boton tipo="button" variante="secundario" icono="whatsapp" descripcion="Compartir por WhatsApp" title="Compartir por WhatsApp" hidden
+        data-compartir-pdf
+        data-pdf="{{ route('cotizaciones.pdf', $cotizacion) }}"
+        data-marcar="{{ route('cotizaciones.marcar-enviada', $cotizacion) }}"
+        data-archivo="cotizacion-{{ $cotizacion->folio_formateado }}.pdf"
+        data-telefono="{{ $telefono }}"
+        data-precargar="al-apuntar"
+        data-texto="Cotización {{ $cotizacion->folio_formateado }} de {{ config('app.name') }} por ${{ number_format((float) $cotizacion->total, 2) }}" />
+    @if ($cotizacion->motivoNoFacturable() === null)
+        <x-boton :href="route('facturas.create', ['cotizacion' => $cotizacion->id])" variante="secundario" icono="receipt" descripcion="Facturar" title="Facturar" />
+    @endif
+    @if ($puedePagar && ! $tieneAnticipo)
+        <x-boton href="#dialogo-anticipo" variante="secundario" icono="cash" descripcion="Registrar anticipo" title="Registrar anticipo" data-abrir-dialogo />
+    @endif
+    @if ($puedePagar)
+        <x-boton href="#dialogo-liquidar" variante="secundario" icono="cash-stack" :descripcion="$tieneAnticipo ? 'Registrar saldo' : 'Pago total'" :title="$tieneAnticipo ? 'Registrar saldo' : 'Pago total'" data-abrir-dialogo />
+    @endif
+    <x-boton href="#dialogo-duplicar" variante="secundario" icono="copy" descripcion="Duplicar" title="Duplicar" data-abrir-dialogo />
+    <x-boton :href="route('cotizaciones.pdf', $cotizacion)" variante="secundario" icono="file-earmark-pdf" descripcion="Ver PDF" title="Ver PDF" target="_blank" />
+    <x-boton :href="route('cotizaciones.pdf', [$cotizacion, 'descargar' => 1])" variante="secundario" icono="download" descripcion="Descargar" title="Descargar" />
     <x-boton :href="route('cotizaciones.show', $cotizacion)" variante="suave" icono="box-arrow-up-right" class="bandeja-abrir-detalle">Abrir</x-boton>
 </div>
 
 <div class="bandeja-documento" data-vista-previa-de="{{ $cotizacion->id }}">
     <p class="bandeja-documento-estado">
-        <span @class(['etiqueta', $cotizacion->estado->claseEtiqueta()])>{{ $cotizacion->estado->etiqueta() }}</span>
+        <span @class(['etiqueta', $cotizacion->estado->claseEtiqueta()]) data-estado-documento>{{ $cotizacion->estado->etiqueta() }}</span>
         @if ($cotizacion->facturaVigente)
             <a href="{{ route('facturas.show', $cotizacion->facturaVigente) }}" class="etiqueta etiqueta-facturada">Facturada · {{ $cotizacion->facturaVigente->folioVisible() }}</a>
         @endif
@@ -34,3 +61,14 @@
         </div>
     </form>
 </dialog>
+
+@include('documentos._dialogo-duplicar', [
+    'titulo' => 'Duplicar '.$cotizacion->folio_formateado,
+    'accion' => route('cotizaciones.duplicar', $cotizacion),
+    'metodo' => 'POST',
+    'clienteActual' => $cotizacion->cliente_id,
+    'ocultos' => ['origen' => 'bandeja'],
+    'ayuda' => 'La copia nace en borrador, con las mismas líneas y precios.',
+])
+
+@include('cotizaciones._dialogos-pago', ['origen' => 'bandeja'])

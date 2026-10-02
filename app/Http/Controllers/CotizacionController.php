@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Enums\EstadoCotizacion;
-use App\Enums\FormaPago;
 use App\Enums\TasaIva;
 use App\Enums\TipoDescuento;
 use App\Http\Requests\CotizacionRequest;
@@ -38,6 +37,7 @@ class CotizacionController extends Controller
 
         return view('cotizaciones.index', [
             ...$this->datosListado($request, $cotizaciones),
+            ...($abierta ? $this->datosAcciones($abierta) : []),
             'abierta' => $abierta,
         ]);
     }
@@ -61,7 +61,10 @@ class CotizacionController extends Controller
     {
         Gate::authorize('view', $cotizacion);
 
-        return view('cotizaciones._vista-previa', ['cotizacion' => $cotizacion->load(['cliente', 'lineas', 'pagos', 'facturaVigente'])]);
+        return view('cotizaciones._vista-previa', [
+            ...$this->datosAcciones($cotizacion),
+            'cotizacion' => $cotizacion->load(['cliente', 'lineas', 'pagos', 'facturaVigente']),
+        ]);
     }
 
     public function create(Request $request): View
@@ -93,14 +96,11 @@ class CotizacionController extends Controller
     {
         Gate::authorize('view', $cotizacion);
 
-        $cotizacion->load(['cliente', 'lineas.articulo', 'pagos', 'facturaVigente', 'duplicadaDe']);
+        $cotizacion->load(['cliente', 'lineas.articulo', 'pagos.cuenta', 'facturaVigente', 'duplicadaDe']);
 
         return view('cotizaciones.show', [
+            ...$this->datosAcciones($cotizacion),
             'cotizacion' => $cotizacion,
-            'formasPago' => FormaPago::opciones(),
-            'hoy' => now(config('app.zona_negocio'))->toDateString(),
-            'clientes' => $cotizacion->user->clientes()->orderBy('razon_social')->get()
-                ->mapWithKeys(fn ($cliente) => [$cliente->id => $cliente->razon_social.' — '.$cliente->rfc])->all(),
         ]);
     }
 
@@ -209,7 +209,12 @@ class CotizacionController extends Controller
             return $copia;
         });
 
-        return redirect()->route('cotizaciones.show', $copia)
+        // Desde la bandeja, la copia queda abierta en ella.
+        $destino = $request->input('origen') === 'bandeja'
+            ? route('cotizaciones.index', ['cotizacion' => $copia->id])
+            : route('cotizaciones.show', $copia);
+
+        return redirect()->to($destino)
             ->with('exito', "Se creó {$copia->folio_formateado} como copia de {$cotizacion->folio_formateado} para {$copia->cliente->razon_social}.");
     }
 
@@ -218,6 +223,22 @@ class CotizacionController extends Controller
      * usuario evita que dos altas simultáneas tomen el mismo folio. El máximo
      * existente es una red de seguridad por si el contador se quedó atrás.
      */
+    /**
+     * Lo que piden las ventanas de pago y de duplicar, en el detalle y en la
+     * vista previa de la bandeja.
+     *
+     * @return array<string, mixed>
+     */
+    private function datosAcciones(Cotizacion $cotizacion): array
+    {
+        return [
+            'cuentas' => $cotizacion->user->cuentas()->activas()->orderBy('nombre')->pluck('nombre', 'id')->all(),
+            'hoy' => now(config('app.zona_negocio'))->toDateString(),
+            'clientes' => $cotizacion->user->clientes()->orderBy('razon_social')->get()
+                ->mapWithKeys(fn ($cliente) => [$cliente->id => $cliente->razon_social.' — '.$cliente->rfc])->all(),
+        ];
+    }
+
     private function siguienteFolio(User $user): int
     {
         $bloqueado = User::whereKey($user->id)->lockForUpdate()->firstOrFail();

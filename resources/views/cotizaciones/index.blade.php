@@ -8,14 +8,17 @@
 
     @include('documentos._mensajes')
 
-    @if ($errors->envio->any())
-        <x-alerta tipo="error">
-            @foreach ($errors->envio->all() as $error)
-                <p>{{ $error }}</p>
-            @endforeach
-        </x-alerta>
-    @endif
+    @foreach (['envio', 'pago'] as $bolsa)
+        @if ($errors->{$bolsa}->any())
+            <x-alerta tipo="error">
+                @foreach ($errors->{$bolsa}->all() as $error)
+                    <p>{{ $error }}</p>
+                @endforeach
+            </x-alerta>
+        @endif
+    @endforeach
 
+    <x-alerta tipo="error" hidden data-compartir-error></x-alerta>
     <x-alerta tipo="error" hidden data-busqueda-error>No se pudo realizar la búsqueda. Intenta de nuevo.</x-alerta>
     <x-alerta tipo="error" hidden data-vista-previa-error>No se pudo abrir la cotización. Intenta de nuevo.</x-alerta>
 
@@ -49,4 +52,5 @@
 @push('scripts')
     <script src="{{ asset('js/busqueda-dinamica.js') }}"></script>
     <script src="{{ asset('js/bandeja-cotizaciones.js') }}"></script>
+    <script src="{{ asset('js/compartir-pdf.js') }}"></script>
 @endpush

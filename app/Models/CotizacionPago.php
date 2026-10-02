@@ -2,20 +2,21 @@
 
 namespace App\Models;
 
-use App\Enums\FormaPago;
 use App\Enums\TipoPago;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 
 /**
- * Registro interno de un pago: no es CFDI ni pasa por ningún PAC.
+ * Registro interno de un pago: no es CFDI ni pasa por ningún PAC. Cada pago
+ * entra a una cuenta de Tesorería como un ingreso automático.
  */
 #[Fillable([
     'tipo',
     'fecha_pago',
     'monto',
-    'forma_pago',
+    'cuenta_id',
 ])]
 class CotizacionPago extends Model
 {
@@ -35,6 +36,32 @@ class CotizacionPago extends Model
     }
 
     /**
+     * @return BelongsTo<Cuenta, $this>
+     */
+    public function cuenta(): BelongsTo
+    {
+        return $this->belongsTo(Cuenta::class);
+    }
+
+    /**
+     * El ingreso que generó en Tesorería.
+     *
+     * @return MorphOne<Movimiento, $this>
+     */
+    public function movimiento(): MorphOne
+    {
+        return $this->morphOne(Movimiento::class, 'documentable');
+    }
+
+    /**
+     * Concepto del ingreso automático: "Anticipo de Cotización COT-0012".
+     */
+    public function conceptoMovimiento(): string
+    {
+        return $this->tipo->etiqueta().' de Cotización '.$this->cotizacion->folio_formateado;
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -45,7 +72,6 @@ class CotizacionPago extends Model
             'tipo' => TipoPago::class,
             'fecha_pago' => 'date',
             'monto' => 'decimal:2',
-            'forma_pago' => FormaPago::class,
         ];
     }
 }
