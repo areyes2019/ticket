@@ -19,6 +19,8 @@
     </x-card>
 
     <x-card titulo="Líneas">
+        @include('cotizaciones._aviso-descuento-cliente')
+
         {{-- El buscador y "Agregar línea libre" necesitan JavaScript; sin él se capturan líneas libres en las filas vacías. --}}
         <div class="barra-lineas" data-controles-lineas hidden>
             {{-- Sin name propio que importe: el servidor ignora "buscar_articulo". --}}

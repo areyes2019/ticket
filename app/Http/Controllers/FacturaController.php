@@ -476,8 +476,9 @@ class FacturaController extends Controller
 
     /**
      * El formulario lleno con la cotización tal como está: cliente, descuento
-     * global y líneas (con sus precios cotizados). Avisa de los precios que
-     * cambiaron desde entonces en el catálogo, sin cambiar la línea.
+     * global y líneas (con sus precios cotizados). El descuento de cada línea
+     * llega dentro de su precio y no por separado (023). Avisa de los precios
+     * que cambiaron desde entonces en el catálogo, sin cambiar la línea.
      *
      * @return array<string, mixed>
      */
@@ -491,7 +492,8 @@ class FacturaController extends Controller
                 'descuento_global_tipo' => $cotizacion->descuento_global_tipo?->value,
                 'descuento_global_valor' => $cotizacion->descuento_global_valor,
             ],
-            'lineas' => $cotizacion->lineas->map($this->lineaFormulario(...))->all(),
+            // Sin descuento de línea: va dentro del precio (023).
+            'lineas' => $cotizacion->lineas->map(fn (CotizacionLinea $linea) => [...$linea->datosParaFactura(), 'importe' => $linea->importe])->all(),
             'cotizacion' => $cotizacion,
             'avisosPrecio' => $cotizacion->avisosDePrecio(),
         ];
@@ -526,12 +528,11 @@ class FacturaController extends Controller
     }
 
     /**
-     * Una línea guardada (de factura o de cotización) como la pinta el
-     * formulario.
+     * Una línea guardada de factura como la pinta el formulario.
      *
      * @return array<string, mixed>
      */
-    private function lineaFormulario(FacturaLinea|CotizacionLinea $linea): array
+    private function lineaFormulario(FacturaLinea $linea): array
     {
         return [
             'articulo_id' => $linea->articulo_id,

@@ -11,6 +11,7 @@ use App\Models\Cotizacion;
 use App\Models\Factura;
 use App\Models\Pedido;
 use App\Models\PedidoLinea;
+use App\Services\Documentos\CalculadoraTotalesDocumento;
 use App\Services\Facturacion\EnviadorCorreoFactura;
 use App\Services\Facturacion\ResultadoTimbrado;
 use App\Services\Facturacion\TimbradorFacturas;
@@ -138,6 +139,10 @@ class Autofacturador
      * existe con el pedido pagado; la forma de pago sale de la cuenta del
      * último pago. pedido_id se escribe antes de timbrar, para que la factura
      * no descuente existencias que el pedido ya descontó.
+     *
+     * La venta de una cotización (021) es la excepción (023): el descuento de
+     * cada línea viaja dentro del precio, como en la factura de una
+     * cotización, y por eso sus importes sí se recalculan.
      */
     private function crearFactura(Pedido $pedido, Cliente $cliente, string $usoCfdi): Factura
     {
@@ -153,12 +158,18 @@ class Autofacturador
         ]);
         $factura->folio = Factura::siguienteFolio($pedido->user);
         $factura->pedido_id = $pedido->id;
-        $factura->aplicarTotales($pedido->only(Pedido::TOTALES));
+
+        $lineas = $pedido->esDeCotizacion() ? $this->lineasSinDescuento($pedido) : $this->lineasTalCual($pedido);
+        $totales = $pedido->esDeCotizacion()
+            ? CalculadoraTotalesDocumento::calcular($lineas, $pedido->descuento_global_tipo?->value, $pedido->descuento_global_valor)
+            : [...$pedido->only(Pedido::TOTALES), 'lineas' => $pedido->lineas->map->only(['importe', 'iva_importe'])->all()];
+
+        $factura->aplicarTotales($totales);
         $factura->save();
 
         $articulos = Articulo::withTrashed()->whereIn('id', $pedido->lineas->pluck('articulo_id')->filter())->get()->keyBy('id');
 
-        foreach ($pedido->lineas as $linea) {
+        foreach ($pedido->lineas as $i => $linea) {
             /** @var PedidoLinea $linea */
             $articulo = $articulos->get($linea->articulo_id);
 
@@ -168,12 +179,12 @@ class Autofacturador
                 'cantidad' => $linea->cantidad,
                 'descripcion' => $linea->descripcion,
                 'modelo' => $linea->modelo ?? '',
-                'precio_unitario' => $linea->precio_unitario,
-                'descuento_tipo' => $linea->descuento_tipo,
-                'descuento_valor' => $linea->descuento_valor,
+                'precio_unitario' => $lineas[$i]['precio_unitario'],
+                'descuento_tipo' => $lineas[$i]['descuento_tipo'],
+                'descuento_valor' => $lineas[$i]['descuento_valor'],
                 'tasa_iva' => $linea->tasa_iva,
-                'importe' => $linea->importe,
-                'iva_importe' => $linea->iva_importe,
+                'importe' => $totales['lineas'][$i]['importe'],
+                'iva_importe' => $totales['lineas'][$i]['iva_importe'],
                 'clave_prod_serv' => $articulo->clave_prod_serv ?? self::CLAVE_PROD_SERV_GENERICA,
                 'clave_unidad' => $articulo->clave_unidad ?? self::CLAVE_UNIDAD_GENERICA,
                 'objeto_imp' => $articulo->objeto_imp ?? ObjetoImpuesto::SiObjeto,
@@ -181,6 +192,34 @@ class Autofacturador
         }
 
         return $factura;
+    }
+
+    /**
+     * @return list<array{cantidad: int, precio_unitario: string, descuento_tipo: string|null, descuento_valor: string|null, tasa_iva: string}>
+     */
+    private function lineasTalCual(Pedido $pedido): array
+    {
+        return $pedido->lineas->map(fn (PedidoLinea $linea) => [
+            'cantidad' => $linea->cantidad,
+            'precio_unitario' => $linea->precio_unitario,
+            'descuento_tipo' => $linea->descuento_tipo?->value,
+            'descuento_valor' => $linea->descuento_valor,
+            'tasa_iva' => $linea->tasa_iva->value,
+        ])->values()->all();
+    }
+
+    /**
+     * @return list<array{cantidad: int, precio_unitario: string, descuento_tipo: null, descuento_valor: null, tasa_iva: string}>
+     */
+    private function lineasSinDescuento(Pedido $pedido): array
+    {
+        return $pedido->lineas->map(fn (PedidoLinea $linea) => [
+            'cantidad' => $linea->cantidad,
+            'precio_unitario' => CalculadoraTotalesDocumento::precioConDescuentoDeLinea($linea->cantidad, $linea->precio_unitario, $linea->descuento_tipo?->value, $linea->descuento_valor),
+            'descuento_tipo' => null,
+            'descuento_valor' => null,
+            'tasa_iva' => $linea->tasa_iva->value,
+        ])->values()->all();
     }
 
     /**

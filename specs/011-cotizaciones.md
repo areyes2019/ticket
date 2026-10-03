@@ -27,6 +27,10 @@ puede reconstruir después.
 > `aceptada`. Aceptar una cotización sin pagos crea su venta, y el cobro, la entrega y la autofactura
 > pasan a la venta. Las cotizaciones con pagos siguen el flujo de esta spec.
 
+> **Desde [023](023-descuento-permanente-cliente.md)**: el descuento permanente del cliente se
+> precarga en cada línea (editable), con un aviso sobre la tabla, y la cotización guarda una copia
+> congelada del porcentaje (`descuento_cliente_porcentaje`).
+
 ## Historia de usuario
 
 Como usuario registrado, quiero generar cotizaciones para mis clientes, enviárselas por correo o

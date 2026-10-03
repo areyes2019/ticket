@@ -31,6 +31,7 @@ class ClienteFactory extends Factory
             'correo' => fake()->safeEmail(),
             'telefono' => '+52'.fake()->numerify('##########'),
             'direccion_comercial' => fake()->address(),
+            'descuento_permanente' => '0.00',
         ];
     }
 }

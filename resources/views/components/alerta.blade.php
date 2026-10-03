@@ -5,6 +5,7 @@
         'exito' => 'check-circle',
         'error' => 'x-circle',
         'advertencia' => 'exclamation-triangle',
+        'info' => 'info-circle',
     ];
 
     if (! isset($iconos[$tipo])) {

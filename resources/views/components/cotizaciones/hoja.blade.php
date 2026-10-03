@@ -25,6 +25,10 @@
         @if ($cliente->telefono)
             <div><dt>Teléfono</dt><dd>{{ $cliente->telefono }}</dd></div>
         @endif
+        {{-- Solo en pantalla (023): el PDF que recibe el cliente no lo lleva. "Al cotizar" porque es el congelado. --}}
+        @if ($cotizacion->tieneDescuentoCliente())
+            <div data-descuento-cliente-al-cotizar><dt>Descuento de cliente al cotizar</dt><dd><strong>{{ App\Models\Cliente::porcentajeTexto($cotizacion->descuento_cliente_porcentaje) }}%</strong></dd></div>
+        @endif
     </dl>
 
     <div class="hoja-lineas">

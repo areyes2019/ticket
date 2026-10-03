@@ -4,7 +4,9 @@ namespace App\Models;
 
 use App\Enums\TasaIva;
 use App\Enums\TipoDescuento;
+use App\Services\Documentos\CalculadoraTotalesDocumento;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -12,6 +14,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * descripcion, modelo, precio_unitario y costo_unitario son copias del
  * artículo tomadas al guardar la línea: si el artículo cambia después, la
  * cotización no cambia. costo_unitario lo pone solo el servidor.
+ *
+ * A la factura no viaja el descuento de la línea (023): va escondido en el
+ * precio unitario (precio_unitario_facturacion) para que el total sea el mismo
+ * y la factura no muestre que hubo descuento.
  */
 #[Fillable([
     'orden',
@@ -45,6 +51,42 @@ class CotizacionLinea extends Model
     public function articulo(): BelongsTo
     {
         return $this->belongsTo(Articulo::class)->withTrashed();
+    }
+
+    /**
+     * La línea como llega a la factura (formulario, timbrado directo): precio
+     * con el descuento de línea adentro y sin descuento propio.
+     *
+     * @return array{articulo_id: int|null, cantidad: int, descripcion: string, modelo: string|null, precio_unitario: string, descuento_tipo: null, descuento_valor: null, tasa_iva: string}
+     */
+    public function datosParaFactura(): array
+    {
+        return [
+            'articulo_id' => $this->articulo_id,
+            'cantidad' => $this->cantidad,
+            'descripcion' => $this->descripcion,
+            'modelo' => $this->modelo,
+            'precio_unitario' => $this->precio_unitario_facturacion,
+            'descuento_tipo' => null,
+            'descuento_valor' => null,
+            'tasa_iva' => $this->tasa_iva->value,
+        ];
+    }
+
+    /**
+     * Neto de la línea antes del descuento global, entre la cantidad. Sin
+     * descuento de línea es el mismo precio_unitario.
+     *
+     * @return Attribute<string, never>
+     */
+    protected function precioUnitarioFacturacion(): Attribute
+    {
+        return Attribute::get(fn (): string => CalculadoraTotalesDocumento::precioConDescuentoDeLinea(
+            $this->cantidad,
+            $this->precio_unitario,
+            $this->descuento_tipo?->value,
+            $this->descuento_valor,
+        ));
     }
 
     /**

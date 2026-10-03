@@ -25,6 +25,7 @@
         <x-campo nombre="correo" etiqueta="Correo" tipo="email" :valor="$cliente->correo ?? null" />
         <x-campo nombre="telefono" etiqueta="Teléfono" tipo="tel" :valor="$cliente->telefono ?? null" ayuda="10 dígitos; se guarda con el prefijo +52." />
         <x-campo nombre="direccion_comercial" etiqueta="Dirección comercial" :valor="$cliente->direccion_comercial ?? null" />
+        <x-campo nombre="descuento_permanente" etiqueta="Descuento permanente (%)" tipo="number" :valor="isset($cliente) ? App\Models\Cliente::porcentajeTexto($cliente->descuento_permanente) : 0" min="0" max="{{ App\Models\Cliente::DESCUENTO_MAXIMO }}" step="0.01" inputmode="decimal" ayuda="Se aplicará automáticamente a cada línea de las cotizaciones de este cliente. Máximo {{ App\Models\Cliente::DESCUENTO_MAXIMO }}%." />
     </x-card>
 
     <div class="acciones">

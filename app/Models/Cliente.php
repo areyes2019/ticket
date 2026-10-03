@@ -25,6 +25,7 @@ use PhpCfdi\Rfc\Rfc;
     'correo',
     'telefono',
     'direccion_comercial',
+    'descuento_permanente',
 ])]
 class Cliente extends Model
 {
@@ -32,9 +33,21 @@ class Cliente extends Model
     use HasFactory, SoftDeletes;
 
     /**
+     * Tope del descuento permanente (023), en porcentaje.
+     */
+    public const DESCUENTO_MAXIMO = 50;
+
+    /**
      * Columnas que se pueden filtrar desde el listado.
      */
     public const FILTROS = ['razon_social', 'nombre_comercial', 'nombre_contacto', 'rfc'];
+
+    /**
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'descuento_permanente' => '0.00',
+    ];
 
     /**
      * @return BelongsTo<User, $this>
@@ -85,6 +98,27 @@ class Cliente extends Model
         }
     }
 
+    public function tieneDescuentoPermanente(): bool
+    {
+        return (float) $this->descuento_permanente > 0;
+    }
+
+    /**
+     * "15%" o "12.5%" (sin ceros de sobra); "—" sin descuento.
+     */
+    public function descuentoPermanenteTexto(): string
+    {
+        return $this->tieneDescuentoPermanente() ? self::porcentajeTexto($this->descuento_permanente).'%' : '—';
+    }
+
+    /**
+     * "15.00" → "15", "12.50" → "12.5".
+     */
+    public static function porcentajeTexto(float|string $porcentaje): string
+    {
+        return rtrim(rtrim(number_format((float) $porcentaje, 2, '.', ''), '0'), '.');
+    }
+
     /**
      * "fisica" o "moral" según el RFC; null para los RFC genéricos.
      *
@@ -112,6 +146,7 @@ class Cliente extends Model
     {
         return [
             'regimen_fiscal' => RegimenFiscal::class,
+            'descuento_permanente' => 'decimal:2',
         ];
     }
 }

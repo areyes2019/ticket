@@ -62,6 +62,7 @@ it('muestra el icono según el tipo de alerta', function (string $tipo, string $
     ['exito', 'check-circle'],
     ['error', 'x-circle'],
     ['advertencia', 'exclamation-triangle'],
+    ['info', 'info-circle'],
 ]);
 
 it('rechaza un tipo de alerta desconocido', function () {

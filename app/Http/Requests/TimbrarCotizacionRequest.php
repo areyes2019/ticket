@@ -10,9 +10,9 @@ use Illuminate\Support\Facades\Gate;
 /**
  * Timbrado directo desde la vista previa de una cotización (spec 020). El
  * navegador solo elige uso de CFDI, método y forma de pago; cliente, descuento
- * global y líneas salen de la cotización tal como están, y lo que llegue en
- * esos campos se ignora. Después se valida con todas las reglas de una
- * factura nueva.
+ * global y líneas salen de la cotización tal como están (el descuento de cada
+ * línea, dentro de su precio: 023), y lo que llegue en esos campos se
+ * ignora. Después se valida con todas las reglas de una factura nueva.
  */
 class TimbrarCotizacionRequest extends FacturaRequest
 {
@@ -39,15 +39,10 @@ class TimbrarCotizacionRequest extends FacturaRequest
             'cliente_id' => $cotizacion->cliente_id,
             'descuento_global_tipo' => $cotizacion->descuento_global_tipo?->value,
             'descuento_global_valor' => $cotizacion->descuento_global_valor,
+            // El descuento de cada línea va dentro de su precio (023).
             'lineas' => $cotizacion->lineas->map(fn (CotizacionLinea $linea) => [
-                'articulo_id' => $linea->articulo_id,
+                ...$linea->datosParaFactura(),
                 'cantidad' => (string) $linea->cantidad,
-                'descripcion' => $linea->descripcion,
-                'modelo' => $linea->modelo,
-                'precio_unitario' => (string) $linea->precio_unitario,
-                'descuento_tipo' => $linea->descuento_tipo?->value,
-                'descuento_valor' => $linea->descuento_valor === null ? null : (string) $linea->descuento_valor,
-                'tasa_iva' => $linea->tasa_iva->value,
             ])->all(),
         ]);
 

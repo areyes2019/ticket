@@ -45,6 +45,8 @@
                     <span class="documento-nuevo-numero">2</span>Artículos y servicios
                 </h3>
 
+                @include('cotizaciones._aviso-descuento-cliente')
+
                 {{-- El buscador y "Agregar línea libre" necesitan JavaScript; sin él se capturan líneas libres en las filas vacías. --}}
                 <div class="barra-lineas" data-controles-lineas hidden>
                     <div class="buscador-articulos">

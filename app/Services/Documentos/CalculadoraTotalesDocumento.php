@@ -94,6 +94,25 @@ final class CalculadoraTotalesDocumento
     }
 
     /**
+     * Precio unitario con el descuento de la línea ya adentro (023): el neto
+     * de la línea (antes del descuento global) entre la cantidad, redondeado
+     * a centavos. Sin descuento es el mismo precio. El residuo de centavos
+     * que deja la división no se compensa.
+     */
+    public static function precioConDescuentoDeLinea(int|string $cantidad, float|string $precioUnitario, ?string $descuentoTipo, float|string|null $descuentoValor): string
+    {
+        $cantidad = (int) $cantidad;
+
+        if ($cantidad <= 0) {
+            return self::pesos(self::centavos($precioUnitario));
+        }
+
+        $bruto = $cantidad * self::centavos($precioUnitario);
+
+        return self::pesos(self::redondear(($bruto - self::descuento($bruto, $descuentoTipo, $descuentoValor)) / $cantidad));
+    }
+
+    /**
      * Reparte un monto en proporción a cada neto. Los centavos que deja el
      * redondeo van a la línea de mayor neto (la primera si hay empate), para
      * que la suma de las partes sea exactamente el monto.

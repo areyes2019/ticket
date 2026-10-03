@@ -12,6 +12,13 @@
 // ofrece artículos de ese proveedor (manda proveedor_id), queda deshabilitado
 // mientras no haya proveedor, y cambiar de proveedor pide confirmar antes de
 // quitar las líneas de artículos (las libres se quedan).
+//
+// Con un [data-aviso-descuento-cliente] dentro (solo la cotización, 023), cada
+// artículo que se agrega trae el descuento permanente del cliente elegido, y
+// cambiar de cliente reemplaza el descuento de todas las líneas por el del
+// nuevo (o lo quita si no tiene). Al editar manda el porcentaje congelado de
+// la cotización mientras no se cambie de cliente. Factura y orden de compra no
+// traen el aviso y no cambian.
 (function () {
     const ESPERA_MS = 300;
     const formulario = document.querySelector('form[data-documento-lineas]');
@@ -27,7 +34,9 @@
     const dialogo = document.getElementById('aviso-duplicado');
     const formato = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
     const selectorProveedor = formulario.querySelector('select[data-proveedor-orden]');
+    const avisoDescuento = formulario.querySelector('[data-aviso-descuento-cliente]');
     let lineaDuplicada = null;
+    let descuentoCliente = null;
 
     function filas() {
         return Array.from(cuerpo.querySelectorAll('tr[data-linea]'));
@@ -125,6 +134,8 @@
             modelo: articulo.modelo,
             precio_unitario: articulo.precio_unitario,
             tasa_iva: articulo.tasa_iva,
+            descuento_tipo: descuentoCliente ? 'porcentaje' : null,
+            descuento_valor: descuentoCliente ? descuentoCliente.porcentaje : null,
         });
 
         campo(fila, 'cantidad').focus();
@@ -349,6 +360,52 @@
         actualizarBuscador();
     }
 
+    // Descuento permanente del cliente (023).
+    function iniciarDescuentoCliente() {
+        const selectorCliente = formulario.querySelector('select[name="cliente_id"]');
+        const descuentos = leerJson(avisoDescuento.dataset.descuentosCliente) || {};
+        const congelado = leerJson(avisoDescuento.dataset.descuentoCongelado);
+
+        function descuentoDe(clienteId) {
+            const descuento = congelado && String(congelado.cliente_id) === clienteId ? congelado : descuentos[clienteId];
+
+            return descuento && Number(descuento.porcentaje) > 0 ? descuento : null;
+        }
+
+        function mostrarAviso() {
+            avisoDescuento.hidden = !descuentoCliente;
+
+            if (descuentoCliente) {
+                avisoDescuento.querySelector('[data-aviso-descuento-nombre]').textContent = descuentoCliente.nombre;
+                avisoDescuento.querySelector('[data-aviso-descuento-porcentaje]').textContent = descuentoCliente.porcentaje;
+            }
+        }
+
+        descuentoCliente = descuentoDe(selectorCliente.value);
+        mostrarAviso();
+
+        // Las ediciones a mano de las líneas no se respetan: eran para otro cliente.
+        selectorCliente.addEventListener('change', function () {
+            descuentoCliente = descuentoDe(selectorCliente.value);
+
+            filas().forEach(function (fila) {
+                campo(fila, 'descuento_tipo').value = descuentoCliente ? 'porcentaje' : '';
+                campo(fila, 'descuento_valor').value = descuentoCliente ? descuentoCliente.porcentaje : '';
+            });
+
+            mostrarAviso();
+            recalcular();
+        });
+    }
+
+    function leerJson(texto) {
+        try {
+            return texto ? JSON.parse(texto) : null;
+        } catch (error) {
+            return null;
+        }
+    }
+
     function lineasDeArticulo() {
         return filas().filter(function (fila) {
             return campo(fila, 'articulo_id').value !== '';
@@ -388,6 +445,10 @@
 
     if (selectorProveedor) {
         iniciarProveedor();
+    }
+
+    if (avisoDescuento) {
+        iniciarDescuentoCliente();
     }
 
     formulario.addEventListener('input', recalcular);

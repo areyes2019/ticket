@@ -1,5 +1,8 @@
 # Spec: Gestión de clientes (datos comerciales y fiscales SAT)
 
+> **Desde [023](023-descuento-permanente-cliente.md)**: la ficha gana el **descuento permanente**
+> (0% a 50%) y el listado una columna "Descuento".
+
 ## Historia de usuario
 
 Como usuario del sistema de facturación, quiero administrar (crear, ver, editar y eliminar) los

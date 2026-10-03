@@ -10,10 +10,12 @@ use App\Http\Requests\CotizacionRequest;
 use App\Http\Requests\DuplicarCotizacionRequest;
 use App\Http\Requests\ListadoCotizacionesRequest;
 use App\Models\Articulo;
+use App\Models\Cliente;
 use App\Models\Cotizacion;
 use App\Models\CotizacionLinea;
 use App\Models\User;
 use App\Services\Cotizaciones\GeneradorPdfCotizacion;
+use App\Services\Documentos\CalculadoraTotalesDocumento;
 use App\Services\Inventario\RegistradorInventario;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
@@ -82,6 +84,7 @@ class CotizacionController extends Controller
         $cotizacion = DB::transaction(function () use ($request) {
             $cotizacion = $request->user()->cotizaciones()->make($request->datosCotizacion());
             $cotizacion->folio = $this->siguienteFolio($request->user());
+            $cotizacion->congelarDescuentoCliente();
             $cotizacion->aplicarTotales($request->totales());
             $cotizacion->save();
 
@@ -120,7 +123,9 @@ class CotizacionController extends Controller
 
     /**
      * CotizacionRequest ya verificó que es del usuario y que es editable.
-     * Editar una enviada la regresa a borrador: hay que reenviarla.
+     * Editar una enviada la regresa a borrador: hay que reenviarla. El
+     * descuento de cliente congelado solo se vuelve a copiar si cambió el
+     * cliente.
      */
     public function update(CotizacionRequest $request, Cotizacion $cotizacion): RedirectResponse
     {
@@ -128,6 +133,11 @@ class CotizacionController extends Controller
 
         DB::transaction(function () use ($request, $cotizacion) {
             $cotizacion->fill($request->datosCotizacion());
+
+            if ($cotizacion->isDirty('cliente_id')) {
+                $cotizacion->congelarDescuentoCliente();
+            }
+
             $cotizacion->aplicarTotales($request->totales());
             $cotizacion->estado = EstadoCotizacion::Borrador;
             // Aunque nada haya cambiado, guardar cuenta como movimiento (caducidad).
@@ -215,6 +225,10 @@ class CotizacionController extends Controller
      * Copia en borrador para el cliente elegido, con folio nuevo, descuento
      * global y líneas (con su costo original), sin pagos ni factura. Se puede
      * duplicar en cualquier estado.
+     *
+     * Para el mismo cliente la copia es exacta, con su descuento de cliente
+     * congelado. Para otro cliente (023) todas las líneas toman el descuento
+     * permanente del cliente nuevo (o ninguno) y se recalculan los totales.
      */
     public function duplicar(DuplicarCotizacionRequest $request, Cotizacion $cotizacion): RedirectResponse
     {
@@ -224,11 +238,18 @@ class CotizacionController extends Controller
             $copia->estado = EstadoCotizacion::Borrador;
             $copia->cliente_id = $request->integer('cliente_id');
             $copia->duplicada_de_id = $cotizacion->id;
-            $copia->save();
 
-            $copia->lineas()->createMany($cotizacion->lineas->map(
+            $lineas = $cotizacion->lineas->map(
                 fn (CotizacionLinea $linea) => $linea->replicate(['cotizacion_id', 'created_at', 'updated_at'])->getAttributes()
-            )->all());
+            )->all();
+
+            if ($copia->cliente_id !== $cotizacion->cliente_id) {
+                $copia->congelarDescuentoCliente();
+                $lineas = $this->conDescuentoCliente($copia, $lineas);
+            }
+
+            $copia->save();
+            $copia->lineas()->createMany($lineas);
 
             return $copia;
         });
@@ -297,6 +318,42 @@ class CotizacionController extends Controller
                 'costo_unitario' => $linea['articulo_id'] === null ? null : $costos->get($linea['articulo_id']),
             ]);
         }
+    }
+
+    /**
+     * Las líneas de una copia para otro cliente: todas con el descuento
+     * congelado de la copia (sin descuento si es 0), con importes y totales
+     * recalculados. Si ninguna línea cambia de descuento, quedan tal cual.
+     *
+     * @param  list<array<string, mixed>>  $lineas
+     * @return list<array<string, mixed>>
+     */
+    private function conDescuentoCliente(Cotizacion $copia, array $lineas): array
+    {
+        $porcentaje = $copia->tieneDescuentoCliente() ? $copia->descuento_cliente_porcentaje : null;
+        $descuento = fn (array $linea) => ($linea['descuento_tipo'] ?? null) === null || CalculadoraTotalesDocumento::centavos($linea['descuento_valor'] ?? null) === 0
+            ? null
+            : $linea['descuento_tipo'].':'.CalculadoraTotalesDocumento::centavos($linea['descuento_valor']);
+        $nuevo = $porcentaje === null ? null : TipoDescuento::Porcentaje->value.':'.CalculadoraTotalesDocumento::centavos($porcentaje);
+
+        if (collect($lineas)->every(fn (array $linea) => $descuento($linea) === $nuevo)) {
+            return $lineas;
+        }
+
+        $lineas = array_map(fn (array $linea) => [
+            ...$linea,
+            'descuento_tipo' => $porcentaje === null ? null : TipoDescuento::Porcentaje->value,
+            'descuento_valor' => $porcentaje,
+        ], $lineas);
+
+        $totales = CalculadoraTotalesDocumento::calcular($lineas, $copia->descuento_global_tipo?->value, $copia->descuento_global_valor);
+        $copia->aplicarTotales($totales);
+
+        return array_map(fn (array $linea, int $i) => [
+            ...$linea,
+            'importe' => $totales['lineas'][$i]['importe'],
+            'iva_importe' => $totales['lineas'][$i]['iva_importe'],
+        ], $lineas, array_keys($lineas));
     }
 
     /**
@@ -386,11 +443,15 @@ class CotizacionController extends Controller
             ])->all() ?? [];
         }
 
+        $clientes = $request->user()->clientes()->orderBy('razon_social')->get();
+
         return [
             'cotizacion' => $cotizacion,
             'lineas' => array_values(array_filter($lineas, 'is_array')),
-            'clientes' => $request->user()->clientes()->orderBy('razon_social')->get()
-                ->mapWithKeys(fn ($cliente) => [$cliente->id => $cliente->razon_social.' — '.$cliente->rfc])->all(),
+            'clientes' => $clientes->mapWithKeys(fn ($cliente) => [$cliente->id => $cliente->razon_social.' — '.$cliente->rfc])->all(),
+            // Lo que lee documento-lineas.js para precargar el descuento (023).
+            'descuentosClientes' => $clientes->filter->tieneDescuentoPermanente()
+                ->mapWithKeys(fn ($cliente) => [$cliente->id => ['nombre' => $cliente->razon_social, 'porcentaje' => Cliente::porcentajeTexto($cliente->descuento_permanente)]])->all(),
             'tiposDescuento' => TipoDescuento::opciones(),
             'tasasIva' => TasaIva::opciones(),
         ];

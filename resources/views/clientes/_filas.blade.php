@@ -7,6 +7,7 @@
             <td>{{ $cliente->rfc }}</td>
             <td title="{{ $cliente->regimen_fiscal->descripcion() }}">{{ $cliente->regimen_fiscal->value }}</td>
             <td>{{ $cliente->telefono ?? '—' }}</td>
+            <td class="numero">{{ $cliente->descuentoPermanenteTexto() }}</td>
             <td>
                 <div class="acciones">
                     <x-boton :href="route('clientes.edit', $cliente)" variante="suave" icono="pencil" title="Editar" descripcion="Editar {{ $cliente->razon_social }}" />
@@ -21,7 +22,7 @@
         </tr>
     @empty
         <tr>
-            <td colspan="7">
+            <td colspan="8">
                 {{ array_filter($filtros) !== [] ? 'Ningún cliente coincide con la búsqueda.' : 'Todavía no tienes clientes registrados.' }}
             </td>
         </tr>

@@ -15,6 +15,10 @@ voltear la relación ni migrar datos.
 > formulario. La asunción 3 sigue valiendo para el detalle de la cotización, cuyo "Facturar" lleva al
 > formulario como siempre. El bloqueo contra dos facturas de la misma cotización es el mismo.
 
+> **Desde [023](023-descuento-permanente-cliente.md)**: la factura de una cotización llega **sin
+> descuento de línea**, escondido en el precio unitario (mismo total). Duplicar una cotización para
+> otro cliente aplica a todas sus líneas el descuento permanente del cliente nuevo.
+
 ## Historia de usuario
 
 Como usuario quiero convertir una cotización en factura, ya sea desde la cotización o jalándola desde

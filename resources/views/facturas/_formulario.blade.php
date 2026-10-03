@@ -12,6 +12,13 @@
     <p class="ayuda">Factura a partir de la cotización <a href="{{ route('cotizaciones.show', $cotizacionOrigen) }}">{{ $cotizacionOrigen->folio_formateado }}</a>. Revisa los datos fiscales antes de timbrar.</p>
 @endif
 
+{{-- Sin este aviso los precios no coinciden con el catálogo y no se sabe por qué (023). --}}
+@if ($cotizacionOrigen?->tieneDescuentoCliente())
+    <x-alerta tipo="info" data-aviso-descuento-cliente-factura>
+        Los precios unitarios ya incluyen el descuento de <strong>{{ App\Models\Cliente::porcentajeTexto($cotizacionOrigen->descuento_cliente_porcentaje) }}%</strong> de este cliente. La factura no mostrará el descuento por separado.
+    </x-alerta>
+@endif
+
 {{-- La regla "si hay cotización, la cotización manda" (018) es invisible sin este aviso. --}}
 @if ($cotizacionOrigen || $factura?->cotizacion_id)
     <x-alerta tipo="advertencia">El inventario se descontará al marcar la cotización como entregada, no al timbrar esta factura.</x-alerta>

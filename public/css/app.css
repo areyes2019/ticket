@@ -31,6 +31,9 @@
     --color-advertencia: #92400e;
     --color-advertencia-fondo: #fef3c7;
     --color-advertencia-borde: #fde68a;
+    --color-info: #1e40af;
+    --color-info-fondo: #eff6ff;
+    --color-info-borde: #bfdbfe;
     --color-precargado: #eff6ff;
     --color-fondo-modal: rgb(17 24 39 / 0.5);
 
@@ -577,6 +580,12 @@ h1.tarjeta-titulo {
     color: var(--color-advertencia);
     background: var(--color-advertencia-fondo);
     border-color: var(--color-advertencia-borde);
+}
+
+.alerta-info {
+    color: var(--color-info);
+    background: var(--color-info-fondo);
+    border-color: var(--color-info-borde);
 }
 
 /* Historial de accesos */

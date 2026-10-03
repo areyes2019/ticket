@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Enums\RegimenFiscal;
 use App\Http\Requests\Concerns\NormalizaTelefono;
+use App\Models\Cliente;
 use App\Rules\RfcValido;
 use Illuminate\Auth\Access\Response;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -27,7 +28,8 @@ class ClienteRequest extends FormRequest
     }
 
     /**
-     * Normaliza teléfono y RFC antes de validar.
+     * Normaliza teléfono y RFC antes de validar. El descuento en blanco o
+     * ausente vale 0: sin descuento.
      */
     protected function prepareForValidation(): void
     {
@@ -35,6 +37,8 @@ class ClienteRequest extends FormRequest
             'telefono' => $this->filled('telefono') ? $this->normalizarTelefono($this->string('telefono')->toString()) : null,
             'rfc' => $this->filled('rfc') ? $this->string('rfc')->replaceMatches('/\s+/', '')->upper()->toString() : null,
         ], fn (?string $valor) => $valor !== null));
+
+        $this->merge(['descuento_permanente' => $this->filled('descuento_permanente') ? $this->input('descuento_permanente') : '0']);
     }
 
     /**
@@ -62,6 +66,7 @@ class ClienteRequest extends FormRequest
             'correo' => ['nullable', 'string', 'email', 'max:255'],
             'telefono' => ['nullable', 'string', 'regex:/^\+52\d{10}$/'],
             'direccion_comercial' => ['nullable', 'string', 'max:255'],
+            'descuento_permanente' => ['required', 'numeric', 'decimal:0,2', 'min:0', 'max:'.Cliente::DESCUENTO_MAXIMO],
         ];
     }
 
@@ -75,6 +80,9 @@ class ClienteRequest extends FormRequest
             'regimen_fiscal.enum' => 'Selecciona un régimen fiscal del catálogo del SAT.',
             'codigo_postal_fiscal.regex' => 'El código postal fiscal debe tener 5 dígitos.',
             'telefono.regex' => 'El teléfono debe tener 10 dígitos.',
+            'descuento_permanente.max' => 'El descuento permanente no puede pasar de '.Cliente::DESCUENTO_MAXIMO.'%.',
+            'descuento_permanente.min' => 'El descuento permanente no puede ser negativo.',
+            'descuento_permanente.decimal' => 'El descuento permanente admite hasta 2 decimales.',
         ];
     }
 
@@ -93,6 +101,7 @@ class ClienteRequest extends FormRequest
             'correo' => 'correo',
             'telefono' => 'teléfono',
             'direccion_comercial' => 'dirección comercial',
+            'descuento_permanente' => 'descuento permanente',
         ];
     }
 }

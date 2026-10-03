@@ -35,6 +35,11 @@ use Illuminate\Support\Collection;
  * aceptada_en lo escriben solo marcarAceptada() y revertirAceptacion().
  *
  * Los totales los escribe solo aplicarTotales(), con la calculadora.
+ *
+ * descuento_cliente_porcentaje (023) es la copia congelada del descuento
+ * permanente del cliente al capturarla: la escribe solo
+ * congelarDescuentoCliente() y nunca llega del formulario. Es contexto; el
+ * cálculo sigue saliendo del descuento de cada línea.
  */
 #[Fillable([
     'cliente_id',
@@ -58,6 +63,7 @@ class Cotizacion extends Model
      */
     protected $attributes = [
         'estado' => 'borrador',
+        'descuento_cliente_porcentaje' => '0.00',
     ];
 
     /**
@@ -70,6 +76,19 @@ class Cotizacion extends Model
      * Días antes del borrado automático en que se empieza a avisar.
      */
     public const DIAS_AVISO_CADUCIDAD = 7;
+
+    /**
+     * Copia el descuento permanente vigente del cliente de la cotización.
+     */
+    public function congelarDescuentoCliente(): void
+    {
+        $this->descuento_cliente_porcentaje = Cliente::withTrashed()->whereKey($this->cliente_id)->value('descuento_permanente') ?? '0.00';
+    }
+
+    public function tieneDescuentoCliente(): bool
+    {
+        return (float) $this->descuento_cliente_porcentaje > 0;
+    }
 
     /**
      * Valor del filtro de estado que pide las que ya muestran el aviso de
@@ -676,6 +695,7 @@ class Cotizacion extends Model
             'estado' => EstadoCotizacion::class,
             'descuento_global_tipo' => TipoDescuento::class,
             'descuento_global_valor' => 'decimal:2',
+            'descuento_cliente_porcentaje' => 'decimal:2',
             'subtotal' => 'decimal:2',
             'total_descuento' => 'decimal:2',
             'base_iva_16' => 'decimal:2',

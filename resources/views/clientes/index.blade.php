@@ -30,6 +30,7 @@
                     <th>RFC</th>
                     <th>Régimen</th>
                     <th>Teléfono</th>
+                    <th class="numero">Descuento</th>
                     <th>Acciones</th>
                 </tr>
                 <tr class="tabla-filtros">
@@ -38,6 +39,7 @@
                             <x-campo :nombre="$filtro" :etiqueta="'Filtrar por '.$etiqueta" tipo="search" :valor="$filtros[$filtro]" form="filtros-clientes" autocomplete="off" />
                         </th>
                     @endforeach
+                    <th></th>
                     <th></th>
                     <th></th>
                     <th></th>
