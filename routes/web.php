@@ -25,6 +25,7 @@ use App\Http\Controllers\HistorialAccesoController;
 use App\Http\Controllers\HojaProduccionController;
 use App\Http\Controllers\ImagenesArticulosController;
 use App\Http\Controllers\ImportacionArticulosController;
+use App\Http\Controllers\ImportacionClientesController;
 use App\Http\Controllers\InicioController;
 use App\Http\Controllers\MovimientoController;
 use App\Http\Controllers\OrdenCompraController;
@@ -59,6 +60,9 @@ Route::middleware(['auth', AsegurarUsuarioActivo::class])->group(function () {
         ->name('historial-accesos.index');
 
     Route::get('clientes/buscar', [ClienteController::class, 'buscar'])->name('clientes.buscar');
+
+    Route::get('clientes/importar', [ImportacionClientesController::class, 'create'])->name('clientes.importar');
+    Route::post('clientes/importar', [ImportacionClientesController::class, 'store'])->name('clientes.importar.store');
 
     Route::post('clientes/constancia', ConstanciaController::class)
         ->middleware('throttle:10,1')

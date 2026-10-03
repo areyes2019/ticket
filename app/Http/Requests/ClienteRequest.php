@@ -48,15 +48,25 @@ class ClienteRequest extends FormRequest
      */
     public function rules(): array
     {
+        return self::reglas($this->user()->id, $this->route('cliente'));
+    }
+
+    /**
+     * Reglas compartidas por el formulario y la importación CSV.
+     *
+     * @return array<string, array<int, ValidationRule|string|object>>
+     */
+    public static function reglas(int $usuarioId, ?Cliente $ignorar = null): array
+    {
         return [
             'rfc' => [
                 'required',
                 'string',
                 new RfcValido,
                 Rule::unique('clientes', 'rfc')
-                    ->where('user_id', $this->user()->id)
+                    ->where('user_id', $usuarioId)
                     ->withoutTrashed()
-                    ->ignore($this->route('cliente')),
+                    ->ignore($ignorar),
             ],
             'razon_social' => ['required', 'string', 'max:255'],
             'regimen_fiscal' => ['required', Rule::enum(RegimenFiscal::class)],
@@ -73,7 +83,7 @@ class ClienteRequest extends FormRequest
     /**
      * @return array<string, string>
      */
-    public function messages(): array
+    public static function mensajes(): array
     {
         return [
             'rfc.unique' => 'RFC duplicado: ya tienes un cliente registrado con ese RFC.',
@@ -89,7 +99,7 @@ class ClienteRequest extends FormRequest
     /**
      * @return array<string, string>
      */
-    public function attributes(): array
+    public static function atributos(): array
     {
         return [
             'rfc' => 'RFC',
@@ -103,5 +113,21 @@ class ClienteRequest extends FormRequest
             'direccion_comercial' => 'dirección comercial',
             'descuento_permanente' => 'descuento permanente',
         ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return self::mensajes();
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function attributes(): array
+    {
+        return self::atributos();
     }
 }

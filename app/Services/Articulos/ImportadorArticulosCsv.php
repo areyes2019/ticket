@@ -7,6 +7,7 @@ use App\Http\Requests\ArticuloRequest;
 use App\Models\Articulo;
 use App\Models\Catalogo;
 use App\Models\User;
+use App\Services\Concerns\LeeArchivoCsv;
 use Illuminate\Support\Facades\Validator;
 
 /**
@@ -15,7 +16,7 @@ use Illuminate\Support\Facades\Validator;
  */
 class ImportadorArticulosCsv
 {
-    private const BOM_UTF8 = "\xEF\xBB\xBF";
+    use LeeArchivoCsv;
 
     /**
      * @return array{importados: int, errores: list<array{fila: int, modelo: string, motivo: string}>}
@@ -65,32 +66,6 @@ class ImportadorArticulosCsv
     }
 
     /**
-     * Devuelve el archivo como flujo UTF-8 sin BOM. Acepta UTF-8 (con o sin
-     * BOM) y Windows-1252, detectado por el contenido: es lo que guarda Excel
-     * en español según la opción que elija el usuario.
-     *
-     * @return resource
-     */
-    private function abrirComoUtf8(string $ruta)
-    {
-        $contenido = (string) file_get_contents($ruta);
-
-        if (str_starts_with($contenido, self::BOM_UTF8)) {
-            $contenido = substr($contenido, strlen(self::BOM_UTF8));
-        }
-
-        if (! mb_check_encoding($contenido, 'UTF-8')) {
-            $contenido = mb_convert_encoding($contenido, 'UTF-8', 'Windows-1252');
-        }
-
-        $flujo = fopen('php://temp', 'r+');
-        fwrite($flujo, $contenido);
-        rewind($flujo);
-
-        return $flujo;
-    }
-
-    /**
      * @param  resource  $archivo
      * @return list<string>
      *
@@ -112,14 +87,6 @@ class ImportadorArticulosCsv
         }
 
         return $encabezado;
-    }
-
-    /**
-     * @param  list<string|null>  $celdas
-     */
-    private function estaVacia(array $celdas): bool
-    {
-        return array_filter($celdas, fn (?string $celda) => trim((string) $celda) !== '') === [];
     }
 
     /**
