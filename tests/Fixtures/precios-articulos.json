@@ -4,8 +4,11 @@
         "precio_proveedor": "200.00",
         "descuento": "10",
         "utilidad_porcentaje": "25",
+        "objeto_imp": "02",
         "costo": "180.00",
+        "precio_venta_crudo": "225.00",
         "precio_venta": "225.00",
+        "precio_con_iva": "261.00",
         "utilidad": "45.00"
     },
     {
@@ -13,8 +16,11 @@
         "precio_proveedor": "100.00",
         "descuento": "0",
         "utilidad_porcentaje": "25",
+        "objeto_imp": "02",
         "costo": "100.00",
+        "precio_venta_crudo": "125.00",
         "precio_venta": "125.00",
+        "precio_con_iva": "145.00",
         "utilidad": "25.00"
     },
     {
@@ -22,44 +28,59 @@
         "precio_proveedor": "100.01",
         "descuento": "0",
         "utilidad_porcentaje": "33",
+        "objeto_imp": "02",
         "costo": "100.01",
-        "precio_venta": "133.02",
-        "utilidad": "33.01"
+        "precio_venta_crudo": "133.02",
+        "precio_venta": "133.62",
+        "precio_con_iva": "155.00",
+        "utilidad": "33.61"
     },
     {
         "descripcion": "ruido al escalar a centavos",
         "precio_proveedor": "15.40",
         "descuento": "0",
         "utilidad_porcentaje": "5",
+        "objeto_imp": "02",
         "costo": "15.40",
-        "precio_venta": "16.17",
-        "utilidad": "0.77"
+        "precio_venta_crudo": "16.17",
+        "precio_venta": "16.38",
+        "precio_con_iva": "19.00",
+        "utilidad": "0.98"
     },
     {
         "descripcion": "empate del descuento (008)",
         "precio_proveedor": "10.05",
         "descuento": "10",
         "utilidad_porcentaje": "0",
+        "objeto_imp": "02",
         "costo": "9.05",
-        "precio_venta": "9.05",
-        "utilidad": "0.00"
+        "precio_venta_crudo": "9.05",
+        "precio_venta": "9.48",
+        "precio_con_iva": "11.00",
+        "utilidad": "0.43"
     },
     {
         "descripcion": "decimales en el descuento",
         "precio_proveedor": "99.99",
         "descuento": "12.5",
         "utilidad_porcentaje": "0",
+        "objeto_imp": "02",
         "costo": "87.49",
-        "precio_venta": "87.49",
-        "utilidad": "0.00"
+        "precio_venta_crudo": "87.49",
+        "precio_venta": "87.93",
+        "precio_con_iva": "102.00",
+        "utilidad": "0.44"
     },
     {
         "descripcion": "descuento del 100%",
         "precio_proveedor": "50.00",
         "descuento": "100",
         "utilidad_porcentaje": "40",
+        "objeto_imp": "02",
         "costo": "0.00",
+        "precio_venta_crudo": "0.00",
         "precio_venta": "0.00",
+        "precio_con_iva": "0.00",
         "utilidad": "0.00"
     },
     {
@@ -67,62 +88,83 @@
         "precio_proveedor": "180.00",
         "descuento": "10",
         "utilidad_porcentaje": "0",
+        "objeto_imp": "02",
         "costo": "162.00",
-        "precio_venta": "162.00",
-        "utilidad": "0.00"
+        "precio_venta_crudo": "162.00",
+        "precio_venta": "162.07",
+        "precio_con_iva": "188.00",
+        "utilidad": "0.07"
     },
     {
         "descripcion": "tres dígitos",
         "precio_proveedor": "130.00",
         "descuento": "0",
         "utilidad_porcentaje": "350",
+        "objeto_imp": "02",
         "costo": "130.00",
-        "precio_venta": "585.00",
-        "utilidad": "455.00"
+        "precio_venta_crudo": "585.00",
+        "precio_venta": "586.21",
+        "precio_con_iva": "680.00",
+        "utilidad": "456.21"
     },
     {
         "descripcion": "máximo 999.99%",
         "precio_proveedor": "12.34",
         "descuento": "0",
         "utilidad_porcentaje": "999.99",
+        "objeto_imp": "02",
         "costo": "12.34",
-        "precio_venta": "135.74",
-        "utilidad": "123.40"
+        "precio_venta_crudo": "135.74",
+        "precio_venta": "136.21",
+        "precio_con_iva": "158.00",
+        "utilidad": "123.87"
     },
     {
         "descripcion": "aceptación: Colop 55% y 99%",
         "precio_proveedor": "347.27",
         "descuento": "55",
         "utilidad_porcentaje": "99",
+        "objeto_imp": "02",
         "costo": "156.27",
-        "precio_venta": "310.98",
-        "utilidad": "154.71"
+        "precio_venta_crudo": "310.98",
+        "precio_venta": "311.21",
+        "precio_con_iva": "361.00",
+        "utilidad": "154.94"
     },
     {
         "descripcion": "costo no redondo",
         "precio_proveedor": "123.45",
         "descuento": "33.33",
         "utilidad_porcentaje": "17.5",
+        "objeto_imp": "02",
         "costo": "82.30",
-        "precio_venta": "96.71",
-        "utilidad": "14.41"
+        "precio_venta_crudo": "96.71",
+        "precio_venta": "97.41",
+        "precio_con_iva": "113.00",
+        "utilidad": "15.11"
     },
     {
         "descripcion": "un centavo",
         "precio_proveedor": "0.01",
         "descuento": "0",
         "utilidad_porcentaje": "50",
+        "objeto_imp": "02",
         "costo": "0.01",
-        "precio_venta": "0.02",
-        "utilidad": "0.01"
+        "precio_venta_crudo": "0.02",
+        "precio_venta": "0.86",
+        "precio_con_iva": "1.00",
+        "utilidad": "0.85"
     },
     {
         "descripcion": "tope de precio de lista",
         "precio_proveedor": "9000000.00",
         "descuento": "0",
         "utilidad_porcentaje": "999.99",
+        "objeto_imp": "02",
         "costo": "9000000.00",
+        "precio_venta_crudo": "98999100.00",
         "precio_venta": "98999100.00",
+        "precio_con_iva": "114838956.00",
         "utilidad": "89999100.00"
     },
     {
@@ -130,17 +172,95 @@
         "precio_proveedor": "1234.56",
         "descuento": "7.25",
         "utilidad_porcentaje": "42.42",
+        "objeto_imp": "02",
         "costo": "1145.05",
-        "precio_venta": "1630.79",
-        "utilidad": "485.74"
+        "precio_venta_crudo": "1630.79",
+        "precio_venta": "1631.90",
+        "precio_con_iva": "1893.00",
+        "utilidad": "486.85"
     },
     {
         "descripcion": "0.07 escalado",
         "precio_proveedor": "0.07",
         "descuento": "0",
         "utilidad_porcentaje": "0",
+        "objeto_imp": "02",
         "costo": "0.07",
-        "precio_venta": "0.07",
-        "utilidad": "0.00"
+        "precio_venta_crudo": "0.07",
+        "precio_venta": "0.86",
+        "precio_con_iva": "1.00",
+        "utilidad": "0.79"
+    },
+    {
+        "descripcion": "aceptación 024: costo 130 al 55%",
+        "precio_proveedor": "130.00",
+        "descuento": "0",
+        "utilidad_porcentaje": "55",
+        "objeto_imp": "02",
+        "costo": "130.00",
+        "precio_venta_crudo": "201.50",
+        "precio_venta": "201.72",
+        "precio_con_iva": "234.00",
+        "utilidad": "71.72"
+    },
+    {
+        "descripcion": "024: objetivo inalcanzable ($6.96 → $8)",
+        "precio_proveedor": "6.00",
+        "descuento": "0",
+        "utilidad_porcentaje": "0",
+        "objeto_imp": "02",
+        "costo": "6.00",
+        "precio_venta_crudo": "6.00",
+        "precio_venta": "6.90",
+        "precio_con_iva": "8.00",
+        "utilidad": "0.90"
+    },
+    {
+        "descripcion": "024: barato con brinco grande ($6.03 → $8)",
+        "precio_proveedor": "5.20",
+        "descuento": "0",
+        "utilidad_porcentaje": "0",
+        "objeto_imp": "02",
+        "costo": "5.20",
+        "precio_venta_crudo": "5.20",
+        "precio_venta": "6.90",
+        "precio_con_iva": "8.00",
+        "utilidad": "1.70"
+    },
+    {
+        "descripcion": "024: no objeto de impuesto (01)",
+        "precio_proveedor": "15.40",
+        "descuento": "0",
+        "utilidad_porcentaje": "5",
+        "objeto_imp": "01",
+        "costo": "15.40",
+        "precio_venta_crudo": "16.17",
+        "precio_venta": "17.00",
+        "precio_con_iva": "17.00",
+        "utilidad": "1.60"
+    },
+    {
+        "descripcion": "024: no obligado al desglose (03)",
+        "precio_proveedor": "130.00",
+        "descuento": "0",
+        "utilidad_porcentaje": "55",
+        "objeto_imp": "03",
+        "costo": "130.00",
+        "precio_venta_crudo": "201.50",
+        "precio_venta": "202.00",
+        "precio_con_iva": "202.00",
+        "utilidad": "72.00"
+    },
+    {
+        "descripcion": "024: no causa impuesto (04), ya entero",
+        "precio_proveedor": "100.00",
+        "descuento": "0",
+        "utilidad_porcentaje": "25",
+        "objeto_imp": "04",
+        "costo": "100.00",
+        "precio_venta_crudo": "125.00",
+        "precio_venta": "125.00",
+        "precio_con_iva": "125.00",
+        "utilidad": "25.00"
     }
 ]

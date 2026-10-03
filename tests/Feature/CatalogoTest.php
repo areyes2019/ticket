@@ -301,7 +301,7 @@ describe('recálculo de precios', function () {
         $this->catalogo->update(['descuento' => 20]);
 
         expect($this->hereda->fresh())->costo_con_descuento->toBe('160.00')->precio_unitario_sin_iva->toBe('200.00')
-            ->and($this->propia->fresh())->costo_con_descuento->toBe('160.00')->precio_unitario_sin_iva->toBe('240.00')
+            ->and($this->propia->fresh())->costo_con_descuento->toBe('160.00')->precio_unitario_sin_iva->toBe('240.52')
             ->and(Articulo::withTrashed()->find($this->eliminado->id)->precio_unitario_sin_iva)->toBe('200.00')
             ->and($this->otro->fresh()->precio_unitario_sin_iva)->toBe('225.00');
     });
@@ -309,8 +309,8 @@ describe('recálculo de precios', function () {
     it('recalcula solo los que heredan al cambiar la utilidad', function () {
         $this->catalogo->update(['utilidad_porcentaje' => 30]);
 
-        expect($this->hereda->fresh()->precio_unitario_sin_iva)->toBe('234.00')
-            ->and($this->propia->fresh()->precio_unitario_sin_iva)->toBe('270.00')
+        expect($this->hereda->fresh()->precio_unitario_sin_iva)->toBe('234.48')
+            ->and($this->propia->fresh()->precio_unitario_sin_iva)->toBe('270.69')
             ->and($this->otro->fresh()->precio_unitario_sin_iva)->toBe('225.00');
     });
 
@@ -332,12 +332,13 @@ describe('recálculo de precios', function () {
     ]);
 
     it('no cuenta un cambio que no mueve ningún centavo', function () {
-        // 0.01 × 1.5 y 0.01 × 1.6 suben al mismo centavo: 0.02.
-        $catalogo = Catalogo::factory()->conUtilidad(50)->create();
-        Articulo::factory()->for($catalogo)->create(['precio_proveedor' => '0.01']);
+        // 100 × 1.2 = 120.00 y 100 × 1.205 = 120.50 aterrizan en el mismo
+        // peso con IVA ($140.00 → 120.69); 100 × 1.21 = 121.00 sube a $141.00.
+        $catalogo = Catalogo::factory()->conUtilidad(20)->create();
+        Articulo::factory()->for($catalogo)->create(['precio_proveedor' => '100.00']);
 
-        expect($catalogo->articulosAfectados('0', '60'))->toBe(0)
-            ->and($catalogo->articulosAfectados('0', '150'))->toBe(1);
+        expect($catalogo->articulosAfectados('0', '20.5'))->toBe(0)
+            ->and($catalogo->articulosAfectados('0', '21'))->toBe(1);
     });
 
     it('pide confirmación antes de recalcular y no guarda nada', function () {

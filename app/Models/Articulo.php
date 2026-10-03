@@ -86,7 +86,7 @@ class Articulo extends Model
     protected static function booted(): void
     {
         static::saving(function (Articulo $articulo) {
-            if (! $articulo->isDirty(['catalogo_id', 'precio_proveedor', 'utilidad_porcentaje'])) {
+            if (! $articulo->isDirty(['catalogo_id', 'precio_proveedor', 'utilidad_porcentaje', 'objeto_imp'])) {
                 return;
             }
 
@@ -113,7 +113,8 @@ class Articulo extends Model
 
     /**
      * Costo y precio de venta con un descuento y una utilidad de catálogo
-     * dados, sin tocar el artículo; lo usa también el conteo de impacto.
+     * dados, sin tocar el artículo; lo usa también el conteo de impacto. El
+     * precio ya va ajustado para que el que lee el cliente sea un peso entero.
      *
      * @return array{0: float, 1: float}
      */
@@ -121,7 +122,7 @@ class Articulo extends Model
     {
         $costo = CalculadoraPrecioArticulo::costoConDescuento($this->precio_proveedor, $descuento);
 
-        return [$costo, CalculadoraPrecioArticulo::precioVentaSinIva($costo, $this->utilidad_porcentaje ?? $utilidadCatalogo)];
+        return [$costo, CalculadoraPrecioArticulo::precioVentaFinal($costo, $this->utilidad_porcentaje ?? $utilidadCatalogo, $this->objeto_imp)];
     }
 
     /**
@@ -222,13 +223,14 @@ class Articulo extends Model
     }
 
     /**
-     * Precio con la tasa general de IVA, redondeado a centavos. No se guarda.
+     * Precio que lee el cliente: con IVA si es objeto de impuesto, a secas si
+     * no. Siempre es un peso entero (ver calcularPrecio()). No se guarda.
      *
      * @return Attribute<float, never>
      */
     protected function precioUnitarioConIva(): Attribute
     {
-        return Attribute::get(fn (): float => CalculadoraPrecioArticulo::precioConIva($this->precio_unitario_sin_iva, self::TASA_IVA));
+        return Attribute::get(fn (): float => CalculadoraPrecioArticulo::precioConIva($this->precio_unitario_sin_iva, CalculadoraPrecioArticulo::tasaIva($this->objeto_imp)));
     }
 
     /**

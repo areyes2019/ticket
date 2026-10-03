@@ -188,7 +188,7 @@ describe('alta', function () {
         expect(Articulo::sole())
             ->proveedor_id->toBe($catalogo->proveedor_id)
             ->costo_con_descuento->toBe('80.00')
-            ->precio_unitario_sin_iva->toBe('120.00');
+            ->precio_unitario_sin_iva->toBe('120.69');
     });
 
     it('ofrece los catálogos con su descuento y su utilidad', function () {
@@ -329,8 +329,8 @@ describe('precio de venta', function () {
 
         expect($articulo->fresh())
             ->costo_con_descuento->toBe('156.27')
-            ->precio_unitario_sin_iva->toBe('310.98')
-            ->utilidad->toBe(154.71)
+            ->precio_unitario_sin_iva->toBe('311.21')
+            ->utilidad->toBe(154.94)
             ->utilidad_porcentaje_efectivo->toBe('99.00');
 
         $this->actingAs($articulo->user)
@@ -343,7 +343,9 @@ describe('precio de venta', function () {
                 'Utilidad', '99%', '+$154.71',
                 'Precio de venta sin IVA', '$310.98',
                 'IVA (16%)', '+$49.76',
-                'Precio de venta con IVA', '$360.74',
+                'Precio con IVA', '$360.74',
+                'Redondeo', '+$0.26',
+                'Precio final', 'con IVA', '$361.00',
             ]);
     });
 
@@ -355,26 +357,85 @@ describe('precio de venta', function () {
             ->utilidad_porcentaje_efectivo->toBe('50.00');
     });
 
-    it('redondea el precio de venta hacia arriba a centavos', function (string $lista, string $utilidad, string $venta) {
-        $articulo = Articulo::factory()->create(['precio_proveedor' => $lista, 'utilidad_porcentaje' => $utilidad]);
+    it('deja el precio con IVA en un peso entero, siempre hacia arriba', function (string $lista, string $utilidad, string $venta, float $conIva, float $utilidadPesos) {
+        $articulo = Articulo::factory()->create(['precio_proveedor' => $lista, 'utilidad_porcentaje' => $utilidad])->fresh();
 
-        expect($articulo->fresh()->precio_unitario_sin_iva)->toBe($venta);
+        expect($articulo)
+            ->precio_unitario_sin_iva->toBe($venta)
+            ->precio_unitario_con_iva->toBe($conIva)
+            ->utilidad->toBe($utilidadPesos);
     })->with([
-        'techo' => ['100.01', '33', '133.02'],
-        'sin centavo de más' => ['15.40', '5', '16.17'],
+        'costo 130 al 55%: $233.74 → $234' => ['130.00', '55', '201.72', 234.0, 71.72],
+        'ya entero: no se mueve' => ['180.00', '25', '225.00', 261.0, 45.0],
+        '$7 es inalcanzable: $6.96 → $8' => ['6.00', '0', '6.90', 8.0, 0.9],
+        'techo del markup y luego el peso' => ['100.01', '33', '133.62', 155.0, 33.61],
     ]);
+
+    it('redondea el precio a secas cuando no es objeto de impuesto', function (ObjetoImpuesto $objeto) {
+        $articulo = Articulo::factory()->create(['precio_proveedor' => '130.00', 'utilidad_porcentaje' => 55, 'objeto_imp' => $objeto])->fresh();
+
+        expect($articulo)
+            ->precio_unitario_sin_iva->toBe('202.00')
+            ->precio_unitario_con_iva->toBe(202.0);
+    })->with([ObjetoImpuesto::NoObjeto, ObjetoImpuesto::SiObjetoNoObligadoDesglose, ObjetoImpuesto::SiObjetoNoCausa]);
+
+    it('recalcula al cambiar el objeto de impuesto', function () {
+        $articulo = Articulo::factory()->create(['precio_proveedor' => '130.00', 'utilidad_porcentaje' => 55]);
+
+        $articulo->update(['objeto_imp' => ObjetoImpuesto::NoObjeto]);
+        expect($articulo->fresh()->precio_unitario_sin_iva)->toBe('202.00');
+
+        $articulo->update(['objeto_imp' => ObjetoImpuesto::SiObjeto]);
+        expect($articulo->fresh()->precio_unitario_sin_iva)->toBe('201.72');
+    });
+
+    it('deja en $0.00 un artículo sin costo', function () {
+        $articulo = Articulo::factory()->for(Catalogo::factory()->conDescuento(100))->create(['utilidad_porcentaje' => 40])->fresh();
+
+        expect($articulo)->precio_unitario_sin_iva->toBe('0.00')->precio_unitario_con_iva->toBe(0.0);
+    });
+
+    it('muestra el renglón de redondeo solo cuando hubo ajuste', function () {
+        $catalogo = Catalogo::factory()->create();
+        $conAjuste = Articulo::factory()->for($catalogo)->create(['precio_proveedor' => '130.00', 'utilidad_porcentaje' => 55]);
+        $sinAjuste = Articulo::factory()->for($catalogo)->create(['precio_proveedor' => '180.00', 'utilidad_porcentaje' => 25]);
+
+        $this->actingAs($catalogo->user)
+            ->get("/articulos/{$conAjuste->id}/editar")
+            ->assertSee('data-objeto="objeto_imp"', false)
+            ->assertSee('<div class="" data-renglon="redondeo" >', false)
+            ->assertSeeInOrder(['Precio de venta sin IVA', '$201.50', 'IVA (16%)', '+$32.24', 'Precio con IVA', '$233.74', 'Redondeo', '+$0.26', 'Precio final', 'con IVA', '$234.00']);
+
+        $this->get("/articulos/{$sinAjuste->id}/editar")
+            ->assertSee('data-renglon="redondeo"  hidden', false)
+            ->assertSeeInOrder(['Precio con IVA', '$261.00', 'Precio final', '$261.00']);
+    });
+
+    it('oculta los renglones de IVA si no es objeto de impuesto', function () {
+        $articulo = Articulo::factory()->create(['precio_proveedor' => '130.00', 'utilidad_porcentaje' => 55, 'objeto_imp' => ObjetoImpuesto::NoObjeto]);
+
+        $this->actingAs($articulo->user)
+            ->get("/articulos/{$articulo->id}/editar")
+            ->assertSee('data-renglon="iva"  hidden', false)
+            ->assertSee('data-renglon="venta-con-iva"  hidden', false)
+            ->assertSee('<span data-sufijo-iva  hidden > con IVA</span>', false)
+            ->assertSeeInOrder(['Precio de venta sin IVA', '$201.50', 'Redondeo', '+$0.50', 'Precio final', '$202.00']);
+
+        $this->put("/articulos/{$articulo->id}", datosArticulo($articulo->catalogo, ['nombre' => $articulo->nombre, 'objeto_imp' => '01', 'precio_proveedor' => '130.00', 'utilidad_porcentaje' => '55']))
+            ->assertSessionHas('exito', 'Artículo actualizado. Precio de venta: $202.00.');
+    });
 
     it('recalcula al editar el precio de lista o la utilidad', function () {
         $articulo = Articulo::factory()->for(Catalogo::factory()->conDescuento(10))->create(['precio_proveedor' => 100]);
 
         $articulo->update(['precio_proveedor' => 200]);
-        expect($articulo->fresh()->precio_unitario_sin_iva)->toBe('180.00');
+        expect($articulo->fresh()->precio_unitario_sin_iva)->toBe('180.17');
 
         $articulo->update(['utilidad_porcentaje' => 25]);
         expect($articulo->fresh()->precio_unitario_sin_iva)->toBe('225.00');
 
         $articulo->update(['utilidad_porcentaje' => null]);
-        expect($articulo->fresh()->precio_unitario_sin_iva)->toBe('180.00');
+        expect($articulo->fresh()->precio_unitario_sin_iva)->toBe('180.17');
     });
 
     it('conserva la utilidad propia al mover el artículo de catálogo', function () {
@@ -383,12 +444,12 @@ describe('precio de venta', function () {
 
         $this->actingAs($articulo->user)
             ->put("/articulos/{$articulo->id}", datosArticulo($destino, ['nombre' => $articulo->nombre, 'utilidad_porcentaje' => '50']))
-            ->assertSessionHas('exito', 'Artículo actualizado. Precio de venta con IVA: $139.20.');
+            ->assertSessionHas('exito', 'Artículo actualizado. Precio de venta con IVA: $140.00.');
 
         expect($articulo->fresh())
             ->utilidad_porcentaje->toBe('50.00')
             ->costo_con_descuento->toBe('80.00')
-            ->precio_unitario_sin_iva->toBe('120.00');
+            ->precio_unitario_sin_iva->toBe('120.69');
     });
 
     it('avisa de una utilidad alta sin impedir guardar', function () {
@@ -411,15 +472,15 @@ describe('precio de venta', function () {
 });
 
 describe('precio con IVA', function () {
-    it('calcula el 16% redondeado a centavos', function (string $sinIva, float $conIva) {
-        $articulo = Articulo::factory()->create(['precio_proveedor' => $sinIva]);
+    it('es siempre un peso entero', function (string $lista, float $conIva) {
+        $articulo = Articulo::factory()->create(['precio_proveedor' => $lista]);
 
         expect($articulo->fresh()->precio_unitario_con_iva)->toBe($conIva);
     })->with([
         ['100.00', 116.0],
-        ['99.99', 115.99],
-        ['12.34', 14.31],
-        ['0.01', 0.01],
+        ['99.99', 116.0],
+        ['12.34', 15.0],
+        ['0.01', 1.0],
     ]);
 });
 
@@ -454,7 +515,7 @@ describe('listado', function () {
             ->assertDontSee('Zeta Sellos')
             ->assertDontSee('Alfa')
             ->assertSeeInOrder(['Costo', 'Precio con IVA'])
-            ->assertSeeInOrder(['$270.00', '$469.80'])
+            ->assertSeeInOrder(['$270.00', '$470.00'])
             ->assertSee('$1,160.00')
             ->assertSee('data-confirmar="¿Eliminar este artículo?"', false);
     });
@@ -650,7 +711,17 @@ describe('imagen', function () {
             ->get('/articulos')
             ->assertSee('data-modelo="R-45"', false)
             ->assertSee('data-precio="$116.00"', false)
+            ->assertSee('data-etiqueta-precio="Precio con IVA"', false)
             ->assertSee('data-imagen="'.e(route('articulos.imagen', [$articulo, 'v' => $articulo->imagen_version])).'"', false)
             ->assertSee('id="ficha-articulo"', false);
+    });
+
+    it('no rotula la ficha como con IVA si no es objeto de impuesto', function () {
+        $articulo = Articulo::factory()->create(['precio_proveedor' => 100, 'objeto_imp' => ObjetoImpuesto::NoObjeto]);
+
+        $this->actingAs($articulo->user)
+            ->get('/articulos')
+            ->assertSee('data-precio="$100.00"', false)
+            ->assertSee('data-etiqueta-precio="Precio"', false);
     });
 });

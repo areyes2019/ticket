@@ -26,6 +26,32 @@
         return techo2(costo * (1 + utilidadPorcentaje / 100));
     }
 
+    // Espejo de CalculadoraPrecioArticulo::redondearAPesoEntero().
+    function redondearAPesoEntero(precioCrudoSinIva, factorIva) {
+        if (precioCrudoSinIva <= 0) {
+            return 0;
+        }
+
+        let objetivo = Math.ceil(sinRuido(precioCrudoSinIva * factorIva));
+
+        for (;;) {
+            const centavos = Math.floor(sinRuido(objetivo * 100 / factorIva));
+
+            for (const candidato of [centavos, centavos + 1]) {
+                if (redondeo2(candidato / 100 * factorIva) === objetivo) {
+                    return candidato / 100;
+                }
+            }
+
+            objetivo++;
+        }
+    }
+
+    // Solo el objeto de impuesto 02 lleva IVA encima; tasaIva viene del servidor.
+    function factorIva(objetoImp, tasaIva) {
+        return objetoImp === '02' ? 1 + tasaIva : 1;
+    }
+
     function utilidad(precioVentaSinIva, costo) {
         return redondeo2(precioVentaSinIva - costo);
     }
@@ -48,6 +74,8 @@
         precioVentaSinIva: precioVentaSinIva,
         utilidad: utilidad,
         precioConIva: precioConIva,
+        redondearAPesoEntero: redondearAPesoEntero,
+        factorIva: factorIva,
         porcentajeAlto: porcentajeAlto,
     };
 
@@ -69,10 +97,13 @@
 
     // Resumen de la cadena: <dl data-resumen-precio> con un <output data-valor="…">
     // por renglón y un <span data-porcentaje="…"> en las etiquetas con porcentaje.
+    // Cada renglón es un <div data-renglon="…">: los de IVA se ocultan si el
+    // objeto de impuesto no es 02, y el de redondeo cuando no hubo ajuste.
     document.querySelectorAll('dl[data-resumen-precio]').forEach(function (resumen) {
         const precio = document.getElementById(resumen.dataset.precio);
         const utilidadCampo = document.getElementById(resumen.dataset.utilidad);
         const catalogo = document.getElementById(resumen.dataset.catalogo);
+        const objeto = document.getElementById(resumen.dataset.objeto);
         const tasaIva = parseFloat(resumen.dataset.tasaIva);
         let catalogos;
 
@@ -94,6 +125,14 @@
             }
         }
 
+        function ocultar(nombre, oculto) {
+            const renglon = resumen.querySelector('[data-renglon="' + nombre + '"]');
+
+            if (renglon) {
+                renglon.hidden = oculto;
+            }
+        }
+
         function mostrarPorcentaje(nombre, texto) {
             const destino = resumen.querySelector('[data-porcentaje="' + nombre + '"]');
 
@@ -111,20 +150,34 @@
             const propia = parseFloat(utilidadCampo.value);
             const porcentaje = utilidadCampo.value.trim() !== '' && Number.isFinite(propia) ? propia : (datos ? datos.utilidad : NaN);
 
+            // Sin objeto de impuesto elegido se supone 02, el caso de casi todos.
+            const factor = factorIva(objeto && objeto.value !== '' ? objeto.value : '02', tasaIva);
+            const sufijo = resumen.querySelector('[data-sufijo-iva]');
+
+            ocultar('iva', factor === 1);
+            ocultar('venta-con-iva', factor === 1);
+
+            if (sufijo) {
+                sufijo.hidden = factor === 1;
+            }
+
             mostrarPorcentaje('descuento', datos ? porcentajeTexto(datos.descuento) : '—');
             mostrarPorcentaje('utilidad', Number.isFinite(porcentaje) ? porcentajeTexto(porcentaje) : '—');
 
             if (!datos || !Number.isFinite(lista) || lista <= 0 || !Number.isFinite(porcentaje)) {
-                ['lista', 'descuento', 'costo', 'utilidad', 'venta', 'iva', 'venta-con-iva'].forEach(function (nombre) {
+                ['lista', 'descuento', 'costo', 'utilidad', 'venta', 'iva', 'venta-con-iva', 'redondeo', 'final'].forEach(function (nombre) {
                     mostrar(nombre, '—');
                 });
+                ocultar('redondeo', true);
 
                 return;
             }
 
             const costo = costoConDescuento(lista, datos.descuento);
             const venta = precioVentaSinIva(costo, porcentaje);
-            const conIva = precioConIva(venta, tasaIva);
+            const conIva = precioConIva(venta, factor === 1 ? 0 : tasaIva);
+            const final = redondeo2(redondearAPesoEntero(venta, factor) * factor);
+            const redondeo = redondeo2(final - conIva);
 
             mostrar('lista', formato.format(lista));
             mostrar('descuento', '−' + formato.format(redondeo2(lista - costo)));
@@ -133,11 +186,19 @@
             mostrar('venta', formato.format(venta));
             mostrar('iva', '+' + formato.format(redondeo2(conIva - venta)));
             mostrar('venta-con-iva', formato.format(conIva));
+            mostrar('redondeo', '+' + formato.format(redondeo));
+            mostrar('final', formato.format(final));
+            ocultar('redondeo', redondeo <= 0);
         }
 
         precio.addEventListener('input', actualizar);
         utilidadCampo.addEventListener('input', actualizar);
         catalogo.addEventListener('change', actualizar);
+
+        if (objeto) {
+            objeto.addEventListener('change', actualizar);
+        }
+
         actualizar();
     });
 

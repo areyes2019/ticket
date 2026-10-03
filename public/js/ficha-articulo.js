@@ -1,9 +1,10 @@
 // Ficha visual de un artículo en el listado.
 //
 // Los enlaces del nombre llevan data-ficha y los datos en data-nombre,
-// data-modelo, data-precio y data-imagen (URL o vacío). Se usa delegación
-// porque busqueda-dinamica.js reemplaza las filas. Sin JavaScript, el enlace
-// lleva a la edición del artículo.
+// data-modelo, data-precio, data-etiqueta-precio ("Precio con IVA" o
+// "Precio", según el objeto de impuesto) y data-imagen (URL o vacío). Se usa
+// delegación porque busqueda-dinamica.js reemplaza las filas. Sin JavaScript,
+// el enlace lleva a la edición del artículo.
 (function () {
     const ficha = document.getElementById('ficha-articulo');
 
@@ -16,6 +17,7 @@
     const nombre = ficha.querySelector('[data-ficha-nombre]');
     const modelo = ficha.querySelector('[data-ficha-modelo]');
     const precio = ficha.querySelector('[data-ficha-precio]');
+    const etiquetaPrecio = ficha.querySelector('[data-ficha-etiqueta-precio]');
     const editar = ficha.querySelector('[data-ficha-editar]');
     const compartir = ficha.querySelector('[data-ficha-compartir]');
     const aviso = ficha.querySelector('[data-ficha-aviso]');
@@ -34,6 +36,7 @@
         nombre.textContent = actual.nombre;
         modelo.textContent = actual.modelo;
         precio.textContent = actual.precio;
+        etiquetaPrecio.textContent = enlace.dataset.etiquetaPrecio || 'Precio con IVA';
         editar.href = enlace.href;
         aviso.textContent = '';
         respaldo.hidden = true;

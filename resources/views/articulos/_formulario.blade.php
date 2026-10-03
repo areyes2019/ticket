@@ -37,11 +37,14 @@
             @include('articulos._aviso-utilidad', ['campo' => 'utilidad_porcentaje', 'valor' => $articulo?->utilidad_porcentaje])
 
             {{-- Cadena de cálculo. En edición la pinta el servidor con lo guardado; precio-articulo.js la recalcula en vivo. --}}
-            <dl class="resumen-precio" data-resumen-precio data-precio="precio_proveedor" data-utilidad="utilidad_porcentaje" data-catalogo="catalogo_id"
+            <dl class="resumen-precio" data-resumen-precio data-precio="precio_proveedor" data-utilidad="utilidad_porcentaje" data-catalogo="catalogo_id" data-objeto="objeto_imp"
                 data-tasa-iva="{{ App\Models\Articulo::TASA_IVA }}" data-catalogos="{{ json_encode($preciosCatalogo, JSON_FORCE_OBJECT) }}">
                 @foreach ($resumen as $renglon)
-                    <div @class(['resumen-total' => $renglon['total'] ?? false])>
-                        <dt>{{ $renglon['etiqueta'] }}@isset($renglon['porcentaje']) (<span data-porcentaje="{{ $renglon['clave'] }}">{{ $renglon['porcentaje'] }}</span>)@endisset</dt>
+                    <div @class(['resumen-total' => $renglon['total'] ?? false]) data-renglon="{{ $renglon['clave'] }}" @if ($renglon['oculto'] ?? false) hidden @endif>
+                        <dt>
+                            {{ $renglon['etiqueta'] }}@isset($renglon['sufijoIva'])<span data-sufijo-iva @if (! $renglon['sufijoIva']) hidden @endif> con IVA</span>@endisset
+                            @isset($renglon['porcentaje']) (<span data-porcentaje="{{ $renglon['clave'] }}">{{ $renglon['porcentaje'] }}</span>)@endisset
+                        </dt>
                         <dd><output data-valor="{{ $renglon['clave'] }}">{{ $renglon['valor'] }}</output></dd>
                     </div>
                 @endforeach

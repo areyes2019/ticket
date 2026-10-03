@@ -26,7 +26,7 @@
             <h2 id="ficha-nombre" data-ficha-nombre></h2>
             <p>Modelo <strong data-ficha-modelo></strong></p>
             <p class="ficha-precio" data-ficha-precio></p>
-            <p class="ayuda">Precio con IVA</p>
+            <p class="ayuda" data-ficha-etiqueta-precio>Precio con IVA</p>
         </div>
     </div>
 </dialog>

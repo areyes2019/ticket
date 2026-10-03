@@ -142,7 +142,9 @@ class ArticuloController extends Controller
      */
     private function precioGuardado(Articulo $articulo): string
     {
-        return 'Precio de venta con IVA: $'.number_format($articulo->precio_unitario_con_iva, 2).'.';
+        $etiqueta = $articulo->objeto_imp === ObjetoImpuesto::SiObjeto ? 'Precio de venta con IVA' : 'Precio de venta';
+
+        return $etiqueta.': $'.number_format($articulo->precio_unitario_con_iva, 2).'.';
     }
 
     /**
@@ -191,16 +193,24 @@ class ArticuloController extends Controller
 
     /**
      * Renglones de la cadena de cálculo del formulario, con lo guardado (en
-     * el alta van vacíos hasta que precio-articulo.js tiene datos).
+     * el alta van vacíos hasta que precio-articulo.js tiene datos). Muestra
+     * el precio que da el markup y el redondeo que lo lleva al peso entero,
+     * para que el ajuste no parezca un error de cálculo. Sin IVA (objeto de
+     * impuesto distinto de 02) se ocultan los renglones de IVA, y el de
+     * redondeo cuando no hubo ajuste.
      *
-     * @return list<array{clave: string, etiqueta: string, valor: string, porcentaje?: string, total?: bool}>
+     * @return list<array{clave: string, etiqueta: string, valor: string, porcentaje?: string, total?: bool, oculto?: bool, sufijoIva?: bool}>
      */
     private function resumenPrecio(?Articulo $articulo): array
     {
         $pesos = fn (float|string $monto, string $signo = '') => $articulo ? $signo.'$'.number_format((float) $monto, 2) : '—';
-        $venta = (float) $articulo?->precio_unitario_sin_iva;
         $costo = (float) $articulo?->costo_con_descuento;
         $lista = (float) $articulo?->precio_proveedor;
+        $tasaIva = CalculadoraPrecioArticulo::tasaIva($articulo ? $articulo->objeto_imp : ObjetoImpuesto::SiObjeto);
+        $venta = $articulo ? CalculadoraPrecioArticulo::precioVentaSinIva($costo, $articulo->utilidad_porcentaje_efectivo) : 0.0;
+        $conIva = CalculadoraPrecioArticulo::precioConIva($venta, $tasaIva);
+        $final = (float) $articulo?->precio_unitario_con_iva;
+        $redondeo = CalculadoraPrecioArticulo::redondeo2($final - $conIva);
 
         return [
             ['clave' => 'lista', 'etiqueta' => 'Precio de lista del proveedor', 'valor' => $pesos($lista)],
@@ -208,11 +218,13 @@ class ArticuloController extends Controller
                 'valor' => $pesos(CalculadoraPrecioArticulo::redondeo2($lista - $costo), '−')],
             ['clave' => 'costo', 'etiqueta' => 'Costo', 'valor' => $pesos($costo), 'total' => true],
             ['clave' => 'utilidad', 'etiqueta' => 'Utilidad', 'porcentaje' => $articulo ? Catalogo::porcentajeTexto($articulo->utilidad_porcentaje_efectivo) : '—',
-                'valor' => $pesos((float) $articulo?->utilidad, '+')],
-            ['clave' => 'venta', 'etiqueta' => 'Precio de venta sin IVA', 'valor' => $pesos($venta), 'total' => true],
+                'valor' => $pesos(CalculadoraPrecioArticulo::utilidad($venta, $costo), '+')],
+            ['clave' => 'venta', 'etiqueta' => 'Precio de venta sin IVA', 'valor' => $pesos($venta)],
             ['clave' => 'iva', 'etiqueta' => 'IVA ('.Articulo::TASA_IVA * 100 .'%)',
-                'valor' => $pesos(CalculadoraPrecioArticulo::redondeo2((float) $articulo?->precio_unitario_con_iva - $venta), '+')],
-            ['clave' => 'venta-con-iva', 'etiqueta' => 'Precio de venta con IVA', 'valor' => $pesos((float) $articulo?->precio_unitario_con_iva), 'total' => true],
+                'valor' => $pesos(CalculadoraPrecioArticulo::redondeo2($conIva - $venta), '+'), 'oculto' => $tasaIva === 0.0],
+            ['clave' => 'venta-con-iva', 'etiqueta' => 'Precio con IVA', 'valor' => $pesos($conIva), 'oculto' => $tasaIva === 0.0],
+            ['clave' => 'redondeo', 'etiqueta' => 'Redondeo', 'valor' => $pesos($redondeo, '+'), 'oculto' => $redondeo <= 0],
+            ['clave' => 'final', 'etiqueta' => 'Precio final', 'sufijoIva' => $tasaIva > 0, 'valor' => $pesos($final), 'total' => true],
         ];
     }
 

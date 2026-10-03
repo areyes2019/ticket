@@ -247,7 +247,7 @@ describe('sugerencias de artículos', function () {
             ->assertOk()
             ->assertJsonCount(1)
             ->assertJsonPath('0.nombre', 'Sello redondo')
-            ->assertJsonPath('0.precio_unitario', '135.00')
+            ->assertJsonPath('0.precio_unitario', '136.21')
             ->assertJsonPath('0.tasa_iva', '16');
 
         $this->actingAs($this->user)->getJson('/articulos/sugerencias?q=T-1')->assertJsonPath('0.tasa_iva', 'exento');

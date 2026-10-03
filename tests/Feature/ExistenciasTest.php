@@ -66,10 +66,11 @@ describe('listado', function () {
             marcarExistencia(articuloFacturable($this->user, ['modelo' => sprintf('M-%02d', $i)]), 2);
         }
 
-        // 16 artículos × 2 piezas: 32 unidades; invertido 32 × $90; beneficio 32 × $45.
+        // 16 artículos × 2 piezas: 32 unidades; invertido 32 × $90; beneficio 32 × $46.21
+        // (venta $136.21: $158.00 con IVA, porque $157.00 es inalcanzable).
         foreach (['/existencias', '/existencias?page=2'] as $ruta) {
             $this->actingAs($this->user)->get($ruta)
-                ->assertViewHas('totales', ['unidades' => 32, 'invertido' => 2880.0, 'beneficio' => 1440.0, 'total' => 4320.0]);
+                ->assertViewHas('totales', ['unidades' => 32, 'invertido' => 2880.0, 'beneficio' => 1478.72, 'total' => 4358.72]);
         }
 
         $this->actingAs($this->user)->get('/existencias?q=M-01')

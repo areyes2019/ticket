@@ -47,11 +47,11 @@ it('importa un archivo válido en el catálogo elegido', function () {
         ->precio_proveedor->toBe('100.50')
         ->utilidad_porcentaje->toBeNull()
         ->costo_con_descuento->toBe('90.45')
-        ->precio_unitario_sin_iva->toBe('108.54')
+        ->precio_unitario_sin_iva->toBe('108.62')
         ->and(Articulo::firstWhere('modelo', 'A-1'))
         ->utilidad_porcentaje->toBe('50.00')
         ->costo_con_descuento->toBe('31.50')
-        ->precio_unitario_sin_iva->toBe('47.25');
+        ->precio_unitario_sin_iva->toBe('47.41');
 });
 
 it('rechaza la fila con una utilidad inválida', function () {
