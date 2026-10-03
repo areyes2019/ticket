@@ -446,13 +446,13 @@ describe('listado', function () {
             ->assertDontSee('Artículo ajeno');
     })->with(['/articulos', '/articulos/buscar']);
 
-    it('muestra proveedor, catálogo, costo y precio con IVA', function () {
+    it('muestra costo y precio con IVA, sin proveedor ni catálogo', function () {
         $this->catalogoZeta->update(['descuento' => 10, 'utilidad_porcentaje' => 50]);
 
         $this->actingAs($this->usuario)
             ->get('/articulos')
-            ->assertSee('Zeta Sellos')
-            ->assertSee('Alfa')
+            ->assertDontSee('Zeta Sellos')
+            ->assertDontSee('Alfa')
             ->assertSeeInOrder(['Costo', 'Precio con IVA'])
             ->assertSeeInOrder(['$270.00', '$469.80'])
             ->assertSee('$1,160.00')
@@ -560,14 +560,6 @@ describe('listado', function () {
             ->assertSee('<input type="hidden" name="orden" value="precio">', false)
             ->assertSee('<input type="hidden" name="direccion" value="desc">', false)
             ->assertSee(e(route('articulos.exportar', ['nombre' => 'sello', 'orden' => 'precio', 'direccion' => 'desc'])), false);
-    });
-
-    it('sigue mostrando el nombre de un proveedor eliminado', function () {
-        $this->zeta->delete();
-
-        $this->actingAs($this->usuario)
-            ->get('/articulos')
-            ->assertSee('Zeta Sellos');
     });
 
     it('trunca los textos largos y deja el texto completo en el título', function () {

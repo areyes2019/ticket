@@ -30,9 +30,7 @@
         <table class="tabla tabla-fija" data-busqueda-tabla>
             <colgroup>
                 <col>
-                <col>
-                <col>
-                <col>
+                <col class="col-modelo">
                 <col class="col-importe">
                 <col class="col-precio">
                 <col class="col-existencias">
@@ -43,8 +41,6 @@
                 <tr class="tabla-filtros">
                     <th><x-campo nombre="nombre" etiqueta="Buscar por nombre" tipo="search" :valor="$filtros['nombre']" form="filtros-articulos" autocomplete="off" /></th>
                     <th><x-campo nombre="modelo" etiqueta="Buscar por modelo" tipo="search" :valor="$filtros['modelo']" form="filtros-articulos" autocomplete="off" /></th>
-                    <th></th>
-                    <th></th>
                     <th></th>
                     <th></th>
                     <th></th>

@@ -166,7 +166,6 @@ class ArticuloController extends Controller
     private function articulos(ListadoArticulosRequest $request): LengthAwarePaginator
     {
         return $request->user()->articulos()
-            ->with(['proveedor', 'catalogo'])
             ->withExists('existencia')
             ->filtrar($request->filtros())
             ->ordenar($request->orden(), $request->direccion())

@@ -8,8 +8,6 @@
                     data-imagen="{{ $articulo->tiene_imagen ? route('articulos.imagen', [$articulo, 'v' => $articulo->imagen_version]) : '' }}">{{ $articulo->nombre }}</a>
             </td>
             <td><span class="celda-truncada" title="{{ $articulo->modelo }}">{{ $articulo->modelo }}</span></td>
-            <td><span class="celda-truncada" title="{{ $articulo->proveedor->nombre_comercial }}">{{ $articulo->proveedor->nombre_comercial }}</span></td>
-            <td><span class="celda-truncada" title="{{ $articulo->catalogo->nombre }}">{{ $articulo->catalogo->nombre }}</span></td>
             <td class="numero">${{ number_format((float) $articulo->costo_con_descuento, 2) }}</td>
             <td class="numero">${{ number_format($articulo->precio_unitario_con_iva, 2) }}</td>
             <td>
@@ -34,7 +32,7 @@
         </tr>
     @empty
         <tr>
-            <td colspan="8">
+            <td colspan="6">
                 {{ array_filter($filtros) !== [] ? 'Ningún artículo coincide con la búsqueda.' : 'Todavía no tienes artículos registrados.' }}
             </td>
         </tr>

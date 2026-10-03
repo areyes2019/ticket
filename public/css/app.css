@@ -760,6 +760,10 @@ h1.tarjeta-titulo {
     max-width: 100%;
 }
 
+.tabla-fija .col-modelo {
+    width: 12rem;
+}
+
 .tabla-fija .col-importe {
     width: var(--ancho-columna-importe);
 }
