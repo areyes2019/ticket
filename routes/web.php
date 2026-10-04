@@ -26,7 +26,6 @@ use App\Http\Controllers\HojaProduccionController;
 use App\Http\Controllers\ImagenesArticulosController;
 use App\Http\Controllers\ImportacionArticulosController;
 use App\Http\Controllers\ImportacionClientesController;
-use App\Http\Controllers\InicioController;
 use App\Http\Controllers\MovimientoController;
 use App\Http\Controllers\OrdenCompraController;
 use App\Http\Controllers\OrdenCompraPagoController;
@@ -40,9 +39,8 @@ use App\Http\Controllers\TransferenciaController;
 use App\Http\Middleware\AsegurarUsuarioActivo;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', [InicioController::class, 'index'])->name('inicio');
-Route::get('/estado', [InicioController::class, 'estado'])->name('estado');
-Route::post('/eco', [InicioController::class, 'eco'])->name('eco');
+// La raíz no tiene vista propia: lleva al panel o al login según haya sesión.
+Route::get('/', fn () => redirect()->route(auth()->check() ? 'dashboard' : 'login'))->name('inicio');
 Route::get('/estilos', EstilosController::class)->name('estilos');
 
 // Portal de autofacturación (019): público, sin sesión. El token de 64

@@ -2,7 +2,7 @@
 
 it('tiene los recursos estáticos en public', function (string $archivo) {
     expect(file_exists(dirname(__DIR__, 2).'/public/'.$archivo))->toBeTrue();
-})->with(['css/app.css', 'js/app.js', 'js/inicio.js', 'js/constancia-fiscal.js', 'js/precio-articulo.js', 'vendor/axios.min.js']);
+})->with(['css/app.css', 'js/app.js', 'js/constancia-fiscal.js', 'js/precio-articulo.js', 'vendor/axios.min.js']);
 
 it('no incluye archivos de Vite ni carpetas de frontend separadas', function (string $ruta) {
     expect(file_exists(dirname(__DIR__, 2).'/'.$ruta))->toBeFalse();

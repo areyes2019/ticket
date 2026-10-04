@@ -14,7 +14,7 @@ function mensajeDeError(Closure $accion): ?string
 }
 
 it('carga Bootstrap Icons desde el proyecto en el layout', function () {
-    $this->get('/')
+    $this->get('/login')
         ->assertOk()
         ->assertSee(asset('vendor/bootstrap-icons/bootstrap-icons.min.css'), false);
 });
