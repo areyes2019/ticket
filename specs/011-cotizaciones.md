@@ -31,6 +31,12 @@ puede reconstruir después.
 > precarga en cada línea (editable), con un aviso sobre la tabla, y la cotización guarda una copia
 > congelada del porcentaje (`descuento_cliente_porcentaje`).
 
+> **Desde [029](029-pago-cotizacion-pedido-orden-trabajo.md)** (implementada el 2026-10-04): los pagos de la cotización vuelven a ser
+> el flujo vigente y se quita "Aceptar". El **primer pago** (también en `borrador`) decide si nace la
+> venta y su orden de trabajo: solo para un cliente que no es distribuidor y una cotización con algo
+> de producción. En ese caso la cotización pasa a `aceptada` y sigue recibiendo pagos. Si no, sigue
+> el flujo de esta spec hasta `producto_entregado`.
+
 ## Historia de usuario
 
 Como usuario registrado, quiero generar cotizaciones para mis clientes, enviárselas por correo o

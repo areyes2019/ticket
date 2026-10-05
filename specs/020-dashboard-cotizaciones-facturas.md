@@ -25,6 +25,10 @@
 > columna con acordeón**, y la columna que hoy es "Facturas" pasa a ser **Órdenes de trabajo**. Ver
 > la sección "Corrección 1". Donde esa sección contradiga lo de arriba, manda la corrección.
 
+> **Desde [029](029-pago-cotizacion-pedido-orden-trabajo.md)** (implementada el 2026-10-04): sale el botón "Aceptar" de la vista
+> previa. La ventana "Registrar pago" avisa si el pago creará la venta y su orden, y el mensaje de
+> después trae los enlaces. La carpeta "Aceptadas" se queda.
+
 ## Historia de usuario
 
 Como usuario, quiero ver en mi inicio mis cotizaciones y mis facturas recientes, abrir cualquiera sin

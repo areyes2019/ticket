@@ -23,7 +23,8 @@ class CatalogoRequest extends FormRequest
     }
 
     /**
-     * Un descuento o una utilidad vacíos son 0%.
+     * Un descuento o una utilidad vacíos son 0%; la casilla de producción
+     * ausente es "no".
      */
     protected function prepareForValidation(): void
     {
@@ -32,6 +33,8 @@ class CatalogoRequest extends FormRequest
                 $this->merge([$campo => 0]);
             }
         }
+
+        $this->merge(['requiere_produccion' => $this->filled('requiere_produccion') ? $this->input('requiere_produccion') : false]);
     }
 
     /**
@@ -57,6 +60,7 @@ class CatalogoRequest extends FormRequest
             'descuento' => ['required', 'numeric', 'between:0,100', 'decimal:0,2'],
             'utilidad_porcentaje' => ['required', 'numeric', 'between:0,999.99', 'decimal:0,2'],
             'utilidad_distribuidor_porcentaje' => ['required', 'numeric', 'between:0,999.99', 'decimal:0,2'],
+            'requiere_produccion' => ['required', 'boolean'],
         ];
 
         if ($catalogo === null) {
@@ -98,6 +102,7 @@ class CatalogoRequest extends FormRequest
             'descuento' => 'descuento',
             'utilidad_porcentaje' => 'utilidad',
             'utilidad_distribuidor_porcentaje' => 'utilidad distribuidor',
+            'requiere_produccion' => 'requiere producción',
         ];
     }
 

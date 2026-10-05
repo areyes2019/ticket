@@ -73,6 +73,10 @@ class PedidoPagoController extends Controller
         return DB::transaction(function () use ($pedido, $pago) {
             $bloqueado = Pedido::whereKey($pedido->id)->lockForUpdate()->firstOrFail();
 
+            if ($bloqueado->cobraEnCotizacion()) {
+                return back()->with('error', "Los pagos se registran en la cotización {$bloqueado->cotizacion->folio_formateado}.");
+            }
+
             if (! $bloqueado->puedeEliminarPago()) {
                 return back()->with('error', 'El pedido ya tiene factura timbrada: sus pagos no se eliminan.');
             }

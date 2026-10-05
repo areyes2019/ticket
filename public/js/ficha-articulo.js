@@ -19,6 +19,7 @@
     const sinImagen = ficha.querySelector('[data-ficha-sin-imagen]');
     const nombre = ficha.querySelector('[data-ficha-nombre]');
     const modelo = ficha.querySelector('[data-ficha-modelo]');
+    const tipo = ficha.querySelector('[data-ficha-tipo]');
     const precio = ficha.querySelector('[data-ficha-precio]');
     const etiquetaPrecio = ficha.querySelector('[data-ficha-etiqueta-precio]');
     const precioDistribuidor = ficha.querySelector('[data-ficha-precio-distribuidor]');
@@ -41,6 +42,8 @@
 
         nombre.textContent = actual.nombre;
         modelo.textContent = actual.modelo;
+        // "Producción (por su catálogo)" o "Suministro (por su catálogo)" (029).
+        tipo.textContent = enlace.dataset.tipo || '';
         precio.textContent = actual.precio;
         etiquetaPrecio.textContent = etiqueta;
         precioDistribuidor.textContent = actual.precioDistribuidor;

@@ -4,7 +4,7 @@
             <td>
                 {{-- Abre la ficha (ficha-articulo.js); sin JavaScript lleva a la edición. Nunca lleva costo ni utilidad. --}}
                 <a href="{{ route('articulos.edit', $articulo) }}" class="celda-truncada enlace-ficha" title="{{ $articulo->nombre }}" data-ficha
-                    data-nombre="{{ $articulo->nombre }}" data-modelo="{{ $articulo->modelo }}" data-precio="${{ number_format($articulo->precio_unitario_con_iva, 2) }}" data-precio-distribuidor="${{ number_format($articulo->precio_distribuidor_con_iva, 2) }}"
+                    data-nombre="{{ $articulo->nombre }}" data-modelo="{{ $articulo->modelo }}" data-precio="${{ number_format($articulo->precio_unitario_con_iva, 2) }}" data-precio-distribuidor="${{ number_format($articulo->precio_distribuidor_con_iva, 2) }}" data-tipo="{{ $articulo->requiereProduccion() ? 'Producción' : 'Suministro' }} (por su catálogo)"
                     data-etiqueta-precio="{{ $articulo->objeto_imp === App\Enums\ObjetoImpuesto::SiObjeto ? 'Precio con IVA' : 'Precio' }}"
                     data-imagen="{{ $articulo->tiene_imagen ? route('articulos.imagen', [$articulo, 'v' => $articulo->imagen_version]) : '' }}">{{ $articulo->nombre }}</a>
             </td>

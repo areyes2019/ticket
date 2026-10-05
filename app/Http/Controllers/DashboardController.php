@@ -51,7 +51,7 @@ class DashboardController extends Controller
         // cliente y "Falta color" sin una consulta por fila.
         $ordenesTrabajo = $user->ordenesTrabajo()
             ->where('estado', '!=', EstadoOrdenTrabajo::Entregado->value)
-            ->with(['pedido.lineas', 'lineas'])
+            ->with(['pedido.lineas.articulo.catalogo', 'lineas'])
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->limit(self::RECIENTES)

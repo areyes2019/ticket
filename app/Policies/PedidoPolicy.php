@@ -28,6 +28,7 @@ class PedidoPolicy
 
         return match (true) {
             $pedido->esEditable() => Response::allow(),
+            $pedido->cobraEnCotizacion() => Response::deny("Los artículos se corrigen en la cotización {$pedido->cotizacion->folio_formateado}."),
             $pedido->estado === EstadoPedido::Pagado => Response::deny('Un pedido pagado ya no se edita: el ticket ya salió con esas líneas.'),
             default => Response::deny('Un pedido entregado ya no se edita.'),
         };
@@ -42,6 +43,7 @@ class PedidoPolicy
         }
 
         return match (true) {
+            $pedido->cobraEnCotizacion() && $pedido->tienePagos() => Response::deny("La cotización {$pedido->cotizacion->folio_formateado} tiene pagos registrados: elimínalos antes de borrar la venta."),
             $pedido->tienePagos() => Response::deny('El pedido tiene pagos registrados: elimínalos antes de borrarlo.'),
             ! $pedido->puedeEliminarse() => Response::deny('Un pedido '.mb_strtolower($pedido->estado->etiqueta()).' no se puede eliminar.'),
             default => Response::allow(),

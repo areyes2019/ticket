@@ -44,5 +44,9 @@
         </x-alerta>
     @endif
 
+    @if ($pedido->lineasDeTrabajo()->isEmpty())
+        <x-alerta tipo="advertencia" data-orden-sin-produccion>Esta orden ya no tiene artículos de producción.</x-alerta>
+    @endif
+
     @include('ordenes-trabajo._detalle')
 </div>

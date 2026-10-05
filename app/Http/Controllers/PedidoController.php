@@ -111,7 +111,7 @@ class PedidoController extends Controller
     {
         Gate::authorize('view', $pedido);
 
-        $pedido->load(['lineas', 'pagos.cuenta', 'facturaVigente', 'cotizacion.facturaVigente', 'cliente', 'ordenTrabajo']);
+        $pedido->load(['lineas', 'pagos.cuenta', 'facturaVigente', 'cotizacion.facturaVigente', 'cotizacion.pagos.cuenta', 'cliente', 'ordenTrabajo']);
 
         $motivoAutofactura = $pedido->motivoAutofacturaNoDisponible();
 
@@ -311,7 +311,8 @@ class PedidoController extends Controller
     private function pedidos(ListadoPedidosRequest $request): LengthAwarePaginator
     {
         return $request->user()->pedidos()
-            ->with(['cotizacion:id,folio', 'ordenTrabajo:id,pedido_id'])
+            // Las que cobran en la cotización (029) suman los pagos de ahí, sin una consulta por fila.
+            ->with(['cotizacion' => fn ($cotizaciones) => $cotizaciones->select('id', 'folio')->withSum('pagos', 'monto')->withCount('pagos'), 'ordenTrabajo:id,pedido_id'])
             ->withSum('pagos', 'monto')
             ->filtrar($request->filtros())
             ->orderByDesc('created_at')

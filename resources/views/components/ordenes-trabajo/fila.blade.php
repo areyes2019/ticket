@@ -12,7 +12,7 @@
         $fecha->isSameDay($hoy->subDay()) => 'Ayer',
         default => rtrim($fecha->translatedFormat('j M'), '.'),
     };
-    $articulos = $pedido->lineas->count();
+    $articulos = $pedido->lineasDeTrabajo()->count();
 @endphp
 
 <li @class(['bandeja-fila', 'bandeja-fila-activa' => $activa]) data-ot="{{ $orden->id }}">

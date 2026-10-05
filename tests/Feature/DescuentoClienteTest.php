@@ -401,16 +401,18 @@ describe('cotización → factura', function () {
     });
 });
 
-describe('cotización aceptada → venta → autofactura', function () {
+describe('cotización pagada → venta → autofactura', function () {
     beforeEach(function () {
         Mail::fake();
+        // Artículo de producción: el pago de la cotización crea la venta (029).
+        $this->articulo->catalogo->update(['requiere_produccion' => true]);
         $this->cotizacion = cotizacionEnviadaConDescuento($this->user, $this->cliente, $this->articulo->id);
-        $this->actingAs($this->user)->post("/cotizaciones/{$this->cotizacion->id}/aceptar", ['cliente_nombre' => 'Ana López', 'cliente_telefono' => '449 765 4321', 'cliente_correo' => 'ana@example.com'])
-            ->assertSessionHasNoErrors();
-        $this->venta = Pedido::sole();
         $cuenta = Cuenta::factory()->for($this->user)->create();
-        $this->actingAs($this->user)->post("/pedidos/{$this->venta->id}/pagos", ['cuenta_id' => $cuenta->id, 'fecha_pago' => today('America/Mexico_City')->toDateString(), 'monto' => $this->venta->total]);
-        $this->venta->refresh();
+        $this->actingAs($this->user)->post("/cotizaciones/{$this->cotizacion->id}/pagos", [
+            'tipo' => 'pago_total', 'cuenta_id' => $cuenta->id, 'fecha_pago' => today('America/Mexico_City')->toDateString(),
+            'cliente_nombre' => 'Ana López', 'cliente_telefono' => '449 765 4321', 'cliente_correo' => 'ana@example.com',
+        ])->assertSessionHasNoErrors();
+        $this->venta = Pedido::sole();
         auth()->logout();
     });
 

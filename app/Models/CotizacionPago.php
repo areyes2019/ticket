@@ -11,6 +11,9 @@ use Illuminate\Database\Eloquent\Relations\MorphOne;
 /**
  * Registro interno de un pago: no es CFDI ni pasa por ningún PAC. Cada pago
  * entra a una cuenta de Tesorería como un ingreso automático.
+ *
+ * registrado_al_entregar (029) no es asignable: lo pone solo el botón
+ * "Entregado" de una venta que cobra en la cotización.
  */
 #[Fillable([
     'tipo',
@@ -72,6 +75,7 @@ class CotizacionPago extends Model
             'tipo' => TipoPago::class,
             'fecha_pago' => 'date',
             'monto' => 'decimal:2',
+            'registrado_al_entregar' => 'boolean',
         ];
     }
 }

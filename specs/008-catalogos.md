@@ -31,6 +31,10 @@ un proveedor tiene varios catálogos y cada artículo pertenece a un catálogo.
 **No** incluye descuentos distintos por artículo dentro de un catálogo ni la aplicación del
 descuento en facturación (que no existe todavía).
 
+> **Desde [029](029-pago-cotizacion-pedido-orden-trabajo.md)** (implementada el 2026-10-04): el catálogo gana la casilla **"Requiere
+> producción"** (`catalogos.requiere_produccion`, apagada por omisión), con la insignia "Producción"
+> en el listado. Todos sus artículos la heredan sin excepción y no dispara recálculo de precios.
+
 ## Backend (Laravel)
 
 ### Modelo y base de datos

@@ -48,12 +48,17 @@ class Autofacturador
     public function facturar(Pedido $pedido, array $datos): ResultadoAutofactura
     {
         $preparada = DB::transaction(function () use ($pedido, $datos): Factura|string {
+            // Una sola factura entre la cotización aceptada y su venta (021):
+            // la fila de la cotización es la que comparten las dos vías. Se
+            // bloquea antes que la venta, el mismo orden que el pago y la
+            // edición de la cotización (029).
+            $cotizacion = $pedido->esDeCotizacion()
+                ? Cotizacion::whereKey($pedido->cotizacion_id)->lockForUpdate()->first()
+                : null;
             $bloqueado = Pedido::whereKey($pedido->id)->lockForUpdate()->firstOrFail();
 
-            // Una sola factura entre la cotización aceptada y su venta (021):
-            // la fila de la cotización es la que comparten las dos vías.
             if ($bloqueado->esDeCotizacion()) {
-                $bloqueado->setRelation('cotizacion', Cotizacion::whereKey($bloqueado->cotizacion_id)->lockForUpdate()->first());
+                $bloqueado->setRelation('cotizacion', $cotizacion);
             }
 
             $motivo = $bloqueado->motivoAutofacturaNoDisponible();
@@ -137,7 +142,7 @@ class Autofacturador
      * Copia del pedido con los mismos importes (no se recalcula: la factura
      * dice exactamente lo que se cobró). PUE siempre, porque el enlace solo
      * existe con el pedido pagado; la forma de pago sale de la cuenta del
-     * último pago. pedido_id se escribe antes de timbrar, para que la factura
+     * último pago (de la cotización, si cobra ahí). pedido_id se escribe antes de timbrar, para que la factura
      * no descuente existencias que el pedido ya descontó.
      *
      * La venta de una cotización (021) es la excepción (023): el descuento de
@@ -146,7 +151,9 @@ class Autofacturador
      */
     private function crearFactura(Pedido $pedido, Cliente $cliente, string $usoCfdi): Factura
     {
-        $ultimoPago = $pedido->pagos()->with('cuenta')->reorder()->orderByDesc('fecha_pago')->orderByDesc('id')->firstOrFail();
+        // La que cobra en la cotización (029) tiene ahí sus pagos.
+        $pagos = $pedido->cobraEnCotizacion() ? $pedido->cotizacion->pagos() : $pedido->pagos();
+        $ultimoPago = $pagos->with('cuenta')->reorder()->orderByDesc('fecha_pago')->orderByDesc('id')->firstOrFail();
 
         $factura = $pedido->user->facturas()->make([
             'cliente_id' => $cliente->id,

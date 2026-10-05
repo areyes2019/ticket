@@ -18,8 +18,12 @@ use Illuminate\Support\Facades\DB;
  * Agrupa artículos de un proveedor con un mismo descuento y las utilidades
  * (directo y distribuidor) que heredan los que no tienen una propia. El proveedor es fijo desde la creación
  * (CatalogoRequest no lo acepta en la edición).
+ *
+ * requiere_produccion (029) la heredan todos sus artículos, sin excepción:
+ * decide si el primer pago de una cotización crea venta y orden de trabajo.
+ * No mueve precios.
  */
-#[Fillable(['proveedor_id', 'nombre', 'descuento', 'utilidad_porcentaje', 'utilidad_distribuidor_porcentaje'])]
+#[Fillable(['proveedor_id', 'nombre', 'descuento', 'utilidad_porcentaje', 'utilidad_distribuidor_porcentaje', 'requiere_produccion'])]
 class Catalogo extends Model
 {
     /** @use HasFactory<CatalogoFactory> */
@@ -34,6 +38,7 @@ class Catalogo extends Model
         'descuento' => 0,
         'utilidad_porcentaje' => 0,
         'utilidad_distribuidor_porcentaje' => 0,
+        'requiere_produccion' => false,
     ];
 
     /**
@@ -219,6 +224,7 @@ class Catalogo extends Model
             'descuento' => 'decimal:2',
             'utilidad_porcentaje' => 'decimal:2',
             'utilidad_distribuidor_porcentaje' => 'decimal:2',
+            'requiere_produccion' => 'boolean',
         ];
     }
 }

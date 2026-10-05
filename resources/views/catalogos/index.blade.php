@@ -28,6 +28,7 @@
                     <th>Descuento</th>
                     <th>Utilidad</th>
                     <th>Utilidad distribuidor</th>
+                    <th>Tipo</th>
                     <th>Artículos</th>
                     <th>Acciones</th>
                 </tr>
@@ -40,6 +41,13 @@
                         <td class="numero">{{ $catalogo->descuento_texto }}</td>
                         <td class="numero">{{ $catalogo->utilidad_texto }}</td>
                         <td class="numero">{{ $catalogo->utilidad_distribuidor_texto }}</td>
+                        <td>
+                            @if ($catalogo->requiere_produccion)
+                                <span class="etiqueta etiqueta-produccion">Producción</span>
+                            @else
+                                —
+                            @endif
+                        </td>
                         <td class="numero">{{ $catalogo->articulos_count }}</td>
                         <td>
                             <div class="acciones">
@@ -55,7 +63,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7">
+                        <td colspan="8">
                             {{ $buscar !== '' ? 'Ningún catálogo coincide con la búsqueda.' : 'Todavía no tienes catálogos registrados.' }}
                         </td>
                     </tr>

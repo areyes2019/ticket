@@ -32,6 +32,10 @@ existen:
   ya lo escribe dentro de la transacción de alta, antes de timbrar.
 - La auditoría como endpoint: aquí es un comando de consola.
 
+> **Desde [029](029-pago-cotizacion-pedido-orden-trabajo.md)** (implementada el 2026-10-04): una cotización cuyo primer pago crea su
+> venta descuenta al nacer la venta, sin bloquear (como en 021). Las cotizaciones sin venta
+> (distribuidor o solo suministros) siguen descontando al marcarse "producto entregado".
+
 ## Historia de usuario
 
 Como usuario registrado, quiero sentir que tengo una **bodega aparte** de mi catálogo general de

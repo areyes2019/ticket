@@ -19,11 +19,16 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 /**
- * La venta (019, 021): de mostrador, o nacida de una cotización aceptada
- * (cotizacion_id y cliente_id, que escribe solo AceptadorCotizacion). En
+ * La venta (019, 021, 029): de mostrador, o nacida de una cotización
+ * (cotizacion_id, cliente_id y cobro_en_cotizacion, que escribe solo
+ * CreadorVentaDeCotizacion). Con cobro_en_cotizacion (029) la venta no tiene
+ * pagos propios: los lee de su cotización, no se edita (se corrige editando
+ * la cotización) y su orden de trabajo lleva solo las líneas de producción.
+ * Las de "Aceptar" (021) cobran en la venta. En
  * pantalla se llama "Venta"; el folio sigue siendo PED-0042. El cliente vive
  * en el propio pedido, sin RFC; cliente_id solo apunta al cliente fiscal de la
  * cotización.
@@ -98,6 +103,32 @@ class Pedido extends Model
     public function esDeCotizacion(): bool
     {
         return $this->cotizacion_id !== null;
+    }
+
+    /**
+     * Sus pagos viven en la cotización (029).
+     */
+    public function cobraEnCotizacion(): bool
+    {
+        return $this->cobro_en_cotizacion && $this->cotizacion_id !== null;
+    }
+
+    /**
+     * Las líneas que lleva su orden de trabajo: en una venta que cobra en la
+     * cotización, solo las de producción (029); en las demás, todas (022).
+     * Para varias ventas, precargar lineas.articulo.catalogo.
+     *
+     * @return Collection<int, PedidoLinea>
+     */
+    public function lineasDeTrabajo(): Collection
+    {
+        if (! $this->cobraEnCotizacion()) {
+            return $this->lineas;
+        }
+
+        $this->loadMissing('lineas.articulo.catalogo');
+
+        return $this->lineas->filter(fn (PedidoLinea $linea) => $linea->esProduccion())->values();
     }
 
     /**
@@ -208,10 +239,15 @@ class Pedido extends Model
     }
 
     /**
-     * Usa pagos_sum_monto cuando el listado lo precargó con withSum().
+     * Usa pagos_sum_monto cuando el listado lo precargó con withSum(). La que
+     * cobra en la cotización suma los pagos de la cotización (mismo total).
      */
     public function totalPagado(): string
     {
+        if ($this->cobraEnCotizacion()) {
+            return $this->cotizacion->totalPagado();
+        }
+
         $suma = array_key_exists('pagos_sum_monto', $this->attributes)
             ? $this->attributes['pagos_sum_monto']
             : ($this->relationLoaded('pagos') ? $this->pagos->sum('monto') : $this->pagos()->sum('monto'));
@@ -236,12 +272,19 @@ class Pedido extends Model
 
     public function tienePagos(): bool
     {
+        if ($this->cobraEnCotizacion()) {
+            return $this->cotizacion->tienePagos();
+        }
+
         return $this->relationLoaded('pagos') ? $this->pagos->isNotEmpty() : $this->pagos()->exists();
     }
 
+    /**
+     * La que cobra en la cotización se corrige editando la cotización (029).
+     */
     public function esEditable(): bool
     {
-        return $this->estado->esEditable();
+        return ! $this->cobraEnCotizacion() && $this->estado->esEditable();
     }
 
     public function puedeEliminarse(): bool
@@ -255,7 +298,7 @@ class Pedido extends Model
      */
     public function puedeRegistrarPago(): bool
     {
-        return $this->tieneSaldo();
+        return ! $this->cobraEnCotizacion() && $this->tieneSaldo();
     }
 
     /**
@@ -263,7 +306,7 @@ class Pedido extends Model
      */
     public function puedeEliminarPago(): bool
     {
-        return $this->facturaTimbrada() === null;
+        return ! $this->cobraEnCotizacion() && $this->facturaTimbrada() === null;
     }
 
     /**
@@ -288,7 +331,18 @@ class Pedido extends Model
         return $this->estaEntregado()
             && $this->entregado_en !== null
             && $this->entregado_en->greaterThan(now()->subMinutes(self::MINUTOS_DESHACER_ENTREGA))
-            && ! $this->pagos()->where('registrado_al_entregar', true)->exists();
+            && ! $this->cobroAlEntregar();
+    }
+
+    /**
+     * La entrega registró el cobro del saldo: en sus pagos o, si cobra en la
+     * cotización, en los de la cotización.
+     */
+    public function cobroAlEntregar(): bool
+    {
+        $pagos = $this->cobraEnCotizacion() ? $this->cotizacion->pagos() : $this->pagos();
+
+        return $pagos->where('registrado_al_entregar', true)->exists();
     }
 
     /**
@@ -496,6 +550,7 @@ class Pedido extends Model
             'base_exento' => 'decimal:2',
             'total' => 'decimal:2',
             'entregado_en' => 'immutable_datetime',
+            'cobro_en_cotizacion' => 'boolean',
         ];
     }
 }

@@ -13,16 +13,19 @@ use App\Models\Articulo;
 use App\Models\Cliente;
 use App\Models\Cotizacion;
 use App\Models\CotizacionLinea;
+use App\Models\Pedido;
 use App\Models\User;
 use App\Services\Cotizaciones\GeneradorPdfCotizacion;
 use App\Services\Documentos\CalculadoraTotalesDocumento;
 use App\Services\Inventario\RegistradorInventario;
+use App\Services\Ventas\CreadorVentaDeCotizacion;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class CotizacionController extends Controller
@@ -107,7 +110,7 @@ class CotizacionController extends Controller
     {
         Gate::authorize('view', $cotizacion);
 
-        $cotizacion->load(['cliente', 'lineas.articulo', 'pagos.cuenta', 'facturaVigente', 'duplicadaDe', 'venta.facturaVigente']);
+        $cotizacion->load(['cliente', 'lineas.articulo', 'pagos.cuenta', 'facturaVigente', 'duplicadaDe', 'venta.facturaVigente', 'venta.ordenTrabajo']);
 
         return view('cotizaciones.show', [
             ...self::datosAcciones($cotizacion),
@@ -127,12 +130,30 @@ class CotizacionController extends Controller
      * Editar una enviada la regresa a borrador: hay que reenviarla. El
      * descuento de cliente congelado solo se vuelve a copiar si cambió el
      * cliente.
+     *
+     * Una aceptada cuya venta cobra aquí (029) se queda aceptada y le copia
+     * los cambios a su venta, con las dos filas bloqueadas (cotización y
+     * después venta) y la regla revisada otra vez: la venta pudo entregarse
+     * o facturarse mientras se editaba.
      */
-    public function update(CotizacionRequest $request, Cotizacion $cotizacion): RedirectResponse
+    public function update(CotizacionRequest $request, Cotizacion $cotizacion, CreadorVentaDeCotizacion $ventas): RedirectResponse
     {
         $estabaEnviada = $cotizacion->estado === EstadoCotizacion::Enviada;
 
-        DB::transaction(function () use ($request, $cotizacion) {
+        $venta = DB::transaction(function () use ($request, $cotizacion, $ventas) {
+            $venta = null;
+
+            if ($cotizacion->ventaQueCobraAqui() !== null) {
+                Cotizacion::whereKey($cotizacion->id)->lockForUpdate()->firstOrFail();
+                $venta = Pedido::whereKey($cotizacion->venta->id)->lockForUpdate()->firstOrFail();
+                $cotizacion->setRelation('venta', $venta);
+                $cotizacion->unsetRelation('facturaVigente');
+
+                if (! $cotizacion->esEditable()) {
+                    throw ValidationException::withMessages(['lineas' => "La venta {$venta->folio_formateado} ya se entregó o se facturó: la cotización queda solo para consulta."]);
+                }
+            }
+
             $cotizacion->fill($request->datosCotizacion());
 
             if ($cotizacion->isDirty('cliente_id')) {
@@ -140,17 +161,29 @@ class CotizacionController extends Controller
             }
 
             $cotizacion->aplicarTotales($request->totales());
-            $cotizacion->estado = EstadoCotizacion::Borrador;
+
+            if ($venta === null) {
+                $cotizacion->estado = EstadoCotizacion::Borrador;
+            }
+
             // Aunque nada haya cambiado, guardar cuenta como movimiento (caducidad).
             $cotizacion->updateTimestamps();
             $cotizacion->save();
 
             $this->guardarLineas($cotizacion, $request->lineas(), $request->totales());
+
+            if ($venta !== null) {
+                $ventas->sincronizar($cotizacion, $venta);
+            }
+
+            return $venta;
         });
 
         $mensaje = "Cotización {$cotizacion->folio_formateado} actualizada.";
 
-        if ($estabaEnviada) {
+        if ($venta !== null) {
+            $mensaje .= " Los cambios se copiaron a la venta {$venta->folio_formateado}.";
+        } elseif ($estabaEnviada) {
             $mensaje .= ' Volvió a borrador: reenvíala para que el cliente vea los cambios.';
         }
 

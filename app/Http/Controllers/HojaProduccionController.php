@@ -17,7 +17,7 @@ class HojaProduccionController extends Controller
     {
         $ordenes = $request->user()->ordenesTrabajo()
             ->where('estado', EstadoOrdenTrabajo::EnProceso->value)
-            ->with(['pedido.lineas', 'lineas'])
+            ->with(['pedido.lineas.articulo.catalogo', 'lineas'])
             ->orderBy(Pedido::select('folio')->whereColumn('pedidos.id', 'ordenes_trabajo.pedido_id'))
             ->get();
 

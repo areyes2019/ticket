@@ -17,6 +17,9 @@ use Illuminate\Support\Str;
  * se leen de la venta; aquí solo vive lo propio: el color de tinta de cada
  * línea, la imagen del diseño y el estado.
  *
+ * Sus artículos son pedido->lineasDeTrabajo(): en una venta que cobra en la
+ * cotización, solo los de producción (029).
+ *
  * Nada es asignable: pedido_id y estado los escribe el controlador y
  * avanzar(); imagen_ruta, solo GuardadorImagenWebp.
  */
@@ -80,7 +83,8 @@ class OrdenTrabajo extends Model
     }
 
     /**
-     * Las líneas de la venta que todavía no tienen color: las que se
+     * Las líneas de trabajo de la venta que todavía no tienen color: las de
+     * una orden que nació sola con el primer pago (029) y las que se
      * agregaron al editar la venta después de crear la orden.
      *
      * @return Collection<int, PedidoLinea>
@@ -89,7 +93,7 @@ class OrdenTrabajo extends Model
     {
         $conColor = $this->lineas->pluck('pedido_linea_id')->all();
 
-        return $this->pedido->lineas->reject(fn (PedidoLinea $linea) => in_array($linea->id, $conColor, true))->values();
+        return $this->pedido->lineasDeTrabajo()->reject(fn (PedidoLinea $linea) => in_array($linea->id, $conColor, true))->values();
     }
 
     /**

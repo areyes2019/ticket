@@ -12,7 +12,8 @@
     $telefono = preg_replace('/\D/', '', (string) $cotizacion->cliente->telefono);
     $facturaVigente = $cotizacion->facturaVigente;
     $motivoNoFacturable = $cotizacion->motivoNoFacturable();
-    $puedeAceptarse = $cotizacion->puedeAceptarse();
+    $venta = $cotizacion->venta;
+    $ventaEntregada = (bool) $venta?->estaEntregado();
 @endphp
 
 @section('content')
@@ -43,11 +44,6 @@
         @endif
     @endforeach
 
-    {{-- Si ya no se puede aceptar (otra pestaña la aceptó), la ventana no se pinta: el motivo va aquí. --}}
-    @if ($errors->aceptar->any() && ! $puedeAceptarse)
-        <x-alerta tipo="error">{{ $errors->aceptar->first() }}</x-alerta>
-    @endif
-
     <x-alerta tipo="error" hidden data-compartir-error></x-alerta>
 
     @if ($cotizacion->duplicadaDe)
@@ -68,19 +64,26 @@
         </x-alerta>
     @endif
 
-    @if ($cotizacion->estaAceptada() && $cotizacion->venta)
-        <p class="ayuda">
-            Aceptada el {{ $cotizacion->aceptada_en?->setTimezone($zona)->format('d/m/Y') }}. El cobro, el ticket y la entrega siguen en la venta
-            <a href="{{ route('pedidos.show', $cotizacion->venta) }}">{{ $cotizacion->venta->folio_formateado }}</a>.
-        </p>
+    @if ($cotizacion->estaAceptada() && $venta)
+        @if ($venta->cobro_en_cotizacion)
+            <p class="ayuda" data-venta-cobra-aqui>
+                Aceptada el {{ $cotizacion->aceptada_en?->setTimezone($zona)->format('d/m/Y') }} con su primer pago.
+                Venta: <a href="{{ route('pedidos.show', $venta) }}">{{ $venta->folio_formateado }}</a>.
+                @if ($venta->ordenTrabajo)
+                    Orden de trabajo: <a href="{{ route('pedidos.orden-trabajo.show', $venta) }}">{{ $venta->ordenTrabajo->estado->etiqueta() }}</a>.
+                @endif
+                Los pagos se registran aquí; el ticket y la entrega, en la venta.
+            </p>
+        @else
+            <p class="ayuda">
+                Aceptada el {{ $cotizacion->aceptada_en?->setTimezone($zona)->format('d/m/Y') }}. El cobro, el ticket y la entrega siguen en la venta
+                <a href="{{ route('pedidos.show', $venta) }}">{{ $venta->folio_formateado }}</a>.
+            </p>
+        @endif
     @endif
 
     <div class="detalle-documento">
         <div class="detalle-acciones">
-            @if ($puedeAceptarse)
-                <x-boton href="#dialogo-aceptar" icono="check2-circle" data-abrir-dialogo>Aceptar</x-boton>
-            @endif
-
             @if ($motivoNoFacturable === null)
                 <x-boton :href="route('facturas.create', ['cotizacion' => $cotizacion->id])" icono="receipt">Facturar</x-boton>
             @endif
@@ -154,7 +157,7 @@
                                     <td>{{ $pago->cuenta->nombre }}</td>
                                     <td class="numero">{{ $pesos($pago->monto) }}</td>
                                     <td>
-                                        @if ($pago->is($ultimoPago) && $cotizacion->estado !== App\Enums\EstadoCotizacion::ProductoEntregado)
+                                        @if ($pago->is($ultimoPago) && $cotizacion->estado !== App\Enums\EstadoCotizacion::ProductoEntregado && ! $ventaEntregada)
                                             <form method="POST" action="{{ route('cotizaciones.pagos.destroy', [$cotizacion, $pago]) }}">
                                                 @csrf
                                                 @method('DELETE')
@@ -199,10 +202,6 @@
     ])
 
     @include('cotizaciones._dialogos-pago')
-
-    @if ($puedeAceptarse)
-        @include('cotizaciones._dialogo-aceptar')
-    @endif
 @endsection
 
 @push('scripts')

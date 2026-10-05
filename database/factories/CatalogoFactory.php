@@ -46,4 +46,12 @@ class CatalogoFactory extends Factory
             'descuento' => $descuento,
         ]);
     }
+
+    /**
+     * Catálogo de producción (029): sus artículos generan orden de trabajo.
+     */
+    public function deProduccion(): static
+    {
+        return $this->state(fn () => ['requiere_produccion' => true]);
+    }
 }

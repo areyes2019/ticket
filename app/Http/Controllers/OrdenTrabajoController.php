@@ -147,7 +147,7 @@ class OrdenTrabajoController extends Controller
 
         $resultado = DB::transaction(function () use ($pedido) {
             $orden = OrdenTrabajo::whereKey($pedido->ordenTrabajo->id)->lockForUpdate()->firstOrFail();
-            $orden->load(['pedido.lineas', 'lineas']);
+            $orden->load(['pedido.lineas.articulo.catalogo', 'lineas']);
             $motivo = $orden->motivoNoAvanza();
 
             if ($motivo !== null) {

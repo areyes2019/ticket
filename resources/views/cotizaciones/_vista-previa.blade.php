@@ -1,12 +1,11 @@
 {{-- Visor de la bandeja: acciones, la hoja en HTML y sus ventanas (envío, pagos,
-     duplicar, timbrar y aceptar). Se pinta con la página o llega por AJAX (cotizaciones.vista-previa)
+     duplicar y timbrar). El primer pago crea la venta cuando toca (029). Se pinta con la página o llega por AJAX (cotizaciones.vista-previa)
      al elegir una fila. --}}
 @php
     $telefono = preg_replace('/\D/', '', (string) $cotizacion->cliente->telefono);
     $puedePagar = $cotizacion->puedeRegistrarPago();
     $tieneAnticipo = $cotizacion->tieneAnticipo();
     $facturable = $cotizacion->motivoNoFacturable() === null;
-    $puedeAceptarse = $cotizacion->puedeAceptarse();
 @endphp
 
 <div class="bandeja-acciones">
@@ -21,10 +20,6 @@
         data-telefono="{{ $telefono }}"
         data-precargar="al-apuntar"
         data-texto="Cotización {{ $cotizacion->folio_formateado }} de {{ config('app.name') }} por ${{ number_format((float) $cotizacion->total, 2) }}" />
-    @if ($puedeAceptarse)
-        {{-- Crea la venta y lleva a ella (spec 021). --}}
-        <x-boton href="#dialogo-aceptar" icono="check2-circle" descripcion="Aceptar y crear venta" title="Aceptar y crear venta" data-abrir-dialogo />
-    @endif
     @if ($facturable)
         {{-- Timbra directo tras confirmar (spec 020); el detalle sigue llevando al formulario. --}}
         <x-boton href="#dialogo-timbrar" variante="secundario" icono="receipt" descripcion="Timbrar factura" title="Timbrar factura" data-abrir-dialogo />
@@ -86,8 +81,4 @@
 
 @if ($facturable)
     @include('cotizaciones._dialogo-timbrar')
-@endif
-
-@if ($puedeAceptarse)
-    @include('cotizaciones._dialogo-aceptar')
 @endif

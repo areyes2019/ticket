@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\DestinoCobro;
 use App\Enums\EstadoCotizacion;
 use App\Enums\EstadoFactura;
 use App\Enums\TipoDescuento;
@@ -32,8 +33,11 @@ use Illuminate\Support\Facades\Storage;
  * "Facturada" no es un estado: es tener una factura vigente (no cancelada)
  * vinculada por facturas.cotizacion_id.
  *
- * "Aceptada" sí es un estado (021): aceptarla crea su venta (un Pedido con
- * pedidos.cotizacion_id), donde siguen el cobro, la entrega y la autofactura.
+ * "Aceptada" sí es un estado: la cotización tiene venta (un Pedido con
+ * pedidos.cotizacion_id). Desde 029 la venta nace con el primer pago, solo
+ * para un cliente que no es distribuidor y con algo de producción
+ * (destinoAlCobrar()); sus pagos siguen en la cotización y la venta se corrige
+ * editando la cotización. Las ventas de "Aceptar" (021) cobran en la venta.
  * aceptada_en lo escriben solo marcarAceptada() y revertirAceptacion().
  *
  * Los totales los escribe solo aplicarTotales(), con la calculadora.
@@ -166,12 +170,6 @@ class Cotizacion extends Model
     public const ESTADOS_FACTURABLES = [EstadoCotizacion::Enviada, EstadoCotizacion::Aceptada, EstadoCotizacion::Pagada, EstadoCotizacion::ProductoEntregado];
 
     /**
-     * Estados desde los que se acepta (021): el cliente puede aceptar en
-     * persona una que nunca se le envió.
-     */
-    public const ESTADOS_ACEPTABLES = [EstadoCotizacion::Borrador, EstadoCotizacion::Enviada];
-
-    /**
      * Columnas que se pueden filtrar desde el listado (además de las fechas).
      */
     public const FILTROS = ['cliente', 'rfc', 'folio', 'estado'];
@@ -236,7 +234,7 @@ class Cotizacion extends Model
     }
 
     /**
-     * La venta que nació al aceptarla (021).
+     * La venta que nació con su primer pago (029) o al aceptarla (021).
      *
      * @return HasOne<Pedido, $this>
      */
@@ -301,11 +299,67 @@ class Cotizacion extends Model
     }
 
     /**
-     * Una cotización facturada ya no cambia: la factura salió de ella.
+     * Una cotización facturada ya no cambia: la factura salió de ella. Una
+     * aceptada se edita mientras su venta cobre aquí (029), no esté entregada
+     * ni facturada: los cambios se copian a la venta.
      */
     public function esEditable(): bool
     {
-        return $this->estado->esEditable() && ! $this->estaFacturada();
+        if ($this->estaFacturada()) {
+            return false;
+        }
+
+        if ($this->estado->esEditable()) {
+            return true;
+        }
+
+        $venta = $this->ventaQueCobraAqui();
+
+        return $venta !== null && ! $venta->estaEntregado() && $venta->facturaVigente === null;
+    }
+
+    /**
+     * Su venta, si nació con el primer pago (029) y lee de aquí sus pagos.
+     */
+    public function ventaQueCobraAqui(): ?Pedido
+    {
+        if (! $this->estaAceptada()) {
+            return null;
+        }
+
+        $venta = $this->venta;
+
+        return $venta?->cobro_en_cotizacion ? $venta : null;
+    }
+
+    /**
+     * Qué nace con el pago que se va a registrar; null si no es el primero
+     * (ya tiene pagos o venta). Solo suministros o un distribuidor no crean
+     * nada; lo demás crea la venta y su orden de trabajo.
+     */
+    public function destinoAlCobrar(): ?DestinoCobro
+    {
+        if ($this->tienePagos() || $this->venta !== null) {
+            return null;
+        }
+
+        return match (true) {
+            $this->lineasDeProduccion()->isEmpty() => DestinoCobro::SinVentaSuministros,
+            (bool) $this->cliente?->es_distribuidor => DestinoCobro::SinVentaDistribuidor,
+            default => DestinoCobro::VentaYOrden,
+        };
+    }
+
+    /**
+     * Las líneas libres y las de artículos de un catálogo de producción.
+     *
+     * @return Collection<int, CotizacionLinea>
+     */
+    public function lineasDeProduccion(): Collection
+    {
+        $this->loadMissing('lineas.articulo.catalogo');
+
+        return $this->lineas->filter(fn (CotizacionLinea $linea) => $linea->esProduccion())->values();
     }
 
     /**
@@ -408,15 +462,31 @@ class Cotizacion extends Model
             ->all();
     }
 
+    /**
+     * Solo en borrador o enviada (una aceptada con venta tampoco se borra).
+     */
     public function puedeEliminarse(): bool
     {
-        return $this->esEditable() && ! $this->tienePagos();
+        return $this->estado->esEditable() && ! $this->estaFacturada() && ! $this->tienePagos();
     }
 
+    /**
+     * Con saldo: en borrador o enviada (el primer pago también en borrador,
+     * 029), o en aceptada mientras su venta cobre aquí y no se haya entregado.
+     */
     public function puedeRegistrarPago(): bool
     {
-        return $this->estado === EstadoCotizacion::Enviada
-            && CalculadoraTotalesDocumento::centavos($this->saldoPendiente()) > 0;
+        if (CalculadoraTotalesDocumento::centavos($this->saldoPendiente()) <= 0) {
+            return false;
+        }
+
+        if ($this->estado->esEditable()) {
+            return true;
+        }
+
+        $venta = $this->ventaQueCobraAqui();
+
+        return $venta !== null && ! $venta->estaEntregado();
     }
 
     /**
@@ -437,9 +507,14 @@ class Cotizacion extends Model
     public function motivoRechazoPago(TipoPago $tipo, float|string|null $monto): ?string
     {
         if (! $this->puedeRegistrarPago()) {
-            return $this->estado === EstadoCotizacion::Enviada
-                ? 'La cotización ya está pagada por completo.'
-                : 'Solo se registran pagos en una cotización enviada.';
+            $venta = $this->estaAceptada() ? $this->venta : null;
+
+            return match (true) {
+                CalculadoraTotalesDocumento::centavos($this->saldoPendiente()) <= 0 => 'La cotización ya está pagada por completo.',
+                $venta !== null && $venta->estaEntregado() => "La venta {$venta->folio_formateado} ya se entregó.",
+                $venta !== null => "Los pagos se registran en su venta {$venta->folio_formateado}.",
+                default => 'Solo se registran pagos en una cotización en borrador o enviada.',
+            };
         }
 
         return match (true) {
@@ -461,49 +536,14 @@ class Cotizacion extends Model
         return $this->estado === EstadoCotizacion::Aceptada;
     }
 
-    public function puedeAceptarse(): bool
-    {
-        return $this->motivoNoAceptable() === null;
-    }
-
     /**
-     * Por qué no se puede aceptar; null si se puede. Las que ya tienen pagos
-     * siguen el flujo anterior (011): se cobran y se entregan desde aquí.
-     */
-    public function motivoNoAceptable(): ?string
-    {
-        if ($this->estaAceptada()) {
-            $this->loadMissing('venta');
-
-            return $this->venta === null
-                ? 'Esta cotización ya se aceptó.'
-                : "Ya se aceptó: su venta es {$this->venta->folio_formateado}.";
-        }
-
-        if ($this->tienePagos()) {
-            return 'Esta cotización ya tiene pagos: se cobra y se entrega desde aquí.';
-        }
-
-        if (! in_array($this->estado, self::ESTADOS_ACEPTABLES, true)) {
-            return 'Solo se acepta una cotización en borrador o enviada.';
-        }
-
-        if ($this->estaFacturada()) {
-            $this->loadMissing('facturaVigente');
-
-            return "Ya tiene la factura {$this->facturaVigente->folioVisible()}.";
-        }
-
-        return null;
-    }
-
-    /**
-     * Aviso de la ventana "Aceptar": líneas de catálogo sin existencia
-     * suficiente. No bloquea; la venta deja el faltante (021).
+     * Aviso de la ventana del primer pago cuando nace la venta: líneas de
+     * catálogo sin existencia suficiente. No bloquea; la venta deja el
+     * faltante (021, 029).
      *
      * @return list<string>
      */
-    public function faltantesAlAceptar(): array
+    public function faltantesAlCrearVenta(): array
     {
         $this->loadMissing('lineas');
 

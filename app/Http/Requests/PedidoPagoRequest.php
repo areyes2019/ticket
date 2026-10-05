@@ -75,6 +75,10 @@ class PedidoPagoRequest extends FormRequest
      */
     public static function motivoRechazo(Pedido $pedido, float|string|null $monto): ?string
     {
+        if ($pedido->cobraEnCotizacion()) {
+            return "Los pagos se registran en la cotización {$pedido->cotizacion->folio_formateado}.";
+        }
+
         if (! $pedido->puedeRegistrarPago()) {
             return 'El pedido ya está pagado por completo.';
         }

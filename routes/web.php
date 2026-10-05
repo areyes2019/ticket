@@ -8,7 +8,6 @@ use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\ComplementoPagoController;
 use App\Http\Controllers\ConfiguracionController;
 use App\Http\Controllers\ConstanciaController;
-use App\Http\Controllers\CotizacionAceptacionController;
 use App\Http\Controllers\CotizacionController;
 use App\Http\Controllers\CotizacionPagoController;
 use App\Http\Controllers\CuentaController;
@@ -100,7 +99,6 @@ Route::middleware(['auth', AsegurarUsuarioActivo::class])->group(function () {
     Route::get('cotizaciones/{cotizacion}/pdf', [CotizacionController::class, 'pdf'])->name('cotizaciones.pdf');
     Route::post('cotizaciones/{cotizacion}/entregar', [CotizacionController::class, 'entregar'])->name('cotizaciones.entregar');
     Route::post('cotizaciones/{cotizacion}/duplicar', [CotizacionController::class, 'duplicar'])->name('cotizaciones.duplicar');
-    Route::post('cotizaciones/{cotizacion}/aceptar', [CotizacionAceptacionController::class, 'store'])->name('cotizaciones.aceptar');
     Route::post('cotizaciones/{cotizacion}/pagos', [CotizacionPagoController::class, 'store'])->name('cotizaciones.pagos.store');
     Route::delete('cotizaciones/{cotizacion}/pagos/{pago}', [CotizacionPagoController::class, 'destroy'])
         ->scopeBindings()

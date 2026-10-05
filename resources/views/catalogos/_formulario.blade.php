@@ -36,6 +36,11 @@
             data-aviso-utilidad="utilidad_distribuidor_porcentaje-aviso" data-umbral="{{ App\Models\Articulo::UMBRAL_UTILIDAD_ALTA }}" />
         @include('articulos._aviso-utilidad', ['campo' => 'utilidad_distribuidor_porcentaje', 'valor' => $catalogo->utilidad_distribuidor_porcentaje ?? 0])
 
+        {{-- Con lo capturado de vuelta (error o confirmación), una casilla apagada no viaja: manda lo capturado. --}}
+        <x-campo nombre="requiere_produccion" etiqueta="Requiere producción" tipo="checkbox"
+            :valor="session()->hasOldInput() ? false : ($catalogo->requiere_produccion ?? false)" aria-describedby="requiere_produccion-ayuda" />
+        <p id="requiere_produccion-ayuda" class="ayuda">Sus artículos generan orden de trabajo cuando un cliente normal paga una cotización.</p>
+
         @if (session('confirmar_recalculo'))
             {{-- Paso de confirmación: nada se guardó todavía; el formulario conserva lo capturado. --}}
             <x-alerta tipo="advertencia">

@@ -54,6 +54,15 @@ class CotizacionLinea extends Model
     }
 
     /**
+     * Una línea libre es producción; una de artículo, si su catálogo lo es
+     * (029). Para varias líneas, precargar articulo.catalogo.
+     */
+    public function esProduccion(): bool
+    {
+        return $this->articulo_id === null || (bool) $this->articulo?->requiereProduccion();
+    }
+
+    /**
      * La línea como llega a la factura (formulario, timbrado directo): precio
      * con el descuento de línea adentro y sin descuento propio.
      *

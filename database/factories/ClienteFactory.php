@@ -35,4 +35,13 @@ class ClienteFactory extends Factory
             'es_distribuidor' => false,
         ];
     }
+
+    /**
+     * Cliente distribuidor (028): el primer pago de su cotización no crea
+     * venta (029).
+     */
+    public function distribuidor(): static
+    {
+        return $this->state(fn () => ['es_distribuidor' => true]);
+    }
 }

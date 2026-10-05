@@ -24,6 +24,11 @@
 > venta; al marcarlo, la orden **desaparece de la columna del dashboard**. Ver la sección
 > "Corrección 1". Donde esa sección contradiga lo de arriba, manda la corrección.
 
+> **Desde [029](029-pago-cotizacion-pedido-orden-trabajo.md)** (implementada el 2026-10-04): la orden de una venta que nace del primer
+> pago de una cotización **se crea sola**, en `en_dibujo`, sin colores ni imagen, y trabaja solo con
+> las **líneas de producción** (`OrdenTrabajo::lineasDeTrabajo()`). El botón manual se conserva como
+> respaldo, con esas mismas líneas. Editar la cotización conserva los colores. La orden de una venta de mostrador sigue igual: manual y con todas las líneas.
+
 **No modifica:** Cotizaciones (011), Facturación (012), Tesorería (016), Inventario (018) ni la
 aceptación de cotizaciones (021). Las imágenes de artículos (010) solo ceden su conversión a WEBP a
 una clase compartida, sin cambiar de comportamiento.

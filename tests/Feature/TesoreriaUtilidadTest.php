@@ -19,8 +19,9 @@ use Illuminate\Support\Facades\DB;
  */
 function cotizacionConCostos(User $user, array $lineas): Cotizacion
 {
+    // Distribuidor: el pago no crea venta (029) y el ingreso es solo de la cotización.
     $cotizacion = Cotizacion::factory()
-        ->for(Cliente::factory()->for($user))
+        ->for(Cliente::factory()->for($user)->distribuidor())
         ->enEstado(EstadoCotizacion::Enviada)
         ->create(['user_id' => $user->id]);
     $articulo = articuloFacturable($user);

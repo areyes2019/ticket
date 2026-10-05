@@ -32,7 +32,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach ($pedido->lineas as $linea)
+                @foreach ($pedido->lineasDeTrabajo() as $linea)
                     @php
                         $guardado = $orden?->colorDe($linea);
                         $color = old("colores.{$linea->id}.color", $guardado?->color_tinta->value);

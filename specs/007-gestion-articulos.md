@@ -7,6 +7,9 @@ entre navegador y servidor se rehicieron para Laravel + Blade + JavaScript nativ
 la spec remota había heredado de historias posteriores (catálogos, costo/utilidad, goma, filtros
 por columna, imágenes): cada una llegará con su propia spec.
 
+> **Desde [029](029-pago-cotizacion-pedido-orden-trabajo.md)** (implementada el 2026-10-04): la ficha y el formulario del artículo
+> muestran "Producción (por su catálogo)" o "Suministro (por su catálogo)", solo para lectura.
+
 ## Historia de usuario
 
 Como usuario del sistema de facturación, quiero administrar (crear, ver, editar y eliminar) mis

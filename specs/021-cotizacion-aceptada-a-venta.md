@@ -3,6 +3,20 @@
 > **Estado: implementada** el 2026-10-02, con autorización del usuario. Ver "Estado de
 > implementación".
 
+> **Reemplazada en parte por [029](029-pago-cotizacion-pedido-orden-trabajo.md)** (implementada el 2026-10-04). Al implementarse:
+> - **se retira el botón "Aceptar"**, junto con su ruta, su ventana, `CotizacionAceptacionController`,
+>   `AceptarCotizacionRequest` y `AceptadorCotizacion`. Este último pasa a ser
+>   `CreadorVentaDeCotizacion`;
+> - la venta de una cotización nace **con el primer pago** y solo para un cliente que no es
+>   distribuidor y una cotización con algo de producción. Nace con su orden de trabajo;
+> - esa venta **no tiene pagos propios**: los lee de la cotización (`pedidos.cobro_en_cotizacion`),
+>   se corrige editando la cotización (que sigue editable mientras la venta no esté entregada ni
+>   facturada) y cobra el saldo de la entrega en la cotización;
+> - las ventas creadas con "Aceptar" antes de 029 **conservan** las reglas de esta spec.
+>
+> Lo demás (estado `aceptada`, `cotizacion_id`/`cliente_id`, inventario sin bloqueo, una sola
+> factura vigente y borrar la venta para regresar la cotización a Enviada) se queda.
+
 **Modifica:**
 
 - [011-cotizaciones.md](011-cotizaciones.md): nace el estado `aceptada`. Una cotización aceptada ya

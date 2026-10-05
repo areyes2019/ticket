@@ -109,7 +109,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($pedido->lineas as $linea)
+                        @foreach ($pedido->lineasDeTrabajo() as $linea)
                             <tr>
                                 <td>{{ filled($linea->modelo) ? $linea->modelo : '—' }}</td>
                                 <td>{{ $linea->descripcion }}</td>

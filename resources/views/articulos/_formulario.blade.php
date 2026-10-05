@@ -20,6 +20,10 @@
         <x-card>
             <x-campo nombre="catalogo_id" etiqueta="Catálogo" tipo="select" :opciones="$catalogos" :valor="$articulo?->catalogo_id" vacia="Selecciona un catálogo" required
                 ayuda="Proveedor — Catálogo (descuento). El proveedor del artículo es el del catálogo." />
+            @if ($articulo)
+                {{-- Solo lectura: se cambia en el catálogo (029). --}}
+                <p class="ayuda" data-tipo-articulo>{{ $articulo->requiereProduccion() ? 'Producción' : 'Suministro' }} (por su catálogo)</p>
+            @endif
             <x-campo nombre="nombre" etiqueta="Nombre" :valor="$articulo?->nombre" maxlength="255" required />
             <x-campo nombre="modelo" etiqueta="Modelo" :valor="$articulo?->modelo" maxlength="255" required />
             <x-campo nombre="clave_prod_serv" etiqueta="Clave de producto/servicio (SAT)" :valor="$articulo?->clave_prod_serv" maxlength="8" autocomplete="off" required

@@ -58,6 +58,11 @@ registro de supuestos, sujetas a corrección):
 > como **Venta** (el folio sigue siendo `PED-0042`) y también nace de una cotización aceptada (`cotizacion_id`,
 > `cliente_id`). Esa venta no se bloquea por existencia. Tablas, clases y rutas `pedidos` no cambian.
 
+> **Desde [029](029-pago-cotizacion-pedido-orden-trabajo.md)** (implementada el 2026-10-04): la venta de una cotización nace con el
+> primer pago y lleva `cobro_en_cotizacion`. No tiene pagos propios (su saldo es el de la
+> cotización), se corrige editando la cotización, y el cobro del saldo al entregar se registra en la cotización. La venta
+> de mostrador no cambia.
+
 > **Desde [022, corrección 1](022-ordenes-trabajo.md#corrección-1-estado-entregado-y-fin-de-la-entrega-por-escaneo)**
 > (pendiente): se elimina la **entrega por escaneo** (pantalla de tres caminos y QR del ticket y la
 > etiqueta). La venta se entrega con un botón **"Entregado"**, y una venta con orden de trabajo solo

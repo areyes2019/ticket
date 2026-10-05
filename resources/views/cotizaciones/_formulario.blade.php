@@ -15,8 +15,19 @@
     @endisset
 
     <x-card titulo="Cliente">
-        <x-campo nombre="cliente_id" etiqueta="Cliente" tipo="select" :opciones="$clientes" :valor="$cotizacion?->cliente_id" vacia="Selecciona un cliente" required />
+        @if ($cotizacion?->venta)
+            {{-- El tipo de cliente decidió la venta (029): ya no se cambia. El select deshabilitado no viaja; viaja el oculto. --}}
+            <x-campo nombre="cliente_id" etiqueta="Cliente" tipo="select" :opciones="$clientes" :valor="$cotizacion->cliente_id" vacia="Selecciona un cliente" disabled
+                ayuda="El cliente ya no se cambia: la cotización tiene venta." />
+            <input type="hidden" name="cliente_id" value="{{ $cotizacion->cliente_id }}">
+        @else
+            <x-campo nombre="cliente_id" etiqueta="Cliente" tipo="select" :opciones="$clientes" :valor="$cotizacion?->cliente_id" vacia="Selecciona un cliente" required />
+        @endif
     </x-card>
+
+    @if ($cotizacion?->ventaQueCobraAqui())
+        <x-alerta tipo="info" data-aviso-copia-venta>Los cambios se copian a la venta {{ $cotizacion->venta->folio_formateado }}.</x-alerta>
+    @endif
 
     <x-card titulo="Líneas">
         @include('cotizaciones._aviso-descuento-cliente')

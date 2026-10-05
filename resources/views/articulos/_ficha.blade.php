@@ -27,6 +27,7 @@
         <div class="ficha-datos">
             <h2 id="ficha-nombre" data-ficha-nombre></h2>
             <p>Modelo <strong data-ficha-modelo></strong></p>
+            <p class="ayuda" data-ficha-tipo></p>
             <p class="ficha-precio" data-ficha-precio></p>
             <p class="ayuda" data-ficha-etiqueta-precio>Precio con IVA</p>
             <p class="ficha-precio" data-ficha-precio-distribuidor></p>

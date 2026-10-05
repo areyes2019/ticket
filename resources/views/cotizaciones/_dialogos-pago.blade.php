@@ -7,6 +7,8 @@
     $puedePagar = $cotizacion->puedeRegistrarPago();
     $tipoLiquidar = $tieneAnticipo ? App\Enums\TipoPago::Saldo : App\Enums\TipoPago::PagoTotal;
     $errorPago = $errors->pago->any() ? old('tipo') : null;
+    // Lo que nace con el primer pago (029); null en los siguientes.
+    $destino = $puedePagar ? $cotizacion->destinoAlCobrar() : null;
 @endphp
 
 @if ($puedePagar && ! $tieneAnticipo)
@@ -22,8 +24,9 @@
             <x-campo nombre="fecha_pago" id="anticipo-fecha" etiqueta="Fecha de pago" tipo="date" :valor="$hoy" :max="$hoy" required />
             @include('cotizaciones._cuenta-pago', ['id' => 'anticipo-cuenta'])
             <x-campo nombre="monto" id="anticipo-monto" etiqueta="Monto" tipo="number" min="0.01" :max="$cotizacion->saldoPendiente()" step="0.01" inputmode="decimal" required />
+            @include('cotizaciones._primer-pago', ['prefijo' => 'anticipo'])
             <div class="acciones">
-                <x-boton icono="save" :disabled="$cuentas === []">Registrar</x-boton>
+                <x-boton icono="save" :disabled="$cuentas === []" data-enviar-una-vez>Registrar</x-boton>
                 <x-boton href="#" variante="secundario" icono="x-lg" data-cerrar-dialogo>Cancelar</x-boton>
             </div>
         </form>
@@ -42,8 +45,9 @@
             <p>Se registrará el saldo pendiente: <strong data-saldo-pendiente>{{ $pesos($cotizacion->saldoPendiente()) }}</strong></p>
             <x-campo nombre="fecha_pago" id="liquidar-fecha" etiqueta="Fecha de pago" tipo="date" :valor="$hoy" :max="$hoy" required />
             @include('cotizaciones._cuenta-pago', ['id' => 'liquidar-cuenta'])
+            @include('cotizaciones._primer-pago', ['prefijo' => 'liquidar'])
             <div class="acciones">
-                <x-boton icono="save" :disabled="$cuentas === []">Registrar</x-boton>
+                <x-boton icono="save" :disabled="$cuentas === []" data-enviar-una-vez>Registrar</x-boton>
                 <x-boton href="#" variante="secundario" icono="x-lg" data-cerrar-dialogo>Cancelar</x-boton>
             </div>
         </form>

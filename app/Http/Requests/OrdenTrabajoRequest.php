@@ -15,7 +15,8 @@ use Illuminate\Validation\Rule;
 
 /**
  * Alta y edición de la orden de trabajo (022): un color de tinta por cada
- * línea de la venta, con el id de la línea como clave, y la imagen opcional.
+ * línea de trabajo de la venta (todas, o solo las de producción si cobra en
+ * la cotización, 029), con el id de la línea como clave, y la imagen opcional.
  */
 class OrdenTrabajoRequest extends FormRequest
 {
@@ -29,13 +30,16 @@ class OrdenTrabajoRequest extends FormRequest
      */
     public function rules(): array
     {
+        $ids = $this->pedido()->lineasDeTrabajo()->pluck('id');
+
         $reglas = [
-            'colores' => ['required', 'array:'.$this->pedido()->lineas->pluck('id')->join(',')],
+            // Una orden de cotización puede quedarse sin líneas de producción (029).
+            'colores' => $ids->isEmpty() ? ['nullable', 'array', 'max:0'] : ['required', 'array:'.$ids->join(',')],
             'imagen' => ['bail', 'nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:'.GuardadorImagenWebp::TAMANO_MAXIMO_KB, new ImagenLegible],
             'quitar_imagen' => ['boolean'],
         ];
 
-        foreach ($this->pedido()->lineas as $linea) {
+        foreach ($this->pedido()->lineasDeTrabajo() as $linea) {
             $reglas["colores.{$linea->id}.color"] = ['required', Rule::enum(ColorTinta::class)];
             $reglas["colores.{$linea->id}.otro"] = ['nullable', 'string', 'max:40', "required_if:colores.{$linea->id}.color,".ColorTinta::Otro->value];
         }
@@ -55,7 +59,7 @@ class OrdenTrabajoRequest extends FormRequest
             'imagen.max' => 'La imagen pesa más de 10 MB. Vuelve a elegir una más ligera.',
         ];
 
-        foreach ($this->pedido()->lineas as $linea) {
+        foreach ($this->pedido()->lineasDeTrabajo() as $linea) {
             $mensajes["colores.{$linea->id}.color.required"] = "Elige el color de tinta de {$linea->descripcion}.";
             $mensajes["colores.{$linea->id}.color.enum"] = "Elige el color de tinta de {$linea->descripcion}.";
             $mensajes["colores.{$linea->id}.otro.required_if"] = "Escribe el color de tinta de {$linea->descripcion}.";
@@ -81,9 +85,9 @@ class OrdenTrabajoRequest extends FormRequest
      */
     public function colores(): array
     {
-        $colores = $this->validated('colores');
+        $colores = $this->validated('colores') ?? [];
 
-        return $this->pedido()->lineas->map(function (PedidoLinea $linea) use ($colores) {
+        return $this->pedido()->lineasDeTrabajo()->map(function (PedidoLinea $linea) use ($colores) {
             $color = $colores[$linea->id]['color'];
             $otro = trim((string) ($colores[$linea->id]['otro'] ?? ''));
 

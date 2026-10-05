@@ -20,7 +20,7 @@
             </tr>
         </thead>
         <tbody>
-            @foreach ($pedido->lineas as $linea)
+            @foreach ($pedido->lineasDeTrabajo() as $linea)
                 @php($renglon = $orden->colorDe($linea))
                 <tr>
                     <td>{{ filled($linea->modelo) ? $linea->modelo : '—' }}</td>

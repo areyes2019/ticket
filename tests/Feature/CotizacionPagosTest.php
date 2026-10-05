@@ -11,12 +11,15 @@ use App\Models\User;
 use App\Services\Tesoreria\RegistradorMovimientos;
 
 /**
- * Cotización de $1,160.00 (10 × $100 + IVA) del usuario de la prueba.
+ * Cotización de $1,160.00 (10 × $100 + IVA) del usuario de la prueba. El
+ * cliente es distribuidor: el primer pago no crea venta y la cotización sigue
+ * su flujo (011). La venta que nace con el pago se prueba en
+ * PagoCotizacionCreaVentaTest (029).
  */
 function cotizacionParaPagos(User $user, EstadoCotizacion $estado = EstadoCotizacion::Enviada): Cotizacion
 {
     return Cotizacion::factory()
-        ->for(Cliente::factory()->for($user))
+        ->for(Cliente::factory()->for($user)->distribuidor())
         ->conLinea(10)
         ->enEstado($estado)
         ->create(['user_id' => $user->id]);
@@ -99,11 +102,13 @@ it('rechaza pagos que rompen las reglas', function (array $previos, array $pago)
     'pago en una pagada' => [[datosPago('pago_total')], datosPago('anticipo', ['monto' => '1.00'])],
 ]);
 
-it('rechaza pagos en borrador', function () {
+it('admite el primer pago en borrador y la pasa a enviada (029)', function () {
     $borrador = cotizacionParaPagos($this->user, EstadoCotizacion::Borrador);
 
-    $this->actingAs($this->user)->post("/cotizaciones/{$borrador->id}/pagos", datosPago('pago_total', ['cuenta_id' => $this->cuenta->id]))
-        ->assertSessionHasErrorsIn('pago', 'monto');
+    $this->actingAs($this->user)->post("/cotizaciones/{$borrador->id}/pagos", datosPago('anticipo', ['monto' => '100.00', 'cuenta_id' => $this->cuenta->id]))
+        ->assertSessionHasNoErrors();
+
+    expect($borrador->fresh()->estado)->toBe(EstadoCotizacion::Enviada);
 });
 
 it('valida fecha y monto del anticipo', function (array $cambios, string $campo) {

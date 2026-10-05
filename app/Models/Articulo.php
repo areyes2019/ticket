@@ -198,6 +198,14 @@ class Articulo extends Model
     }
 
     /**
+     * Lo hereda de su catálogo, sin valor propio (029).
+     */
+    public function requiereProduccion(): bool
+    {
+        return (bool) $this->catalogo?->requiere_produccion;
+    }
+
+    /**
      * Su fila en existencias, si está marcado (sin las quitadas, por el soft
      * delete).
      *

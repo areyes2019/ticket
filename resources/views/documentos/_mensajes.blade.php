@@ -1,5 +1,8 @@
 @if (session('exito'))
-    <x-alerta tipo="exito">{{ session('exito') }}</x-alerta>
+    <x-alerta tipo="exito">
+        {{ session('exito') }}
+        @include('documentos._enlaces-exito')
+    </x-alerta>
 @endif
 
 @if (session('error'))

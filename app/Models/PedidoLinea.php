@@ -49,6 +49,15 @@ class PedidoLinea extends Model
     }
 
     /**
+     * Una línea libre es producción; una de artículo, si su catálogo lo es
+     * (029). Para varias líneas, precargar articulo.catalogo.
+     */
+    public function esProduccion(): bool
+    {
+        return $this->articulo_id === null || (bool) $this->articulo?->requiereProduccion();
+    }
+
+    /**
      * "10%" o "$5.50"; vacío sin descuento.
      */
     public function descuentoTexto(): string

@@ -9,6 +9,9 @@
     $puedeEliminarPago = $pedido->puedeEliminarPago();
     // Una sola factura entre la cotización aceptada y su venta (021).
     $facturaDeLaCotizacion = $pedido->facturaDeLaCotizacion();
+    // Sus pagos viven en la cotización y se corrige editándola (029).
+    $cobraEnCotizacion = $pedido->cobraEnCotizacion();
+    $pagos = $cobraEnCotizacion ? $pedido->cotizacion->pagos : $pedido->pagos;
 @endphp
 
 @section('content')
@@ -92,7 +95,7 @@
                 <form method="POST" action="{{ route('pedidos.destroy', $pedido) }}">
                     @csrf
                     @method('DELETE')
-                    <x-boton variante="peligro" icono="trash" data-confirmar="¿Eliminar la venta {{ $pedido->folio_formateado }}? Sus artículos regresan a existencias y el borrado es definitivo.{{ $pedido->cotizacion ? ' La cotización '.$pedido->cotizacion->folio_formateado.' volverá a Enviada.' : '' }}">Eliminar</x-boton>
+                    <x-boton variante="peligro" icono="trash" data-confirmar="¿Eliminar la venta {{ $pedido->folio_formateado }}{{ $pedido->ordenTrabajo ? ' y su orden de trabajo' : '' }}? Sus artículos regresan a existencias y el borrado es definitivo.{{ $pedido->cotizacion ? ' La cotización '.$pedido->cotizacion->folio_formateado.' volverá a Enviada.' : '' }}">Eliminar</x-boton>
                 </form>
             @endcan
         </div>
@@ -104,6 +107,14 @@
 
             @if ($pedido->cotizacion)
                 <p class="ayuda" data-origen-cotizacion>Origen: cotización <a href="{{ route('cotizaciones.show', $pedido->cotizacion) }}">{{ $pedido->cotizacion->folio_formateado }}</a> aceptada.</p>
+            @endif
+
+            @if ($cobraEnCotizacion)
+                <x-alerta tipo="info" data-cobra-en-cotizacion>
+                    Los pagos se registran en la cotización
+                    <a href="{{ route('cotizaciones.show', $pedido->cotizacion) }}">{{ $pedido->cotizacion->folio_formateado }}</a>,
+                    y los artículos se corrigen ahí.
+                </x-alerta>
             @endif
 
             <article class="hoja" aria-label="Venta {{ $pedido->folio_formateado }}">
@@ -174,7 +185,7 @@
             </article>
 
             <x-card titulo="Pagos">
-                @if ($pedido->pagos->isEmpty())
+                @if ($pagos->isEmpty())
                     <p class="ayuda">Sin pagos registrados. El ticket se comparte a partir del primer pago.</p>
                 @else
                     <table class="tabla">
@@ -187,7 +198,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach ($pedido->pagos as $pago)
+                            @foreach ($pagos as $pago)
                                 <tr>
                                     <td>
                                         {{ $pago->fecha_pago->format('d/m/Y') }}

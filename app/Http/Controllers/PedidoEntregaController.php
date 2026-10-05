@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Enums\TipoMovimiento;
+use App\Enums\TipoPago;
 use App\Exceptions\OperacionTesoreriaRechazada;
 use App\Http\Requests\EntregarPedidoRequest;
+use App\Models\Cotizacion;
+use App\Models\CotizacionPago;
 use App\Models\Cuenta;
 use App\Models\OrdenTrabajo;
 use App\Models\Pedido;
@@ -28,12 +31,12 @@ class PedidoEntregaController extends Controller
      * Idempotente: con el pedido bloqueado, uno ya entregado no se toca. Una
      * venta con orden de trabajo sin terminar tampoco. Con saldo, registra un
      * pago por el saldo exacto (el monto no viaja en la petición) en la
-     * cuenta elegida.
+     * cuenta elegida: en la venta, o en su cotización si cobra ahí (029).
      */
     public function store(EntregarPedidoRequest $request, Pedido $pedido): RedirectResponse
     {
         $resultado = DB::transaction(function () use ($request, $pedido) {
-            $bloqueado = Pedido::whereKey($pedido->id)->lockForUpdate()->firstOrFail();
+            $bloqueado = $this->bloquear($pedido);
 
             if ($bloqueado->estaEntregado()) {
                 return ['ya' => $bloqueado];
@@ -55,7 +58,10 @@ class PedidoEntregaController extends Controller
                     throw ValidationException::withMessages(['cuenta_id' => 'Elige la cuenta a la que entra el cobro.'])->errorBag('entrega');
                 }
 
-                $cobro = $this->cobrarSaldo($bloqueado, $request->user()->cuentas()->findOrFail($request->integer('cuenta_id')));
+                $cuenta = $request->user()->cuentas()->findOrFail($request->integer('cuenta_id'));
+                $cobro = $bloqueado->cobraEnCotizacion()
+                    ? $this->cobrarSaldoEnCotizacion($bloqueado->cotizacion, $cuenta)
+                    : $this->cobrarSaldo($bloqueado, $cuenta);
                 // Queda pagado antes de entregarse: nace el enlace de autofactura.
                 $bloqueado->recalcularEstado();
             }
@@ -95,13 +101,13 @@ class PedidoEntregaController extends Controller
         Gate::authorize('operar', $pedido);
 
         $motivo = DB::transaction(function () use ($pedido) {
-            $bloqueado = Pedido::whereKey($pedido->id)->lockForUpdate()->firstOrFail();
+            $bloqueado = $this->bloquear($pedido);
 
             if (! $bloqueado->estaEntregado()) {
                 return 'El pedido no está entregado.';
             }
 
-            if ($bloqueado->pagos()->where('registrado_al_entregar', true)->exists()) {
+            if ($bloqueado->cobroAlEntregar()) {
                 return 'Esta entrega registró un cobro: corrígelo desde el detalle del pedido.';
             }
 
@@ -140,6 +146,53 @@ class PedidoEntregaController extends Controller
             $request->input('origen') === 'orden' && $orden !== null => route('pedidos.orden-trabajo.show', $pedido),
             default => route('pedidos.show', $pedido),
         };
+    }
+
+    /**
+     * La venta bloqueada. Si cobra en su cotización, primero la cotización
+     * (el mismo orden que el pago y la edición de la cotización, 029).
+     */
+    private function bloquear(Pedido $pedido): Pedido
+    {
+        $cotizacion = $pedido->cobraEnCotizacion()
+            ? Cotizacion::whereKey($pedido->cotizacion_id)->lockForUpdate()->firstOrFail()
+            : null;
+
+        $bloqueado = Pedido::whereKey($pedido->id)->lockForUpdate()->firstOrFail();
+
+        if ($cotizacion !== null) {
+            $bloqueado->setRelation('cotizacion', $cotizacion);
+        }
+
+        return $bloqueado;
+    }
+
+    /**
+     * El saldo de una venta que cobra en la cotización (029): pago de la
+     * cotización (saldo si hay anticipo, si no pago total), marcado como
+     * registrado al entregar, con su ingreso "Saldo de Cotización COT-0012".
+     */
+    private function cobrarSaldoEnCotizacion(Cotizacion $cotizacion, Cuenta $cuenta): CotizacionPago
+    {
+        $pago = new CotizacionPago([
+            'tipo' => $cotizacion->tieneAnticipo() ? TipoPago::Saldo : TipoPago::PagoTotal,
+            'fecha_pago' => now(config('app.zona_negocio'))->toDateString(),
+            'cuenta_id' => $cuenta->id,
+            'monto' => $cotizacion->saldoPendiente(),
+        ]);
+        $pago->registrado_al_entregar = true;
+        $cotizacion->pagos()->save($pago);
+        $cotizacion->unsetRelation('pagos');
+        $pago->setRelation('cotizacion', $cotizacion);
+        $pago->setRelation('cuenta', $cuenta);
+
+        try {
+            $this->registrador->registrar($cuenta, TipoMovimiento::Ingreso, $pago->monto, $pago->fecha_pago->toDateString(), $pago->conceptoMovimiento(), $pago);
+        } catch (OperacionTesoreriaRechazada $rechazo) {
+            throw ValidationException::withMessages(['cuenta_id' => $rechazo->getMessage()])->errorBag('entrega');
+        }
+
+        return $pago;
     }
 
     /**

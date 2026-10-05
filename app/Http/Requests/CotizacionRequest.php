@@ -146,6 +146,11 @@ class CotizacionRequest extends FormRequest
 
                 $cotizacion = $this->route('cotizacion');
 
+                // El tipo de cliente decidió la venta (029): ya no se cambia.
+                if ($cotizacion instanceof Cotizacion && $cotizacion->venta !== null && (int) $this->input('cliente_id') !== $cotizacion->cliente_id) {
+                    $validator->errors()->add('cliente_id', 'El cliente ya no se cambia: la cotización tiene venta.');
+                }
+
                 if ($cotizacion instanceof Cotizacion && CalculadoraTotalesDocumento::centavos($totales['total']) < CalculadoraTotalesDocumento::centavos($cotizacion->totalPagado())) {
                     $validator->errors()->add('lineas', 'El total no puede ser menor a lo ya pagado ($'.number_format((float) $cotizacion->totalPagado(), 2).').');
                 }
