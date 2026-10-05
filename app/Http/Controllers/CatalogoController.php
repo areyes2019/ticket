@@ -64,14 +64,14 @@ class CatalogoController extends Controller
 
     /**
      * CatalogoRequest ya verificó que el catálogo es del usuario. Si el cambio
-     * mueve el precio de venta de algún artículo, primero se pide confirmación:
-     * se vuelve al formulario con lo capturado y el conteo, sin guardar. Al
-     * confirmar, el modelo recalcula los artículos.
+     * mueve el precio de venta o el precio distribuidor de algún artículo,
+     * primero se pide confirmación: se vuelve al formulario con lo capturado y
+     * el conteo, sin guardar. Al confirmar, el modelo recalcula los artículos.
      */
     public function update(CatalogoRequest $request, Catalogo $catalogo): RedirectResponse
     {
         $datos = $request->validated();
-        $afectados = $catalogo->articulosAfectados($datos['descuento'], $datos['utilidad_porcentaje']);
+        $afectados = $catalogo->articulosAfectados($datos['descuento'], $datos['utilidad_porcentaje'], $datos['utilidad_distribuidor_porcentaje']);
 
         if ($afectados > 0 && ! $request->boolean('confirmar')) {
             return redirect()->route('catalogos.edit', $catalogo)

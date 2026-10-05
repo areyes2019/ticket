@@ -4,13 +4,14 @@
             <td>
                 {{-- Abre la ficha (ficha-articulo.js); sin JavaScript lleva a la edición. Nunca lleva costo ni utilidad. --}}
                 <a href="{{ route('articulos.edit', $articulo) }}" class="celda-truncada enlace-ficha" title="{{ $articulo->nombre }}" data-ficha
-                    data-nombre="{{ $articulo->nombre }}" data-modelo="{{ $articulo->modelo }}" data-precio="${{ number_format($articulo->precio_unitario_con_iva, 2) }}"
+                    data-nombre="{{ $articulo->nombre }}" data-modelo="{{ $articulo->modelo }}" data-precio="${{ number_format($articulo->precio_unitario_con_iva, 2) }}" data-precio-distribuidor="${{ number_format($articulo->precio_distribuidor_con_iva, 2) }}"
                     data-etiqueta-precio="{{ $articulo->objeto_imp === App\Enums\ObjetoImpuesto::SiObjeto ? 'Precio con IVA' : 'Precio' }}"
                     data-imagen="{{ $articulo->tiene_imagen ? route('articulos.imagen', [$articulo, 'v' => $articulo->imagen_version]) : '' }}">{{ $articulo->nombre }}</a>
             </td>
             <td><span class="celda-truncada" title="{{ $articulo->modelo }}">{{ $articulo->modelo }}</span></td>
             <td class="numero">${{ number_format((float) $articulo->costo_con_descuento, 2) }}</td>
             <td class="numero">${{ number_format($articulo->precio_unitario_con_iva, 2) }}</td>
+            <td class="numero">${{ number_format($articulo->precio_distribuidor_con_iva, 2) }}</td>
             <td>
                 {{-- Las dos llevan a la ficha de existencias; con "No", la ficha abre el alta. --}}
                 @if ($articulo->existencia_exists)
@@ -33,7 +34,7 @@
         </tr>
     @empty
         <tr>
-            <td colspan="6">
+            <td colspan="7">
                 {{ array_filter($filtros) !== [] ? 'Ningún artículo coincide con la búsqueda.' : 'Todavía no tienes artículos registrados.' }}
             </td>
         </tr>

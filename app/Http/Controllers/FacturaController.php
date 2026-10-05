@@ -15,6 +15,7 @@ use App\Http\Requests\FacturaRequest;
 use App\Http\Requests\ListadoCotizacionesRequest;
 use App\Http\Requests\ListadoFacturasRequest;
 use App\Http\Requests\TimbrarCotizacionRequest;
+use App\Models\Articulo;
 use App\Models\Cotizacion;
 use App\Models\CotizacionLinea;
 use App\Models\Factura;
@@ -574,10 +575,16 @@ class FacturaController extends Controller
         }
 
         $cabecera = $precarga['cabecera'] ?? [];
+        $clientes = $request->user()->clientes()->orderBy('razon_social')->get();
+        // La factura de una cotización conserva el precio cotizado (028): no
+        // se vuelve a decidir si el cliente es distribuidor.
+        $deCotizacion = isset($precarga['cotizacion']) || $factura?->cotizacion_id !== null || $request->old('cotizacion_id') !== null;
 
         return [
             'factura' => $factura,
-            'lineas' => array_values(array_filter($lineas, 'is_array')),
+            'lineas' => Articulo::conPreciosDeVenta($request->user(), array_values(array_filter($lineas, 'is_array'))),
+            // Lo que lee documento-lineas.js para elegir el precio distribuidor; null lo desactiva.
+            'distribuidores' => $deCotizacion ? null : $clientes->where('es_distribuidor', true)->pluck('razon_social', 'id')->all(),
             'cabecera' => [
                 'cliente_id' => $factura?->cliente_id ?? $cabecera['cliente_id'] ?? null,
                 'uso_cfdi' => $factura?->uso_cfdi?->value ?? $cabecera['uso_cfdi'] ?? UsoCfdi::GastosEnGeneral->value,
@@ -590,7 +597,7 @@ class FacturaController extends Controller
             'facturaOrigen' => $precarga['duplicadaDe'] ?? null,
             'avisosPrecio' => $precarga['avisosPrecio'] ?? [],
             'lineasOmitidas' => $precarga['lineasOmitidas'] ?? [],
-            'clientes' => $this->clientes($request->user()),
+            'clientes' => $clientes->mapWithKeys(fn ($cliente) => [$cliente->id => $cliente->razon_social.' — '.$cliente->rfc])->all(),
             'usosCfdi' => UsoCfdi::opcionesFactura(),
             'metodosPago' => MetodoPago::opciones(),
             'formasPago' => FormaPago::opciones(),

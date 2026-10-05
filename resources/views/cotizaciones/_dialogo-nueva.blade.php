@@ -46,6 +46,7 @@
                 </h3>
 
                 @include('cotizaciones._aviso-descuento-cliente')
+                @include('documentos._aviso-distribuidor', ['clienteInicial' => null, 'excepcion' => true])
 
                 {{-- El buscador y "Agregar línea libre" necesitan JavaScript; sin él se capturan líneas libres en las filas vacías. --}}
                 <div class="barra-lineas" data-controles-lineas hidden>

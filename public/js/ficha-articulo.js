@@ -1,8 +1,11 @@
 // Ficha visual de un artículo en el listado.
 //
 // Los enlaces del nombre llevan data-ficha y los datos en data-nombre,
-// data-modelo, data-precio, data-etiqueta-precio ("Precio con IVA" o
-// "Precio", según el objeto de impuesto) y data-imagen (URL o vacío). Se usa
+// data-modelo, data-precio, data-precio-distribuidor, data-etiqueta-precio
+// ("Precio con IVA" o "Precio", según el objeto de impuesto) y data-imagen
+// (URL o vacío). Hay un botón de compartir por precio
+// (data-ficha-compartir="precio" o "distribuidor"): lo compartido lleva solo
+// el precio de su botón. Se usa
 // delegación porque busqueda-dinamica.js reemplaza las filas. Sin JavaScript,
 // el enlace lleva a la edición del artículo.
 (function () {
@@ -18,8 +21,9 @@
     const modelo = ficha.querySelector('[data-ficha-modelo]');
     const precio = ficha.querySelector('[data-ficha-precio]');
     const etiquetaPrecio = ficha.querySelector('[data-ficha-etiqueta-precio]');
+    const precioDistribuidor = ficha.querySelector('[data-ficha-precio-distribuidor]');
+    const etiquetaDistribuidor = ficha.querySelector('[data-ficha-etiqueta-distribuidor]');
     const editar = ficha.querySelector('[data-ficha-editar]');
-    const compartir = ficha.querySelector('[data-ficha-compartir]');
     const aviso = ficha.querySelector('[data-ficha-aviso]');
     const respaldo = ficha.querySelector('[data-ficha-copiar]');
     const campoTexto = respaldo.querySelector('input');
@@ -30,13 +34,18 @@
             nombre: enlace.dataset.nombre,
             modelo: enlace.dataset.modelo,
             precio: enlace.dataset.precio,
+            precioDistribuidor: enlace.dataset.precioDistribuidor || '',
             imagen: enlace.dataset.imagen,
         };
+        const etiqueta = enlace.dataset.etiquetaPrecio || 'Precio con IVA';
 
         nombre.textContent = actual.nombre;
         modelo.textContent = actual.modelo;
         precio.textContent = actual.precio;
-        etiquetaPrecio.textContent = enlace.dataset.etiquetaPrecio || 'Precio con IVA';
+        etiquetaPrecio.textContent = etiqueta;
+        precioDistribuidor.textContent = actual.precioDistribuidor;
+        // "Precio con IVA" → "Precio distribuidor con IVA"; "Precio" → "Precio distribuidor".
+        etiquetaDistribuidor.textContent = etiqueta.replace(/^Precio/, 'Precio distribuidor');
         editar.href = enlace.href;
         aviso.textContent = '';
         respaldo.hidden = true;
@@ -54,8 +63,8 @@
         ficha.showModal();
     }
 
-    function textoCompartido() {
-        return actual.nombre + ' — Modelo ' + actual.modelo + ' — ' + actual.precio;
+    function textoCompartido(cual) {
+        return actual.nombre + ' — Modelo ' + actual.modelo + ' — ' + (cual === 'distribuidor' ? actual.precioDistribuidor : actual.precio);
     }
 
     // WhatsApp trata los .webp como calcomanías: se comparte una copia en JPEG.
@@ -93,8 +102,8 @@
         }
     }
 
-    function copiar() {
-        const texto = textoCompartido();
+    function copiar(cual) {
+        const texto = textoCompartido(cual);
 
         window.copiarTexto(texto).then(function (copiado) {
             if (copiado) {
@@ -109,9 +118,9 @@
         });
     }
 
-    function compartirFicha() {
+    function compartirFicha(cual) {
         if (!puedeCompartirArchivos()) {
-            copiar();
+            copiar(cual);
             return;
         }
 
@@ -121,7 +130,7 @@
 
         archivos
             .then(function (lista) {
-                return navigator.share(lista.length ? { files: lista, text: textoCompartido() } : { text: textoCompartido() });
+                return navigator.share(lista.length ? { files: lista, text: textoCompartido(cual) } : { text: textoCompartido(cual) });
             })
             .catch(function (error) {
                 // Cerrar el menú de compartir no es un error.
@@ -129,7 +138,7 @@
                     return;
                 }
 
-                copiar();
+                copiar(cual);
             });
     }
 
@@ -144,7 +153,11 @@
         abrir(enlace);
     });
 
-    compartir.addEventListener('click', compartirFicha);
+    ficha.querySelectorAll('[data-ficha-compartir]').forEach(function (boton) {
+        boton.addEventListener('click', function () {
+            compartirFicha(boton.dataset.fichaCompartir);
+        });
+    });
 
     // Clic en el fondo oscuro (fuera del recuadro, no en su margen interior): cierra.
     ficha.addEventListener('click', function (evento) {

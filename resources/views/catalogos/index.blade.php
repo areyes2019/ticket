@@ -27,6 +27,7 @@
                     <th>Proveedor</th>
                     <th>Descuento</th>
                     <th>Utilidad</th>
+                    <th>Utilidad distribuidor</th>
                     <th>Artículos</th>
                     <th>Acciones</th>
                 </tr>
@@ -38,6 +39,7 @@
                         <td><span class="celda-truncada" title="{{ $catalogo->proveedor->nombre_comercial }}">{{ $catalogo->proveedor->nombre_comercial }}</span></td>
                         <td class="numero">{{ $catalogo->descuento_texto }}</td>
                         <td class="numero">{{ $catalogo->utilidad_texto }}</td>
+                        <td class="numero">{{ $catalogo->utilidad_distribuidor_texto }}</td>
                         <td class="numero">{{ $catalogo->articulos_count }}</td>
                         <td>
                             <div class="acciones">
@@ -53,7 +55,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6">
+                        <td colspan="7">
                             {{ $buscar !== '' ? 'Ningún catálogo coincide con la búsqueda.' : 'Todavía no tienes catálogos registrados.' }}
                         </td>
                     </tr>

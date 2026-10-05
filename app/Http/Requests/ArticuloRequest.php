@@ -96,6 +96,7 @@ class ArticuloRequest extends FormRequest
             // quepa en decimal(10,2).
             'precio_proveedor' => ['required', 'numeric', 'gt:0', 'decimal:0,2', 'max:9000000'],
             'utilidad_porcentaje' => ['nullable', 'numeric', 'between:0,999.99', 'decimal:0,2'],
+            'utilidad_distribuidor_porcentaje' => ['nullable', 'numeric', 'between:0,999.99', 'decimal:0,2'],
         ];
     }
 
@@ -130,6 +131,8 @@ class ArticuloRequest extends FormRequest
             'precio_proveedor.max' => 'El precio del proveedor no puede ser mayor a 9,000,000.',
             'utilidad_porcentaje.between' => 'La utilidad debe estar entre 0 y 999.99%.',
             'utilidad_porcentaje.decimal' => 'La utilidad admite como máximo 2 decimales.',
+            'utilidad_distribuidor_porcentaje.between' => 'La utilidad distribuidor debe estar entre 0 y 999.99%.',
+            'utilidad_distribuidor_porcentaje.decimal' => 'La utilidad distribuidor admite como máximo 2 decimales.',
         ];
     }
 
@@ -159,6 +162,7 @@ class ArticuloRequest extends FormRequest
             'objeto_imp' => 'objeto de impuesto',
             'precio_proveedor' => 'precio del proveedor',
             'utilidad_porcentaje' => 'utilidad',
+            'utilidad_distribuidor_porcentaje' => 'utilidad distribuidor',
             'imagen' => 'imagen',
         ];
     }

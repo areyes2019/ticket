@@ -62,7 +62,7 @@ describe('alta', function () {
         $this->actingAs($catalogo->user)
             ->post('/articulos', datosArticulo($catalogo, ['precio_proveedor' => '200.00']))
             ->assertRedirect(route('articulos.index'))
-            ->assertSessionHas('exito', 'Artículo creado. Precio de venta con IVA: $261.00.');
+            ->assertSessionHas('exito', 'Artículo creado. Precio de venta con IVA: $261.00. Precio distribuidor con IVA: $209.00.');
 
         $articulo = Articulo::sole();
 
@@ -205,7 +205,7 @@ describe('alta', function () {
             ->assertOk()
             ->assertSee('Acme — Otoño (12.5%)')
             ->assertDontSee('Viejo')
-            ->assertSee('data-catalogos="'.e(json_encode([$catalogo->id => ['descuento' => 12.5, 'utilidad' => 30]])).'"', false)
+            ->assertSee('data-catalogos="'.e(json_encode([$catalogo->id => ['descuento' => 12.5, 'utilidad' => 30, 'utilidad_distribuidor' => 0]])).'"', false)
             ->assertSee('data-umbral="400"', false)
             ->assertSee('js/precio-articulo.js');
     });
@@ -422,7 +422,7 @@ describe('precio de venta', function () {
             ->assertSeeInOrder(['Precio de venta sin IVA', '$201.50', 'Redondeo', '+$0.50', 'Precio final', '$202.00']);
 
         $this->put("/articulos/{$articulo->id}", datosArticulo($articulo->catalogo, ['nombre' => $articulo->nombre, 'objeto_imp' => '01', 'precio_proveedor' => '130.00', 'utilidad_porcentaje' => '55']))
-            ->assertSessionHas('exito', 'Artículo actualizado. Precio de venta: $202.00.');
+            ->assertSessionHas('exito', 'Artículo actualizado. Precio de venta: $202.00. Precio distribuidor: $130.00.');
     });
 
     it('recalcula al editar el precio de lista o la utilidad', function () {
@@ -444,7 +444,7 @@ describe('precio de venta', function () {
 
         $this->actingAs($articulo->user)
             ->put("/articulos/{$articulo->id}", datosArticulo($destino, ['nombre' => $articulo->nombre, 'utilidad_porcentaje' => '50']))
-            ->assertSessionHas('exito', 'Artículo actualizado. Precio de venta con IVA: $140.00.');
+            ->assertSessionHas('exito', 'Artículo actualizado. Precio de venta con IVA: $140.00. Precio distribuidor con IVA: $93.00.');
 
         expect($articulo->fresh())
             ->utilidad_porcentaje->toBe('50.00')

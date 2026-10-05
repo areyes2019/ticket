@@ -40,7 +40,12 @@ class ImportadorArticulosCsv
 
             $datos = $this->normalizar($this->combinar($encabezado, $celdas));
             $validador = Validator::make(
-                [...$datos, 'catalogo_id' => $catalogo->id, 'utilidad_porcentaje' => $datos['utilidad_porcentaje'] === '' ? null : $datos['utilidad_porcentaje']],
+                [
+                    ...$datos,
+                    'catalogo_id' => $catalogo->id,
+                    'utilidad_porcentaje' => $datos['utilidad_porcentaje'] === '' ? null : $datos['utilidad_porcentaje'],
+                    'utilidad_distribuidor_porcentaje' => $datos['utilidad_distribuidor_porcentaje'] === '' ? null : $datos['utilidad_distribuidor_porcentaje'],
+                ],
                 ArticuloRequest::reglas($usuario->id, $catalogo->id),
                 $this->mensajes($datos),
                 array_combine(Articulo::COLUMNAS_CSV, Articulo::COLUMNAS_CSV),
@@ -80,7 +85,7 @@ class ImportadorArticulosCsv
         }
 
         $encabezado = array_map(fn (?string $columna) => mb_strtolower(trim((string) $columna)), $encabezado);
-        $faltantes = array_diff(Articulo::COLUMNAS_CSV, $encabezado);
+        $faltantes = array_diff(Articulo::COLUMNAS_CSV, Articulo::COLUMNAS_CSV_OPCIONALES, $encabezado);
 
         if ($faltantes !== []) {
             throw new ArchivoCsvInvalido('Al encabezado del archivo le faltan las columnas: '.implode(', ', $faltantes).'.');
@@ -90,7 +95,8 @@ class ImportadorArticulosCsv
     }
 
     /**
-     * Toma solo las columnas esperadas, por nombre; las demás se ignoran.
+     * Toma solo las columnas esperadas, por nombre; las demás se ignoran. Una
+     * columna opcional que no viene en el encabezado vale como celda vacía.
      *
      * @param  list<string>  $encabezado
      * @param  list<string|null>  $celdas
@@ -101,7 +107,8 @@ class ImportadorArticulosCsv
         $datos = [];
 
         foreach (Articulo::COLUMNAS_CSV as $columna) {
-            $datos[$columna] = trim((string) ($celdas[array_search($columna, $encabezado, true)] ?? ''));
+            $posicion = array_search($columna, $encabezado, true);
+            $datos[$columna] = $posicion === false ? '' : trim((string) ($celdas[$posicion] ?? ''));
         }
 
         return $datos;
@@ -119,7 +126,8 @@ class ImportadorArticulosCsv
         $datos['clave_unidad'] = mb_strtoupper($datos['clave_unidad']);
 
         // Excel y Google Sheets leen "02" como número y lo guardan como "2".
-        // Una utilidad vacía hereda la del catálogo destino (se vuelve null al validar).
+        // Una utilidad vacía (o la distribuidor ausente) hereda la del catálogo
+        // destino (se vuelve null al validar).
         if (preg_match('/^\d$/', $datos['objeto_imp'])) {
             $datos['objeto_imp'] = '0'.$datos['objeto_imp'];
         }

@@ -36,19 +36,17 @@
                 data-aviso-utilidad="utilidad_porcentaje-aviso" data-umbral="{{ App\Models\Articulo::UMBRAL_UTILIDAD_ALTA }}" />
             @include('articulos._aviso-utilidad', ['campo' => 'utilidad_porcentaje', 'valor' => $articulo?->utilidad_porcentaje])
 
-            {{-- Cadena de cálculo. En edición la pinta el servidor con lo guardado; precio-articulo.js la recalcula en vivo. --}}
-            <dl class="resumen-precio" data-resumen-precio data-precio="precio_proveedor" data-utilidad="utilidad_porcentaje" data-catalogo="catalogo_id" data-objeto="objeto_imp"
-                data-tasa-iva="{{ App\Models\Articulo::TASA_IVA }}" data-catalogos="{{ json_encode($preciosCatalogo, JSON_FORCE_OBJECT) }}">
-                @foreach ($resumen as $renglon)
-                    <div @class(['resumen-total' => $renglon['total'] ?? false]) data-renglon="{{ $renglon['clave'] }}" @if ($renglon['oculto'] ?? false) hidden @endif>
-                        <dt>
-                            {{ $renglon['etiqueta'] }}@isset($renglon['sufijoIva'])<span data-sufijo-iva @if (! $renglon['sufijoIva']) hidden @endif> con IVA</span>@endisset
-                            @isset($renglon['porcentaje']) (<span data-porcentaje="{{ $renglon['clave'] }}">{{ $renglon['porcentaje'] }}</span>)@endisset
-                        </dt>
-                        <dd><output data-valor="{{ $renglon['clave'] }}">{{ $renglon['valor'] }}</output></dd>
-                    </div>
-                @endforeach
-            </dl>
+            @include('articulos._resumen-precio', ['renglones' => $resumen, 'utilidad' => 'utilidad_porcentaje', 'herencia' => 'utilidad', 'titulo' => 'Cadena del precio de venta'])
+        </x-card>
+
+        {{-- Segundo precio, para los clientes distribuidores: mismo costo, su propia utilidad. --}}
+        <x-card titulo="Precio distribuidor">
+            <x-campo nombre="utilidad_distribuidor_porcentaje" etiqueta="Utilidad distribuidor (%)" tipo="number" step="0.01" min="0" max="999.99" inputmode="decimal"
+                :valor="$articulo?->utilidad_distribuidor_porcentaje" :placeholder="$placeholderUtilidadDistribuidor" ayuda="Déjalo vacío para usar la del catálogo."
+                data-aviso-utilidad="utilidad_distribuidor_porcentaje-aviso" data-umbral="{{ App\Models\Articulo::UMBRAL_UTILIDAD_ALTA }}" />
+            @include('articulos._aviso-utilidad', ['campo' => 'utilidad_distribuidor_porcentaje', 'valor' => $articulo?->utilidad_distribuidor_porcentaje])
+
+            @include('articulos._resumen-precio', ['renglones' => $resumenDistribuidor, 'utilidad' => 'utilidad_distribuidor_porcentaje', 'herencia' => 'utilidad_distribuidor', 'titulo' => 'Cadena del precio distribuidor'])
         </x-card>
 
         <x-card titulo="Imagen">

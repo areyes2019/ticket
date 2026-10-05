@@ -19,6 +19,15 @@
 // nuevo (o lo quita si no tiene). Al editar manda el porcentaje congelado de
 // la cotización mientras no se cambie de cliente. Factura y orden de compra no
 // traen el aviso y no cambian.
+//
+// Con un [data-aviso-distribuidor] dentro (cotización y factura que no viene
+// de una cotización, 028), cada artículo que se agrega para un cliente
+// distribuidor nace con su precio distribuidor (precio_distribuidor de las
+// sugerencias), y cambiar de cliente reemplaza el precio de todas las líneas
+// de artículo por el que le toca al nuevo, aunque se hayan editado a mano.
+// Cada fila guarda los dos precios en data-precio-directo y
+// data-precio-distribuidor (los pinta el servidor en las líneas ya
+// guardadas); una fila sin ellos conserva su precio.
 (function () {
     const ESPERA_MS = 300;
     const formulario = document.querySelector('form[data-documento-lineas]');
@@ -35,8 +44,10 @@
     const formato = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
     const selectorProveedor = formulario.querySelector('select[data-proveedor-orden]');
     const avisoDescuento = formulario.querySelector('[data-aviso-descuento-cliente]');
+    const avisoDistribuidor = formulario.querySelector('[data-aviso-distribuidor]');
     let lineaDuplicada = null;
     let descuentoCliente = null;
+    let clienteDistribuidor = false;
 
     function filas() {
         return Array.from(cuerpo.querySelectorAll('tr[data-linea]'));
@@ -117,6 +128,11 @@
         return fila;
     }
 
+    // El precio con el que nace la línea: el distribuidor si el cliente lo es (028).
+    function precioQueToca(articulo) {
+        return avisoDistribuidor && clienteDistribuidor && articulo.precio_distribuidor !== undefined ? articulo.precio_distribuidor : articulo.precio_unitario;
+    }
+
     function agregarArticulo(articulo) {
         const existente = filas().find(function (fila) {
             return campo(fila, 'articulo_id').value === String(articulo.id);
@@ -127,16 +143,22 @@
             return;
         }
 
+        const conDistribuidor = avisoDistribuidor && articulo.precio_distribuidor !== undefined;
         const fila = nuevaFila({
             articulo_id: articulo.id,
             cantidad: 1,
             descripcion: articulo.nombre,
             modelo: articulo.modelo,
-            precio_unitario: articulo.precio_unitario,
+            precio_unitario: precioQueToca(articulo),
             tasa_iva: articulo.tasa_iva,
             descuento_tipo: descuentoCliente ? 'porcentaje' : null,
             descuento_valor: descuentoCliente ? descuentoCliente.porcentaje : null,
         });
+
+        if (conDistribuidor) {
+            fila.dataset.precioDirecto = articulo.precio_unitario;
+            fila.dataset.precioDistribuidor = articulo.precio_distribuidor;
+        }
 
         campo(fila, 'cantidad').focus();
         campo(fila, 'cantidad').select();
@@ -248,7 +270,7 @@
                 opcion.id = lista.id + '-' + i;
                 opcion.setAttribute('role', 'option');
                 opcion.setAttribute('aria-selected', 'false');
-                opcion.textContent = articulo.nombre + ' · ' + articulo.modelo + ' · ' + formato.format(Number(articulo.precio_unitario));
+                opcion.textContent = articulo.nombre + ' · ' + articulo.modelo + ' · ' + formato.format(Number(precioQueToca(articulo)));
                 opcion.addEventListener('mousedown', function (evento) {
                     evento.preventDefault();
                     elegir(i);
@@ -398,6 +420,40 @@
         });
     }
 
+    // Precio distribuidor del cliente (028). Las ediciones a mano del precio
+    // no se respetan al cambiar de cliente, igual que el descuento.
+    function iniciarPrecioDistribuidor() {
+        const selectorCliente = formulario.querySelector('select[name="cliente_id"]');
+        const distribuidores = leerJson(avisoDistribuidor.dataset.clientesDistribuidores) || {};
+
+        function mostrarAviso() {
+            const nombre = distribuidores[selectorCliente.value];
+
+            clienteDistribuidor = nombre !== undefined;
+            avisoDistribuidor.hidden = !clienteDistribuidor;
+
+            if (clienteDistribuidor) {
+                avisoDistribuidor.querySelector('[data-aviso-distribuidor-nombre]').textContent = nombre;
+            }
+        }
+
+        mostrarAviso();
+
+        selectorCliente.addEventListener('change', function () {
+            mostrarAviso();
+
+            filas().forEach(function (fila) {
+                const precio = clienteDistribuidor ? fila.dataset.precioDistribuidor : fila.dataset.precioDirecto;
+
+                if (precio !== undefined && precio !== '') {
+                    campo(fila, 'precio_unitario').value = precio;
+                }
+            });
+
+            recalcular();
+        });
+    }
+
     function leerJson(texto) {
         try {
             return texto ? JSON.parse(texto) : null;
@@ -449,6 +505,10 @@
 
     if (avisoDescuento) {
         iniciarDescuentoCliente();
+    }
+
+    if (avisoDistribuidor) {
+        iniciarPrecioDistribuidor();
     }
 
     formulario.addEventListener('input', recalcular);

@@ -351,7 +351,7 @@ describe('recálculo de precios', function () {
             ->and($this->hereda->fresh()->precio_unitario_sin_iva)->toBe('225.00');
 
         $this->get("/catalogos/{$this->catalogo->id}/editar")
-            ->assertSee('Se recalculará el precio de venta de')
+            ->assertSee('Se recalculará el precio de venta o el precio distribuidor de')
             ->assertSee('<strong>1</strong>', false)
             ->assertSee('value="Nuevo nombre"', false)
             ->assertSee('value="30"', false)

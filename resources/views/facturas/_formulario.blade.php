@@ -72,6 +72,11 @@
     </x-card>
 
     <x-card titulo="Líneas">
+        {{-- Sin él (factura de una cotización) las líneas conservan el precio cotizado (028). --}}
+        @if ($distribuidores !== null)
+            @include('documentos._aviso-distribuidor', ['clienteInicial' => $cabecera['cliente_id']])
+        @endif
+
         <div class="barra-lineas" data-controles-lineas hidden>
             {{-- Sin name propio que importe: el servidor ignora "buscar_articulo". --}}
             <div class="buscador-articulos">

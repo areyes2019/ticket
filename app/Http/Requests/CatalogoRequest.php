@@ -27,7 +27,7 @@ class CatalogoRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        foreach (['descuento', 'utilidad_porcentaje'] as $campo) {
+        foreach (['descuento', 'utilidad_porcentaje', 'utilidad_distribuidor_porcentaje'] as $campo) {
             if (! $this->filled($campo)) {
                 $this->merge([$campo => 0]);
             }
@@ -56,6 +56,7 @@ class CatalogoRequest extends FormRequest
             ],
             'descuento' => ['required', 'numeric', 'between:0,100', 'decimal:0,2'],
             'utilidad_porcentaje' => ['required', 'numeric', 'between:0,999.99', 'decimal:0,2'],
+            'utilidad_distribuidor_porcentaje' => ['required', 'numeric', 'between:0,999.99', 'decimal:0,2'],
         ];
 
         if ($catalogo === null) {
@@ -81,6 +82,8 @@ class CatalogoRequest extends FormRequest
             'descuento.decimal' => 'El descuento admite como máximo 2 decimales.',
             'utilidad_porcentaje.between' => 'La utilidad debe estar entre 0 y 999.99%.',
             'utilidad_porcentaje.decimal' => 'La utilidad admite como máximo 2 decimales.',
+            'utilidad_distribuidor_porcentaje.between' => 'La utilidad distribuidor debe estar entre 0 y 999.99%.',
+            'utilidad_distribuidor_porcentaje.decimal' => 'La utilidad distribuidor admite como máximo 2 decimales.',
         ];
     }
 
@@ -94,6 +97,7 @@ class CatalogoRequest extends FormRequest
             'nombre' => 'nombre',
             'descuento' => 'descuento',
             'utilidad_porcentaje' => 'utilidad',
+            'utilidad_distribuidor_porcentaje' => 'utilidad distribuidor',
         ];
     }
 

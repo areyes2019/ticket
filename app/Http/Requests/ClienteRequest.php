@@ -29,7 +29,8 @@ class ClienteRequest extends FormRequest
 
     /**
      * Normaliza teléfono y RFC antes de validar. El descuento en blanco o
-     * ausente vale 0: sin descuento.
+     * ausente vale 0: sin descuento. La casilla de distribuidor sin marcar no
+     * se envía: ausente o en blanco es "no es distribuidor".
      */
     protected function prepareForValidation(): void
     {
@@ -38,7 +39,10 @@ class ClienteRequest extends FormRequest
             'rfc' => $this->filled('rfc') ? $this->string('rfc')->replaceMatches('/\s+/', '')->upper()->toString() : null,
         ], fn (?string $valor) => $valor !== null));
 
-        $this->merge(['descuento_permanente' => $this->filled('descuento_permanente') ? $this->input('descuento_permanente') : '0']);
+        $this->merge([
+            'descuento_permanente' => $this->filled('descuento_permanente') ? $this->input('descuento_permanente') : '0',
+            'es_distribuidor' => $this->filled('es_distribuidor') ? $this->input('es_distribuidor') : false,
+        ]);
     }
 
     /**
@@ -48,7 +52,11 @@ class ClienteRequest extends FormRequest
      */
     public function rules(): array
     {
-        return self::reglas($this->user()->id, $this->route('cliente'));
+        return [
+            ...self::reglas($this->user()->id, $this->route('cliente')),
+            // Solo en la ficha: la importación CSV no lo trae y el cliente queda sin marcar.
+            'es_distribuidor' => ['required', 'boolean'],
+        ];
     }
 
     /**
@@ -112,6 +120,7 @@ class ClienteRequest extends FormRequest
             'telefono' => 'teléfono',
             'direccion_comercial' => 'dirección comercial',
             'descuento_permanente' => 'descuento permanente',
+            'es_distribuidor' => 'distribuidor',
         ];
     }
 

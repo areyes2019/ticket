@@ -21,8 +21,9 @@ use Illuminate\Support\Str;
  * proveedor_id es una copia del proveedor del catálogo que escribe el modelo
  * (ver booted()); el formulario y la importación solo envían catalogo_id.
  *
- * costo_con_descuento y precio_unitario_sin_iva también los escribe solo el
- * modelo, a partir del precio de lista y la utilidad (ver recalcularPrecio()).
+ * costo_con_descuento, precio_unitario_sin_iva y precio_distribuidor_sin_iva
+ * también los escribe solo el modelo, a partir del precio de lista y las dos
+ * utilidades (ver recalcularPrecio()).
  *
  * imagen_ruta la escribe solo ProcesadorImagenArticulo, al guardar el archivo.
  */
@@ -35,6 +36,7 @@ use Illuminate\Support\Str;
     'objeto_imp',
     'precio_proveedor',
     'utilidad_porcentaje',
+    'utilidad_distribuidor_porcentaje',
 ])]
 class Articulo extends Model
 {
@@ -60,7 +62,7 @@ class Articulo extends Model
     /**
      * Columnas por las que se puede ordenar el listado.
      */
-    public const ORDENES = ['nombre', 'modelo', 'proveedor', 'catalogo', 'costo', 'precio'];
+    public const ORDENES = ['nombre', 'modelo', 'proveedor', 'catalogo', 'costo', 'precio', 'distribuidor'];
 
     /**
      * Filas por página que se pueden elegir en el listado.
@@ -70,7 +72,13 @@ class Articulo extends Model
     /**
      * Columnas del CSV, idénticas en importación y exportación.
      */
-    public const COLUMNAS_CSV = ['nombre', 'modelo', 'clave_prod_serv', 'clave_unidad', 'objeto_imp', 'precio_proveedor', 'utilidad_porcentaje'];
+    public const COLUMNAS_CSV = ['nombre', 'modelo', 'clave_prod_serv', 'clave_unidad', 'objeto_imp', 'precio_proveedor', 'utilidad_porcentaje', 'utilidad_distribuidor_porcentaje'];
+
+    /**
+     * Columnas del CSV que la importación no exige: llegaron después y un
+     * archivo sin ellas sigue siendo importable (la celda faltante hereda).
+     */
+    public const COLUMNAS_CSV_OPCIONALES = ['utilidad_distribuidor_porcentaje'];
 
     /**
      * Carpeta de las imágenes dentro del disco privado (local).
@@ -86,7 +94,7 @@ class Articulo extends Model
     protected static function booted(): void
     {
         static::saving(function (Articulo $articulo) {
-            if (! $articulo->isDirty(['catalogo_id', 'precio_proveedor', 'utilidad_porcentaje', 'objeto_imp'])) {
+            if (! $articulo->isDirty(['catalogo_id', 'precio_proveedor', 'utilidad_porcentaje', 'utilidad_distribuidor_porcentaje', 'objeto_imp'])) {
                 return;
             }
 
@@ -100,29 +108,64 @@ class Articulo extends Model
     }
 
     /**
-     * Escribe costo y precio de venta con el descuento y la utilidad del
-     * catálogo (salvo que el artículo tenga utilidad propia). No guarda.
+     * Escribe costo, precio de venta y precio distribuidor con el descuento y
+     * las utilidades del catálogo (salvo las que el artículo tenga propias).
+     * No guarda.
      */
     public function recalcularPrecio(Catalogo $catalogo): void
     {
-        [$costo, $venta] = $this->calcularPrecio($catalogo->descuento, $catalogo->utilidad_porcentaje);
+        [$costo, $venta, $distribuidor] = $this->calcularPrecio($catalogo->descuento, $catalogo->utilidad_porcentaje, $catalogo->utilidad_distribuidor_porcentaje);
 
         $this->costo_con_descuento = $costo;
         $this->precio_unitario_sin_iva = $venta;
+        $this->precio_distribuidor_sin_iva = $distribuidor;
     }
 
     /**
-     * Costo y precio de venta con un descuento y una utilidad de catálogo
-     * dados, sin tocar el artículo; lo usa también el conteo de impacto. El
-     * precio ya va ajustado para que el que lee el cliente sea un peso entero.
+     * Costo, precio de venta y precio distribuidor con un descuento y unas
+     * utilidades de catálogo dados, sin tocar el artículo; lo usa también el
+     * conteo de impacto. Los dos precios parten del mismo costo, cada uno con
+     * su utilidad, y van ajustados para que el que lee el cliente sea un peso
+     * entero.
      *
-     * @return array{0: float, 1: float}
+     * @return array{0: float, 1: float, 2: float}
      */
-    public function calcularPrecio(float|string $descuento, float|string $utilidadCatalogo): array
+    public function calcularPrecio(float|string $descuento, float|string $utilidadCatalogo, float|string $utilidadDistribuidorCatalogo): array
     {
         $costo = CalculadoraPrecioArticulo::costoConDescuento($this->precio_proveedor, $descuento);
 
-        return [$costo, CalculadoraPrecioArticulo::precioVentaFinal($costo, $this->utilidad_porcentaje ?? $utilidadCatalogo, $this->objeto_imp)];
+        return [
+            $costo,
+            CalculadoraPrecioArticulo::precioVentaFinal($costo, $this->utilidad_porcentaje ?? $utilidadCatalogo, $this->objeto_imp),
+            CalculadoraPrecioArticulo::precioVentaFinal($costo, $this->utilidad_distribuidor_porcentaje ?? $utilidadDistribuidorCatalogo, $this->objeto_imp),
+        ];
+    }
+
+    /**
+     * Las líneas de un formulario de documento con los dos precios vigentes
+     * de su artículo (precio_directo y precio_distribuidor), para que
+     * documento-lineas.js cambie el precio al cambiar de cliente (028). Solo
+     * artículos del usuario y no eliminados; las demás líneas quedan igual. Una
+     * sola consulta.
+     *
+     * @param  list<array<string, mixed>>  $lineas
+     * @return list<array<string, mixed>>
+     */
+    public static function conPreciosDeVenta(User $user, array $lineas): array
+    {
+        $ids = array_filter(array_map(fn (array $linea) => $linea['articulo_id'] ?? null, $lineas), 'is_numeric');
+        $articulos = $ids === [] ? collect() : $user->articulos()->whereKey(array_unique($ids))
+            ->get(['id', 'precio_unitario_sin_iva', 'precio_distribuidor_sin_iva'])->keyBy('id');
+
+        return array_map(function (array $linea) use ($articulos) {
+            $articulo = is_numeric($linea['articulo_id'] ?? null) ? $articulos->get((int) $linea['articulo_id']) : null;
+
+            return $articulo === null ? $linea : [
+                ...$linea,
+                'precio_directo' => $articulo->precio_unitario_sin_iva,
+                'precio_distribuidor' => $articulo->precio_distribuidor_sin_iva,
+            ];
+        }, $lineas);
     }
 
     /**
@@ -216,6 +259,7 @@ class Articulo extends Model
             ),
             'costo' => $consulta->orderBy('costo_con_descuento', $direccion),
             'precio' => $consulta->orderBy('precio_unitario_sin_iva', $direccion),
+            'distribuidor' => $consulta->orderBy('precio_distribuidor_sin_iva', $direccion),
             default => $consulta->orderBy($columna, $direccion),
         };
 
@@ -234,6 +278,17 @@ class Articulo extends Model
     }
 
     /**
+     * El precio distribuidor como lo lee el cliente, igual que
+     * precio_unitario_con_iva. No se guarda.
+     *
+     * @return Attribute<float, never>
+     */
+    protected function precioDistribuidorConIva(): Attribute
+    {
+        return Attribute::get(fn (): float => CalculadoraPrecioArticulo::precioConIva($this->precio_distribuidor_sin_iva, CalculadoraPrecioArticulo::tasaIva($this->objeto_imp)));
+    }
+
+    /**
      * Porcentaje que realmente se aplicó: el propio o el del catálogo.
      *
      * @return Attribute<string, never>
@@ -241,6 +296,16 @@ class Articulo extends Model
     protected function utilidadPorcentajeEfectivo(): Attribute
     {
         return Attribute::get(fn (): string => $this->utilidad_porcentaje ?? $this->catalogo->utilidad_porcentaje);
+    }
+
+    /**
+     * Igual que utilidad_porcentaje_efectivo, para el precio distribuidor.
+     *
+     * @return Attribute<string, never>
+     */
+    protected function utilidadDistribuidorPorcentajeEfectivo(): Attribute
+    {
+        return Attribute::get(fn (): string => $this->utilidad_distribuidor_porcentaje ?? $this->catalogo->utilidad_distribuidor_porcentaje);
     }
 
     /**
@@ -286,8 +351,10 @@ class Articulo extends Model
             'objeto_imp' => ObjetoImpuesto::class,
             'precio_proveedor' => 'decimal:2',
             'utilidad_porcentaje' => 'decimal:2',
+            'utilidad_distribuidor_porcentaje' => 'decimal:2',
             'costo_con_descuento' => 'decimal:2',
             'precio_unitario_sin_iva' => 'decimal:2',
+            'precio_distribuidor_sin_iva' => 'decimal:2',
         ];
     }
 }

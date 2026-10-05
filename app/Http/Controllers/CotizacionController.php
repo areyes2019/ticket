@@ -450,11 +450,13 @@ class CotizacionController extends Controller
 
         return [
             'cotizacion' => $cotizacion,
-            'lineas' => array_values(array_filter($lineas, 'is_array')),
+            'lineas' => Articulo::conPreciosDeVenta($request->user(), array_values(array_filter($lineas, 'is_array'))),
             'clientes' => $clientes->mapWithKeys(fn ($cliente) => [$cliente->id => $cliente->razon_social.' — '.$cliente->rfc])->all(),
             // Lo que lee documento-lineas.js para precargar el descuento (023).
             'descuentosClientes' => $clientes->filter->tieneDescuentoPermanente()
                 ->mapWithKeys(fn ($cliente) => [$cliente->id => ['nombre' => $cliente->razon_social, 'porcentaje' => Cliente::porcentajeTexto($cliente->descuento_permanente)]])->all(),
+            // Y para elegir el precio distribuidor (028).
+            'distribuidores' => $clientes->where('es_distribuidor', true)->pluck('razon_social', 'id')->all(),
             'tiposDescuento' => TipoDescuento::opciones(),
             'tasasIva' => TasaIva::opciones(),
         ];

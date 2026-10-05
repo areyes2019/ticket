@@ -4,7 +4,10 @@
     $error = fn (string ...$campos) => is_int($i) && collect($campos)->contains(fn ($campo) => $errors->has("lineas.{$i}.{$campo}"));
     $nombre = fn (string $campo) => "lineas[{$i}][{$campo}]";
 @endphp
-<tr data-linea @if (! empty($vacia)) data-linea-vacia @endif>
+{{-- data-precio-directo y data-precio-distribuidor (028) son los dos precios del artículo, para que
+     documento-lineas.js cambie el precio al cambiar de cliente; no viajan al servidor. --}}
+<tr data-linea @if (! empty($vacia)) data-linea-vacia @endif
+    @isset($linea['precio_directo']) data-precio-directo="{{ $linea['precio_directo'] }}" data-precio-distribuidor="{{ $linea['precio_distribuidor'] }}" @endisset>
     <td class="numero" data-linea-numero>{{ is_int($i) ? $i + 1 : '' }}</td>
     <td @class(['campo-error' => $error('cantidad')])>
         <input type="hidden" name="{{ $nombre('articulo_id') }}" value="{{ $linea['articulo_id'] ?? '' }}" data-campo="articulo_id">

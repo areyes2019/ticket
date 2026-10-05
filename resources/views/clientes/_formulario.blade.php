@@ -26,6 +26,9 @@
         <x-campo nombre="telefono" etiqueta="Teléfono" tipo="tel" :valor="$cliente->telefono ?? null" ayuda="10 dígitos; se guarda con el prefijo +52." />
         <x-campo nombre="direccion_comercial" etiqueta="Dirección comercial" :valor="$cliente->direccion_comercial ?? null" />
         <x-campo nombre="descuento_permanente" etiqueta="Descuento permanente (%)" tipo="number" :valor="isset($cliente) ? App\Models\Cliente::porcentajeTexto($cliente->descuento_permanente) : 0" min="0" max="{{ App\Models\Cliente::DESCUENTO_MAXIMO }}" step="0.01" inputmode="decimal" ayuda="Se aplicará automáticamente a cada línea de las cotizaciones de este cliente. Máximo {{ App\Models\Cliente::DESCUENTO_MAXIMO }}%." />
+        {{-- Tras un error de validación manda lo enviado: una casilla sin marcar no viaja y old() la daría por ausente. --}}
+        <x-campo nombre="es_distribuidor" etiqueta="Es distribuidor" tipo="checkbox" :valor="$errors->any() ? false : ($cliente->es_distribuidor ?? false)" aria-describedby="es_distribuidor-ayuda" />
+        <p id="es_distribuidor-ayuda" class="ayuda">Sus cotizaciones y facturas usarán el precio distribuidor de cada artículo en vez del precio de lista.</p>
     </x-card>
 
     <div class="acciones">

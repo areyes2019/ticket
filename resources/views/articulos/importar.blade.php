@@ -52,7 +52,9 @@
             <pre class="bloque-codigo"><code>{{ implode(',', App\Models\Articulo::COLUMNAS_CSV) }}</code></pre>
             <p>
                 <code>precio_proveedor</code> es el precio de lista sin IVA, antes del descuento del catálogo. Deja
-                <code>utilidad_porcentaje</code> vacío para usar la utilidad del catálogo; el precio de venta lo calcula el sistema.
+                <code>utilidad_porcentaje</code> y <code>utilidad_distribuidor_porcentaje</code> vacíos para usar las utilidades del
+                catálogo; los precios de venta los calcula el sistema. La columna <code>utilidad_distribuidor_porcentaje</code> es
+                opcional: un archivo sin ella también se importa.
                 Todas las filas se registran en el catálogo que elijas (y en su proveedor). Se aceptan archivos guardados desde
                 Excel como "CSV UTF-8" o "CSV (delimitado por comas)". Si necesitas una plantilla, exporta tu
                 listado de artículos.

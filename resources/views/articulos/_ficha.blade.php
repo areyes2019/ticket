@@ -12,7 +12,9 @@
             <form method="dialog" class="acciones ficha-pie">
                 <x-boton href="#" variante="secundario" icono="pencil" data-ficha-editar>Editar</x-boton>
                 <x-boton variante="secundario" icono="x-lg">Cerrar</x-boton>
-                <x-boton tipo="button" icono="share" data-ficha-compartir>Compartir</x-boton>
+                {{-- Uno por precio: lo compartido lleva solo el precio de su botón. --}}
+                <x-boton tipo="button" icono="share" data-ficha-compartir="precio">Compartir precio</x-boton>
+                <x-boton tipo="button" variante="secundario" icono="share" data-ficha-compartir="distribuidor">Compartir precio distribuidor</x-boton>
             </form>
 
             {{-- Respaldo cuando el navegador no permite compartir ni copiar (sitio sin HTTPS). --}}
@@ -27,6 +29,8 @@
             <p>Modelo <strong data-ficha-modelo></strong></p>
             <p class="ficha-precio" data-ficha-precio></p>
             <p class="ayuda" data-ficha-etiqueta-precio>Precio con IVA</p>
+            <p class="ficha-precio" data-ficha-precio-distribuidor></p>
+            <p class="ayuda" data-ficha-etiqueta-distribuidor>Precio distribuidor con IVA</p>
         </div>
     </div>
 </dialog>

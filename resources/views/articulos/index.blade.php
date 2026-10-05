@@ -33,6 +33,7 @@
                 <col class="col-modelo">
                 <col class="col-importe">
                 <col class="col-precio">
+                <col class="col-precio">
                 <col class="col-existencias">
                 <col class="col-acciones">
             </colgroup>
@@ -41,6 +42,7 @@
                 <tr class="tabla-filtros">
                     <th><x-campo nombre="nombre" etiqueta="Buscar por nombre" tipo="search" :valor="$filtros['nombre']" form="filtros-articulos" autocomplete="off" /></th>
                     <th><x-campo nombre="modelo" etiqueta="Buscar por modelo" tipo="search" :valor="$filtros['modelo']" form="filtros-articulos" autocomplete="off" /></th>
+                    <th></th>
                     <th></th>
                     <th></th>
                     <th></th>

@@ -31,12 +31,16 @@
             :valor="$catalogo->utilidad_porcentaje ?? 0" ayuda="Markup sobre el costo que heredan los artículos sin utilidad propia."
             data-aviso-utilidad="utilidad_porcentaje-aviso" data-umbral="{{ App\Models\Articulo::UMBRAL_UTILIDAD_ALTA }}" />
         @include('articulos._aviso-utilidad', ['campo' => 'utilidad_porcentaje', 'valor' => $catalogo->utilidad_porcentaje ?? 0])
+        <x-campo nombre="utilidad_distribuidor_porcentaje" etiqueta="Utilidad distribuidor (%)" tipo="number" step="0.01" min="0" max="999.99" inputmode="decimal"
+            :valor="$catalogo->utilidad_distribuidor_porcentaje ?? 0" ayuda="Markup sobre el costo para el precio distribuidor; lo heredan los artículos sin utilidad distribuidor propia."
+            data-aviso-utilidad="utilidad_distribuidor_porcentaje-aviso" data-umbral="{{ App\Models\Articulo::UMBRAL_UTILIDAD_ALTA }}" />
+        @include('articulos._aviso-utilidad', ['campo' => 'utilidad_distribuidor_porcentaje', 'valor' => $catalogo->utilidad_distribuidor_porcentaje ?? 0])
 
         @if (session('confirmar_recalculo'))
             {{-- Paso de confirmación: nada se guardó todavía; el formulario conserva lo capturado. --}}
             <x-alerta tipo="advertencia">
                 <p>
-                    Se recalculará el precio de venta de <strong>{{ session('confirmar_recalculo') }}</strong>
+                    Se recalculará el precio de venta o el precio distribuidor de <strong>{{ session('confirmar_recalculo') }}</strong>
                     {{ session('confirmar_recalculo') === 1 ? 'artículo' : 'artículos' }}.
                 </p>
                 <div class="acciones">

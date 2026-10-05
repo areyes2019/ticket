@@ -20,6 +20,14 @@ for (const caso of casos) {
         assert.equal(venta.toFixed(2), caso.precio_venta);
         assert.equal(PrecioArticulo.precioConIva(venta, factor === 1 ? 0 : TASA_IVA).toFixed(2), caso.precio_con_iva);
         assert.equal(PrecioArticulo.utilidad(venta, costo).toFixed(2), caso.utilidad);
+
+        // 028: el precio distribuidor parte del mismo costo con su propia utilidad.
+        if (caso.utilidad_distribuidor_porcentaje !== undefined) {
+            const distribuidor = PrecioArticulo.redondearAPesoEntero(PrecioArticulo.precioVentaSinIva(costo, parseFloat(caso.utilidad_distribuidor_porcentaje)), factor);
+
+            assert.equal(distribuidor.toFixed(2), caso.precio_distribuidor);
+            assert.equal(PrecioArticulo.precioConIva(distribuidor, factor === 1 ? 0 : TASA_IVA).toFixed(2), caso.precio_distribuidor_con_iva);
+        }
     });
 }
 

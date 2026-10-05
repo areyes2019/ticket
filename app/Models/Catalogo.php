@@ -15,11 +15,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Agrupa artículos de un proveedor con un mismo descuento y la utilidad que
- * heredan los que no tienen una propia. El proveedor es fijo desde la creación
+ * Agrupa artículos de un proveedor con un mismo descuento y las utilidades
+ * (directo y distribuidor) que heredan los que no tienen una propia. El proveedor es fijo desde la creación
  * (CatalogoRequest no lo acepta en la edición).
  */
-#[Fillable(['proveedor_id', 'nombre', 'descuento', 'utilidad_porcentaje'])]
+#[Fillable(['proveedor_id', 'nombre', 'descuento', 'utilidad_porcentaje', 'utilidad_distribuidor_porcentaje'])]
 class Catalogo extends Model
 {
     /** @use HasFactory<CatalogoFactory> */
@@ -33,11 +33,13 @@ class Catalogo extends Model
     protected $attributes = [
         'descuento' => 0,
         'utilidad_porcentaje' => 0,
+        'utilidad_distribuidor_porcentaje' => 0,
     ];
 
     /**
      * Al cambiar el descuento se recalculan todos sus artículos (cambia el
-     * costo del que parten); al cambiar solo la utilidad, los que la heredan.
+     * costo del que parten los dos precios); al cambiar solo una utilidad, los
+     * que heredan esa utilidad.
      * Se hace en PHP con la calculadora, no con un UPDATE: el techo a centavos
      * no es portable entre MySQL y SQLite y sería otra copia de la fórmula.
      */
@@ -47,6 +49,7 @@ class Catalogo extends Model
             $articulos = $catalogo->articulosPorRecalcular(
                 $catalogo->wasChanged('descuento'),
                 $catalogo->wasChanged('utilidad_porcentaje'),
+                $catalogo->wasChanged('utilidad_distribuidor_porcentaje'),
             );
 
             if ($articulos === null) {
@@ -105,16 +108,22 @@ class Catalogo extends Model
     }
 
     /**
-     * Cuántos artículos (no eliminados) cambiarían su precio de venta si el
-     * catálogo pasara a este descuento y esta utilidad. Es exacto: compara el
-     * precio nuevo con el guardado, así que un cambio que no mueve ningún
-     * centavo no cuenta. Alimenta la confirmación del formulario.
+     * Cuántos artículos (no eliminados) cambiarían su precio de venta o su
+     * precio distribuidor si el catálogo pasara a este descuento y estas
+     * utilidades. Es exacto: compara los precios nuevos con los guardados, así
+     * que un cambio que no mueve ningún centavo no cuenta. Alimenta la
+     * confirmación del formulario. Sin utilidad distribuidor, se queda la
+     * actual.
      */
-    public function articulosAfectados(float|string $descuento, float|string $utilidadPorcentaje): int
+    public function articulosAfectados(float|string $descuento, float|string $utilidadPorcentaje, float|string|null $utilidadDistribuidorPorcentaje = null): int
     {
+        $utilidadDistribuidorPorcentaje ??= $this->utilidad_distribuidor_porcentaje;
+        $distinto = fn (float|string $nuevo, float|string $actual) => round((float) $nuevo, 2) !== round((float) $actual, 2);
+
         $articulos = $this->articulosPorRecalcular(
-            round((float) $descuento, 2) !== round((float) $this->descuento, 2),
-            round((float) $utilidadPorcentaje, 2) !== round((float) $this->utilidad_porcentaje, 2),
+            $distinto($descuento, $this->descuento),
+            $distinto($utilidadPorcentaje, $this->utilidad_porcentaje),
+            $distinto($utilidadDistribuidorPorcentaje, $this->utilidad_distribuidor_porcentaje),
         );
 
         if ($articulos === null) {
@@ -122,21 +131,31 @@ class Catalogo extends Model
         }
 
         return $articulos->get()
-            ->filter(fn (Articulo $articulo) => $articulo->calcularPrecio($descuento, $utilidadPorcentaje)[1] !== round((float) $articulo->precio_unitario_sin_iva, 2))
+            ->filter(function (Articulo $articulo) use ($descuento, $utilidadPorcentaje, $utilidadDistribuidorPorcentaje) {
+                [, $venta, $distribuidor] = $articulo->calcularPrecio($descuento, $utilidadPorcentaje, $utilidadDistribuidorPorcentaje);
+
+                return $venta !== round((float) $articulo->precio_unitario_sin_iva, 2)
+                    || $distribuidor !== round((float) $articulo->precio_distribuidor_sin_iva, 2);
+            })
             ->count();
     }
 
     /**
-     * Artículos que mueve un cambio: todos si cambia el descuento, solo los
-     * que heredan la utilidad si cambia la utilidad; null si no cambia nada.
+     * Artículos que mueve un cambio: todos si cambia el descuento; si cambia
+     * una utilidad, los que heredan esa (o cualquiera de las dos, si cambian
+     * ambas); null si no cambia nada.
      *
      * @return HasMany<Articulo, $this>|null
      */
-    private function articulosPorRecalcular(bool $cambiaDescuento, bool $cambiaUtilidad): ?HasMany
+    private function articulosPorRecalcular(bool $cambiaDescuento, bool $cambiaUtilidad, bool $cambiaUtilidadDistribuidor): ?HasMany
     {
         return match (true) {
             $cambiaDescuento => $this->articulos(),
+            $cambiaUtilidad && $cambiaUtilidadDistribuidor => $this->articulos()->where(
+                fn ($consulta) => $consulta->whereNull('utilidad_porcentaje')->orWhereNull('utilidad_distribuidor_porcentaje')
+            ),
             $cambiaUtilidad => $this->articulos()->whereNull('utilidad_porcentaje'),
+            $cambiaUtilidadDistribuidor => $this->articulos()->whereNull('utilidad_distribuidor_porcentaje'),
             default => null,
         };
     }
@@ -172,6 +191,16 @@ class Catalogo extends Model
     }
 
     /**
+     * Utilidad distribuidor sin ceros sobrantes: "25%", "122.5%".
+     *
+     * @return Attribute<string, never>
+     */
+    protected function utilidadDistribuidorTexto(): Attribute
+    {
+        return Attribute::get(fn (): string => self::porcentajeTexto($this->utilidad_distribuidor_porcentaje));
+    }
+
+    /**
      * Porcentaje sin ceros sobrantes: "15%", "12.5%".
      */
     public static function porcentajeTexto(float|string $porcentaje): string
@@ -189,6 +218,7 @@ class Catalogo extends Model
         return [
             'descuento' => 'decimal:2',
             'utilidad_porcentaje' => 'decimal:2',
+            'utilidad_distribuidor_porcentaje' => 'decimal:2',
         ];
     }
 }

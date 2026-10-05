@@ -26,6 +26,14 @@ it('calcula la cadena del fixture compartido', function (array $caso) {
         ->and(number_format($venta, 2, '.', ''))->toBe($caso['precio_venta'])
         ->and(number_format($conIva, 2, '.', ''))->toBe($caso['precio_con_iva'])
         ->and(number_format(CalculadoraPrecioArticulo::utilidad($venta, $costo), 2, '.', ''))->toBe($caso['utilidad']);
+
+    // 028: el precio distribuidor parte del mismo costo con su propia utilidad.
+    if (isset($caso['utilidad_distribuidor_porcentaje'])) {
+        $distribuidor = CalculadoraPrecioArticulo::precioVentaFinal($costo, $caso['utilidad_distribuidor_porcentaje'], $objeto);
+
+        expect(number_format($distribuidor, 2, '.', ''))->toBe($caso['precio_distribuidor'])
+            ->and(number_format(CalculadoraPrecioArticulo::precioConIva($distribuidor, CalculadoraPrecioArticulo::tasaIva($objeto)), 2, '.', ''))->toBe($caso['precio_distribuidor_con_iva']);
+    }
 })->with('precios');
 
 it('calcula el precio con IVA a centavos', function () {

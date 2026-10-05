@@ -98,13 +98,17 @@
     // Resumen de la cadena: <dl data-resumen-precio> con un <output data-valor="…">
     // por renglón y un <span data-porcentaje="…"> en las etiquetas con porcentaje.
     // Cada renglón es un <div data-renglon="…">: los de IVA se ocultan si el
-    // objeto de impuesto no es 02, y el de redondeo cuando no hubo ajuste.
+    // objeto de impuesto no es 02, y el de redondeo cuando no hubo ajuste. Un
+    // renglón que el resumen no trae se salta (el del distribuidor no repite
+    // lista ni descuento). data-herencia dice qué utilidad del catálogo se
+    // hereda con el campo vacío: "utilidad" o "utilidad_distribuidor".
     document.querySelectorAll('dl[data-resumen-precio]').forEach(function (resumen) {
         const precio = document.getElementById(resumen.dataset.precio);
         const utilidadCampo = document.getElementById(resumen.dataset.utilidad);
         const catalogo = document.getElementById(resumen.dataset.catalogo);
         const objeto = document.getElementById(resumen.dataset.objeto);
         const tasaIva = parseFloat(resumen.dataset.tasaIva);
+        const herencia = resumen.dataset.herencia || 'utilidad';
         let catalogos;
 
         try {
@@ -145,10 +149,12 @@
             const datos = catalogos[catalogo.value];
             const lista = parseFloat(precio.value);
 
-            utilidadCampo.placeholder = datos ? 'Hereda ' + porcentajeTexto(datos.utilidad) + ' del catálogo' : '';
+            const heredada = datos ? Number(datos[herencia]) : NaN;
+
+            utilidadCampo.placeholder = Number.isFinite(heredada) ? 'Hereda ' + porcentajeTexto(heredada) + ' del catálogo' : '';
 
             const propia = parseFloat(utilidadCampo.value);
-            const porcentaje = utilidadCampo.value.trim() !== '' && Number.isFinite(propia) ? propia : (datos ? datos.utilidad : NaN);
+            const porcentaje = utilidadCampo.value.trim() !== '' && Number.isFinite(propia) ? propia : heredada;
 
             // Sin objeto de impuesto elegido se supone 02, el caso de casi todos.
             const factor = factorIva(objeto && objeto.value !== '' ? objeto.value : '02', tasaIva);

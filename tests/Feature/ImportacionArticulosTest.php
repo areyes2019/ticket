@@ -13,7 +13,10 @@ beforeEach(function () {
     $this->usuario = $this->catalogo->user;
 });
 
+// Sin la columna opcional de 028: un archivo de antes sigue siendo importable.
 const ENCABEZADO_CSV = "nombre,modelo,clave_prod_serv,clave_unidad,objeto_imp,precio_proveedor,utilidad_porcentaje\n";
+
+const ENCABEZADO_CSV_COMPLETO = "nombre,modelo,clave_prod_serv,clave_unidad,objeto_imp,precio_proveedor,utilidad_porcentaje,utilidad_distribuidor_porcentaje\n";
 
 function csv(string $contenido, string $nombre = 'articulos.csv'): UploadedFile
 {
@@ -214,9 +217,9 @@ describe('exportación', function () {
             ->assertHeader('Content-Type', 'text/csv; charset=UTF-8')
             ->assertDownload('articulos-'.now()->format('Y-m-d').'.csv');
 
-        expect($respuesta->streamedContent())->toBe("\xEF\xBB\xBF".ENCABEZADO_CSV
-            ."Almohadilla,A-1,44121600,H87,01,35.00,\n"
-            ."\"Sello redondo de Ø X 45 mm\",R-45,44121604,H87,02,100.50,35.00\n");
+        expect($respuesta->streamedContent())->toBe("\xEF\xBB\xBF".ENCABEZADO_CSV_COMPLETO
+            ."Almohadilla,A-1,44121600,H87,01,35.00,,\n"
+            ."\"Sello redondo de Ø X 45 mm\",R-45,44121604,H87,02,100.50,35.00,\n");
     });
 
     it('respeta los filtros y el orden del listado, sin paginar', function () {
@@ -250,5 +253,53 @@ describe('exportación', function () {
             ->toBe(['Almohadilla', 'Sello redondo de Ø X 45 mm'])
             ->and($otro->articulos()->pluck('utilidad_porcentaje', 'modelo')->sortKeys()->all())
             ->toBe(['A-1' => null, 'R-45' => '35.00']);
+    });
+
+    it('no pierde la utilidad distribuidor al exportar y reimportar', function () {
+        Articulo::firstWhere('modelo', 'R-45')->update(['utilidad_distribuidor_porcentaje' => 12.5]);
+        $contenido = $this->actingAs($this->usuario)->get('/articulos/exportar')->streamedContent();
+        $otro = Catalogo::factory()->for(Proveedor::factory()->for($this->usuario))->create();
+
+        expect($contenido)->toContain("02,100.50,35.00,12.50\n");
+
+        importar($this->usuario, $otro, csv($contenido))->assertSee('2 artículos importados.');
+
+        expect($otro->articulos()->pluck('utilidad_distribuidor_porcentaje', 'modelo')->sortKeys()->all())
+            ->toBe(['A-1' => null, 'R-45' => '12.50']);
+    });
+});
+
+describe('utilidad distribuidor (028)', function () {
+    it('hereda la del catálogo con la celda vacía y guarda la propia con valor', function () {
+        $this->catalogo->update(['utilidad_porcentaje' => 20, 'utilidad_distribuidor_porcentaje' => 10]);
+
+        importar($this->usuario, $this->catalogo, csv(ENCABEZADO_CSV_COMPLETO
+            ."Sello redondo,R-45,44121604,H87,02,100.50,,\n"
+            ."Almohadilla,A-1,44121600,H87,02,35,50,5\n"))
+            ->assertSee('2 artículos importados.');
+
+        expect(Articulo::firstWhere('modelo', 'R-45'))
+            ->utilidad_distribuidor_porcentaje->toBeNull()
+            ->precio_distribuidor_sin_iva->toBe('100.00')
+            ->and(Articulo::firstWhere('modelo', 'A-1'))
+            ->utilidad_distribuidor_porcentaje->toBe('5.00')
+            ->precio_distribuidor_sin_iva->toBe('33.62');
+    });
+
+    it('importa un archivo sin la columna como si viniera vacía', function () {
+        $this->catalogo->update(['utilidad_distribuidor_porcentaje' => 10]);
+
+        importar($this->usuario, $this->catalogo, csv(ENCABEZADO_CSV."Sello redondo,R-45,44121604,H87,02,100.50,\n"))
+            ->assertSee('1 artículo importado.');
+
+        expect(Articulo::firstWhere('modelo', 'R-45'))
+            ->utilidad_distribuidor_porcentaje->toBeNull()
+            ->precio_distribuidor_sin_iva->toBe('100.00');
+    });
+
+    it('rechaza la fila con una utilidad distribuidor fuera de rango', function () {
+        importar($this->usuario, $this->catalogo, csv(ENCABEZADO_CSV_COMPLETO."Sello redondo,R-45,44121604,H87,02,100,,1000\n"))
+            ->assertSee('1 fila rechazada.')
+            ->assertSee('La utilidad distribuidor debe estar entre 0 y 999.99%.');
     });
 });

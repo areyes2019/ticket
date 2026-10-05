@@ -32,6 +32,7 @@ class ClienteFactory extends Factory
             'telefono' => '+52'.fake()->numerify('##########'),
             'direccion_comercial' => fake()->address(),
             'descuento_permanente' => '0.00',
+            'es_distribuidor' => false,
         ];
     }
 }

@@ -9,6 +9,13 @@
             <td>{{ $cliente->telefono ?? '—' }}</td>
             <td class="numero">{{ $cliente->descuentoPermanenteTexto() }}</td>
             <td>
+                @if ($cliente->es_distribuidor)
+                    <span class="etiqueta etiqueta-activa">Distribuidor</span>
+                @else
+                    —
+                @endif
+            </td>
+            <td>
                 <div class="acciones">
                     <x-boton :href="route('clientes.edit', $cliente)" variante="suave" icono="pencil" title="Editar" descripcion="Editar {{ $cliente->razon_social }}" />
 
@@ -22,7 +29,7 @@
         </tr>
     @empty
         <tr>
-            <td colspan="8">
+            <td colspan="9">
                 {{ array_filter($filtros) !== [] ? 'Ningún cliente coincide con la búsqueda.' : 'Todavía no tienes clientes registrados.' }}
             </td>
         </tr>

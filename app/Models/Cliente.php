@@ -26,6 +26,7 @@ use PhpCfdi\Rfc\Rfc;
     'telefono',
     'direccion_comercial',
     'descuento_permanente',
+    'es_distribuidor',
 ])]
 class Cliente extends Model
 {
@@ -47,6 +48,7 @@ class Cliente extends Model
      */
     protected $attributes = [
         'descuento_permanente' => '0.00',
+        'es_distribuidor' => false,
     ];
 
     /**
@@ -147,6 +149,7 @@ class Cliente extends Model
         return [
             'regimen_fiscal' => RegimenFiscal::class,
             'descuento_permanente' => 'decimal:2',
+            'es_distribuidor' => 'boolean',
         ];
     }
 }

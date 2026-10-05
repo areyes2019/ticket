@@ -45,7 +45,8 @@ class ArticuloController extends Controller
     /**
      * Sugerencias para las líneas de un documento (cotización): artículos del
      * usuario cuyo nombre o modelo contiene el texto, con los datos que se
-     * precargan en la línea.
+     * precargan en la línea. Con el precio de venta viaja también el precio
+     * distribuidor, que documento-lineas.js usa con un cliente distribuidor.
      */
     public function sugerencias(Request $request): JsonResponse
     {
@@ -71,6 +72,7 @@ class ArticuloController extends Controller
             'nombre' => $articulo->nombre,
             'modelo' => $articulo->modelo,
             'precio_unitario' => $costo ? $articulo->costo_con_descuento : $articulo->precio_unitario_sin_iva,
+            ...($costo ? [] : ['precio_distribuidor' => $articulo->precio_distribuidor_sin_iva]),
             'tasa_iva' => $articulo->objeto_imp === ObjetoImpuesto::SiObjeto ? TasaIva::Dieciseis->value : TasaIva::Exento->value,
         ])->values());
     }
@@ -137,14 +139,15 @@ class ArticuloController extends Controller
     }
 
     /**
-     * El precio de venta que calculó y guardó el servidor, que es el que
-     * cuenta (el resumen del formulario solo es informativo).
+     * Los precios que calculó y guardó el servidor, que son los que cuentan
+     * (el resumen del formulario solo es informativo).
      */
     private function precioGuardado(Articulo $articulo): string
     {
-        $etiqueta = $articulo->objeto_imp === ObjetoImpuesto::SiObjeto ? 'Precio de venta con IVA' : 'Precio de venta';
+        $conIva = $articulo->objeto_imp === ObjetoImpuesto::SiObjeto ? ' con IVA' : '';
 
-        return $etiqueta.': $'.number_format($articulo->precio_unitario_con_iva, 2).'.';
+        return "Precio de venta{$conIva}: $".number_format($articulo->precio_unitario_con_iva, 2).'.'
+            ." Precio distribuidor{$conIva}: $".number_format($articulo->precio_distribuidor_con_iva, 2).'.';
     }
 
     /**
@@ -199,32 +202,39 @@ class ArticuloController extends Controller
      * impuesto distinto de 02) se ocultan los renglones de IVA, y el de
      * redondeo cuando no hubo ajuste.
      *
+     * La cadena distribuidor parte del mismo costo con su propia utilidad, así
+     * que no repite los renglones de precio de lista y descuento.
+     *
      * @return list<array{clave: string, etiqueta: string, valor: string, porcentaje?: string, total?: bool, oculto?: bool, sufijoIva?: bool}>
      */
-    private function resumenPrecio(?Articulo $articulo): array
+    private function resumenPrecio(?Articulo $articulo, bool $distribuidor = false): array
     {
         $pesos = fn (float|string $monto, string $signo = '') => $articulo ? $signo.'$'.number_format((float) $monto, 2) : '—';
         $costo = (float) $articulo?->costo_con_descuento;
         $lista = (float) $articulo?->precio_proveedor;
+        $utilidad = $distribuidor ? $articulo?->utilidad_distribuidor_porcentaje_efectivo : $articulo?->utilidad_porcentaje_efectivo;
         $tasaIva = CalculadoraPrecioArticulo::tasaIva($articulo ? $articulo->objeto_imp : ObjetoImpuesto::SiObjeto);
-        $venta = $articulo ? CalculadoraPrecioArticulo::precioVentaSinIva($costo, $articulo->utilidad_porcentaje_efectivo) : 0.0;
+        $venta = $articulo ? CalculadoraPrecioArticulo::precioVentaSinIva($costo, $utilidad) : 0.0;
         $conIva = CalculadoraPrecioArticulo::precioConIva($venta, $tasaIva);
-        $final = (float) $articulo?->precio_unitario_con_iva;
+        $final = (float) ($distribuidor ? $articulo?->precio_distribuidor_con_iva : $articulo?->precio_unitario_con_iva);
         $redondeo = CalculadoraPrecioArticulo::redondeo2($final - $conIva);
+        $precio = $distribuidor ? 'Precio distribuidor' : 'Precio de venta';
 
         return [
-            ['clave' => 'lista', 'etiqueta' => 'Precio de lista del proveedor', 'valor' => $pesos($lista)],
-            ['clave' => 'descuento', 'etiqueta' => 'Descuento del catálogo', 'porcentaje' => $articulo ? $articulo->catalogo->descuento_texto : '—',
-                'valor' => $pesos(CalculadoraPrecioArticulo::redondeo2($lista - $costo), '−')],
+            ...($distribuidor ? [] : [
+                ['clave' => 'lista', 'etiqueta' => 'Precio de lista del proveedor', 'valor' => $pesos($lista)],
+                ['clave' => 'descuento', 'etiqueta' => 'Descuento del catálogo', 'porcentaje' => $articulo ? $articulo->catalogo->descuento_texto : '—',
+                    'valor' => $pesos(CalculadoraPrecioArticulo::redondeo2($lista - $costo), '−')],
+            ]),
             ['clave' => 'costo', 'etiqueta' => 'Costo', 'valor' => $pesos($costo), 'total' => true],
-            ['clave' => 'utilidad', 'etiqueta' => 'Utilidad', 'porcentaje' => $articulo ? Catalogo::porcentajeTexto($articulo->utilidad_porcentaje_efectivo) : '—',
+            ['clave' => 'utilidad', 'etiqueta' => $distribuidor ? 'Utilidad distribuidor' : 'Utilidad', 'porcentaje' => $articulo ? Catalogo::porcentajeTexto($utilidad) : '—',
                 'valor' => $pesos(CalculadoraPrecioArticulo::utilidad($venta, $costo), '+')],
-            ['clave' => 'venta', 'etiqueta' => 'Precio de venta sin IVA', 'valor' => $pesos($venta)],
+            ['clave' => 'venta', 'etiqueta' => "{$precio} sin IVA", 'valor' => $pesos($venta)],
             ['clave' => 'iva', 'etiqueta' => 'IVA ('.Articulo::TASA_IVA * 100 .'%)',
                 'valor' => $pesos(CalculadoraPrecioArticulo::redondeo2($conIva - $venta), '+'), 'oculto' => $tasaIva === 0.0],
-            ['clave' => 'venta-con-iva', 'etiqueta' => 'Precio con IVA', 'valor' => $pesos($conIva), 'oculto' => $tasaIva === 0.0],
+            ['clave' => 'venta-con-iva', 'etiqueta' => $distribuidor ? 'Precio distribuidor con IVA' : 'Precio con IVA', 'valor' => $pesos($conIva), 'oculto' => $tasaIva === 0.0],
             ['clave' => 'redondeo', 'etiqueta' => 'Redondeo', 'valor' => $pesos($redondeo, '+'), 'oculto' => $redondeo <= 0],
-            ['clave' => 'final', 'etiqueta' => 'Precio final', 'sufijoIva' => $tasaIva > 0, 'valor' => $pesos($final), 'total' => true],
+            ['clave' => 'final', 'etiqueta' => $distribuidor ? 'Precio distribuidor final' : 'Precio final', 'sufijoIva' => $tasaIva > 0, 'valor' => $pesos($final), 'total' => true],
         ];
     }
 
@@ -245,9 +255,12 @@ class ArticuloController extends Controller
             'preciosCatalogo' => $catalogos->mapWithKeys(fn (Catalogo $catalogo) => [$catalogo->id => [
                 'descuento' => (float) $catalogo->descuento,
                 'utilidad' => (float) $catalogo->utilidad_porcentaje,
+                'utilidad_distribuidor' => (float) $catalogo->utilidad_distribuidor_porcentaje,
             ]])->all(),
             'placeholderUtilidad' => $catalogoElegido ? "Hereda {$catalogoElegido->utilidad_texto} del catálogo" : null,
+            'placeholderUtilidadDistribuidor' => $catalogoElegido ? "Hereda {$catalogoElegido->utilidad_distribuidor_texto} del catálogo" : null,
             'resumen' => $this->resumenPrecio($articulo),
+            'resumenDistribuidor' => $this->resumenPrecio($articulo, distribuidor: true),
             'objetosImpuesto' => ObjetoImpuesto::opciones(),
             'descripcionProdServ' => $claveProdServ ? SatClaveProdServ::find($claveProdServ)?->descripcion : null,
             'descripcionUnidad' => $claveUnidad ? SatClaveUnidad::find(mb_strtoupper($claveUnidad))?->nombre : null,
