@@ -63,5 +63,5 @@
 @endsection
 
 @push('scripts')
-    <script src="{{ asset('js/carga-imagenes.js') }}"></script>
+    <script src="{{ asset('js/carga-imagenes.js') }}?v={{ filemtime(public_path('js/carga-imagenes.js')) }}"></script>
 @endpush

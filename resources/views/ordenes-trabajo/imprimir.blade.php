@@ -130,7 +130,7 @@
     @endforelse
 
     @if ($ordenes->isNotEmpty())
-        <script src="{{ asset('js/imprimir-al-cargar.js') }}"></script>
+        <script src="{{ asset('js/imprimir-al-cargar.js') }}?v={{ filemtime(public_path('js/imprimir-al-cargar.js')) }}"></script>
     @endif
 </body>
 </html>

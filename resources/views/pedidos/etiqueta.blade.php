@@ -63,6 +63,6 @@
         </div>
     </div>
 
-    <script src="{{ asset('js/etiqueta-pedido.js') }}"></script>
+    <script src="{{ asset('js/etiqueta-pedido.js') }}?v={{ filemtime(public_path('js/etiqueta-pedido.js')) }}"></script>
 </body>
 </html>

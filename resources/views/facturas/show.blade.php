@@ -271,6 +271,6 @@
 @endsection
 
 @push('scripts')
-    <script src="{{ asset('js/compartir-pdf.js') }}"></script>
-    <script src="{{ asset('js/facturas.js') }}"></script>
+    <script src="{{ asset('js/compartir-pdf.js') }}?v={{ filemtime(public_path('js/compartir-pdf.js')) }}"></script>
+    <script src="{{ asset('js/facturas.js') }}?v={{ filemtime(public_path('js/facturas.js')) }}"></script>
 @endpush

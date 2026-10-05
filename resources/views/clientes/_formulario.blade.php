@@ -3,7 +3,7 @@
 @include('clientes._constancia')
 
 @push('scripts')
-    <script src="{{ asset('js/constancia-fiscal.js') }}"></script>
+    <script src="{{ asset('js/constancia-fiscal.js') }}?v={{ filemtime(public_path('js/constancia-fiscal.js')) }}"></script>
 @endpush
 
 <form method="POST" action="{{ $accion }}">

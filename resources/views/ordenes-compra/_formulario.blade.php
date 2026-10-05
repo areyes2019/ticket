@@ -97,6 +97,6 @@
 @include('documentos._aviso-duplicado', ['documento' => 'la orden de compra'])
 
 @push('scripts')
-    <script src="{{ asset('js/totales-documento.js') }}"></script>
-    <script src="{{ asset('js/documento-lineas.js') }}"></script>
+    <script src="{{ asset('js/totales-documento.js') }}?v={{ filemtime(public_path('js/totales-documento.js')) }}"></script>
+    <script src="{{ asset('js/documento-lineas.js') }}?v={{ filemtime(public_path('js/documento-lineas.js')) }}"></script>
 @endpush

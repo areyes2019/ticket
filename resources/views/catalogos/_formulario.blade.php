@@ -7,7 +7,7 @@
     </x-alerta>
 @else
     @push('scripts')
-        <script src="{{ asset('js/precio-articulo.js') }}"></script>
+        <script src="{{ asset('js/precio-articulo.js') }}?v={{ filemtime(public_path('js/precio-articulo.js')) }}"></script>
     @endpush
 
     <form method="POST" action="{{ $accion }}">

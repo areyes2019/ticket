@@ -25,5 +25,5 @@
 @endsection
 
 @push('scripts')
-    <script src="{{ asset('js/contrasena.js') }}"></script>
+    <script src="{{ asset('js/contrasena.js') }}?v={{ filemtime(public_path('js/contrasena.js')) }}"></script>
 @endpush

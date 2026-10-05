@@ -23,6 +23,6 @@
 
     {{-- app.js da data-enviar-una-vez y los diálogos; necesita Axios para su configuración. --}}
     <script src="{{ asset('vendor/axios.min.js') }}"></script>
-    <script src="{{ asset('js/app.js') }}"></script>
+    <script src="{{ asset('js/app.js') }}?v={{ filemtime(public_path('js/app.js')) }}"></script>
 </body>
 </html>

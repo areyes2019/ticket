@@ -59,5 +59,5 @@
 @endsection
 
 @push('scripts')
-    <script src="{{ asset('js/busqueda-dinamica.js') }}"></script>
+    <script src="{{ asset('js/busqueda-dinamica.js') }}?v={{ filemtime(public_path('js/busqueda-dinamica.js')) }}"></script>
 @endpush

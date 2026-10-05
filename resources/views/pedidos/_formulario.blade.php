@@ -90,7 +90,7 @@
 @include('documentos._aviso-duplicado', ['documento' => 'la venta'])
 
 @push('scripts')
-    <script src="{{ asset('js/totales-documento.js') }}"></script>
-    <script src="{{ asset('js/documento-lineas.js') }}"></script>
-    <script src="{{ asset('js/pedido-cliente.js') }}"></script>
+    <script src="{{ asset('js/totales-documento.js') }}?v={{ filemtime(public_path('js/totales-documento.js')) }}"></script>
+    <script src="{{ asset('js/documento-lineas.js') }}?v={{ filemtime(public_path('js/documento-lineas.js')) }}"></script>
+    <script src="{{ asset('js/pedido-cliente.js') }}?v={{ filemtime(public_path('js/pedido-cliente.js')) }}"></script>
 @endpush

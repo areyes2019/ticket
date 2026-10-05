@@ -70,7 +70,7 @@
 @endsection
 
 @push('scripts')
-    <script src="{{ asset('js/busqueda-dinamica.js') }}"></script>
-    <script src="{{ asset('js/compartir-pdf.js') }}"></script>
-    <script src="{{ asset('js/elegir-cotizacion.js') }}"></script>
+    <script src="{{ asset('js/busqueda-dinamica.js') }}?v={{ filemtime(public_path('js/busqueda-dinamica.js')) }}"></script>
+    <script src="{{ asset('js/compartir-pdf.js') }}?v={{ filemtime(public_path('js/compartir-pdf.js')) }}"></script>
+    <script src="{{ asset('js/elegir-cotizacion.js') }}?v={{ filemtime(public_path('js/elegir-cotizacion.js')) }}"></script>
 @endpush
