@@ -24,7 +24,7 @@
         @endif
 
         <x-campo nombre="cliente_id" id="duplicar-cliente" etiqueta="Cliente de la copia" tipo="select" :opciones="$clientes"
-            :valor="array_key_exists($clienteActual, $clientes) ? $clienteActual : null" vacia="Selecciona un cliente" required
+            :valor="array_key_exists($clienteActual, $clientes) ? $clienteActual : null" vacia="Selecciona un cliente" required data-buscable="Buscar cliente por nombre…"
             :ayuda="$ayuda ?? null" />
 
         <div class="acciones">
@@ -33,3 +33,7 @@
         </div>
     </form>
 </dialog>
+
+@push('scripts')
+    <script src="{{ asset('js/select-buscable.js') }}?v={{ filemtime(public_path('js/select-buscable.js')) }}"></script>
+@endpush

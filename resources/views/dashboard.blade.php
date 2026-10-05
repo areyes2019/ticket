@@ -154,6 +154,7 @@
     <script src="{{ asset('js/dashboard-secciones.js') }}?v={{ filemtime(public_path('js/dashboard-secciones.js')) }}"></script>
     <script src="{{ asset('js/compartir-pdf.js') }}?v={{ filemtime(public_path('js/compartir-pdf.js')) }}"></script>
     <script src="{{ asset('js/totales-documento.js') }}?v={{ filemtime(public_path('js/totales-documento.js')) }}"></script>
+    <script src="{{ asset('js/select-buscable.js') }}?v={{ filemtime(public_path('js/select-buscable.js')) }}"></script>
     <script src="{{ asset('js/documento-lineas.js') }}?v={{ filemtime(public_path('js/documento-lineas.js')) }}"></script>
     <script src="{{ asset('js/timbrar-cotizacion.js') }}?v={{ filemtime(public_path('js/timbrar-cotizacion.js')) }}"></script>
 @endpush

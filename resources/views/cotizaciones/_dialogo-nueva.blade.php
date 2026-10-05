@@ -37,7 +37,7 @@
                     <span class="documento-nuevo-numero">1</span>Cliente
                 </h3>
                 <x-campo nombre="cliente_id" id="nueva-cotizacion-cliente" etiqueta="¿Para quién es?" tipo="select"
-                         :opciones="$clientes" vacia="Selecciona un cliente" required />
+                         :opciones="$clientes" vacia="Selecciona un cliente" required data-buscable="Buscar cliente por nombre…" />
             </section>
 
             <section class="documento-nuevo-paso" aria-labelledby="nueva-cotizacion-paso-lineas">

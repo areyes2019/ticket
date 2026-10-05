@@ -118,6 +118,10 @@
 
                 visor.innerHTML = respuesta.data;
                 visor.scrollTop = 0;
+
+                if (window.SelectBuscable) {
+                    window.SelectBuscable.activar(visor);
+                }
                 bandeja.classList.toggle('bandeja-leyendo', leyendo);
                 recordarEnUrl();
 

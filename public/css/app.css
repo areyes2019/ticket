@@ -961,6 +961,118 @@ h1.tarjeta-titulo {
     background: var(--color-menu);
 }
 
+/* Lista desplegable con buscador (select-buscable.js) */
+.select-buscable {
+    position: relative;
+}
+
+.campo .select-buscable-original {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.select-buscable-boton {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--espacio-2);
+    width: 100%;
+    padding: var(--espacio-2) var(--espacio-3);
+    font: inherit;
+    color: var(--color-texto);
+    text-align: left;
+    cursor: pointer;
+    background: var(--color-superficie);
+    border: 1px solid var(--color-borde-campo);
+    border-radius: var(--radio);
+}
+
+.select-buscable-boton::after {
+    flex-shrink: 0;
+    width: 0.5em;
+    height: 0.5em;
+    margin-top: -0.25em;
+    content: "";
+    border-right: 2px solid currentcolor;
+    border-bottom: 2px solid currentcolor;
+    transform: rotate(45deg);
+}
+
+.select-buscable-abierto .select-buscable-boton::after {
+    margin-top: 0.25em;
+    transform: rotate(-135deg);
+}
+
+.select-buscable-texto {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.select-buscable-vacio {
+    color: var(--color-texto-suave);
+}
+
+.campo-error .select-buscable-boton {
+    border-color: var(--color-error);
+}
+
+.select-buscable-abierto .select-buscable-boton {
+    border-color: var(--color-primario);
+}
+
+.select-buscable-panel {
+    position: absolute;
+    z-index: 10;
+    right: 0;
+    left: 0;
+    margin-top: var(--espacio-1);
+    padding: var(--espacio-2);
+    background: var(--color-superficie);
+    border: 1px solid var(--color-borde-campo);
+    border-radius: var(--radio);
+    box-shadow: var(--sombra-menu-panel);
+}
+
+/* En una ventana chica el panel empuja el contenido en vez de quedar recortado. */
+.dialogo:not(.dialogo-documento) .select-buscable-panel {
+    position: static;
+}
+
+.campo .select-buscable-buscador {
+    margin-bottom: var(--espacio-2);
+}
+
+.select-buscable-lista {
+    max-height: var(--alto-sugerencias);
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+}
+
+.select-buscable-lista [role="option"] {
+    padding: var(--espacio-2) var(--espacio-3);
+    cursor: pointer;
+}
+
+.select-buscable-lista [aria-selected="true"] {
+    font-weight: 600;
+}
+
+.select-buscable-lista [role="option"]:hover,
+.select-buscable-lista .select-buscable-activa {
+    background: var(--color-menu);
+}
+
+.select-buscable-aviso {
+    margin: var(--espacio-2) 0 0;
+    font-size: var(--texto-pequeno);
+    color: var(--color-texto-suave);
+}
+
 /* Imágenes de artículos */
 .enlace-ficha {
     color: var(--color-primario);

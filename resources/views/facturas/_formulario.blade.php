@@ -64,7 +64,7 @@
     @endisset
 
     <x-card titulo="Cliente y datos fiscales">
-        <x-campo nombre="cliente_id" etiqueta="Cliente" tipo="select" :opciones="$clientes" :valor="$cabecera['cliente_id']" vacia="Selecciona un cliente" required />
+        <x-campo nombre="cliente_id" etiqueta="Cliente" tipo="select" :opciones="$clientes" :valor="$cabecera['cliente_id']" vacia="Selecciona un cliente" required data-buscable="Buscar cliente por nombre…" />
         <x-campo nombre="uso_cfdi" etiqueta="Uso de CFDI" tipo="select" :opciones="$usosCfdi" :valor="$cabecera['uso_cfdi']" vacia="Selecciona el uso de CFDI" required />
         <x-campo nombre="metodo_pago" etiqueta="Método de pago" tipo="select" :opciones="$metodosPago" :valor="$cabecera['metodo_pago']" vacia="Selecciona el método de pago" required data-metodo-pago />
         <x-campo nombre="forma_pago" etiqueta="Forma de pago" tipo="select" :opciones="$formasPago" :valor="$cabecera['forma_pago']" vacia="Selecciona la forma de pago" required
@@ -138,6 +138,7 @@
 
 @push('scripts')
     <script src="{{ asset('js/totales-documento.js') }}?v={{ filemtime(public_path('js/totales-documento.js')) }}"></script>
+    <script src="{{ asset('js/select-buscable.js') }}?v={{ filemtime(public_path('js/select-buscable.js')) }}"></script>
     <script src="{{ asset('js/documento-lineas.js') }}?v={{ filemtime(public_path('js/documento-lineas.js')) }}"></script>
     <script src="{{ asset('js/facturas.js') }}?v={{ filemtime(public_path('js/facturas.js')) }}"></script>
 @endpush

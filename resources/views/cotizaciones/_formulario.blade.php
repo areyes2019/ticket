@@ -21,7 +21,7 @@
                 ayuda="El cliente ya no se cambia: la cotización tiene venta." />
             <input type="hidden" name="cliente_id" value="{{ $cotizacion->cliente_id }}">
         @else
-            <x-campo nombre="cliente_id" etiqueta="Cliente" tipo="select" :opciones="$clientes" :valor="$cotizacion?->cliente_id" vacia="Selecciona un cliente" required />
+            <x-campo nombre="cliente_id" etiqueta="Cliente" tipo="select" :opciones="$clientes" :valor="$cotizacion?->cliente_id" vacia="Selecciona un cliente" required data-buscable="Buscar cliente por nombre…" />
         @endif
     </x-card>
 
@@ -99,5 +99,6 @@
 
 @push('scripts')
     <script src="{{ asset('js/totales-documento.js') }}?v={{ filemtime(public_path('js/totales-documento.js')) }}"></script>
+    <script src="{{ asset('js/select-buscable.js') }}?v={{ filemtime(public_path('js/select-buscable.js')) }}"></script>
     <script src="{{ asset('js/documento-lineas.js') }}?v={{ filemtime(public_path('js/documento-lineas.js')) }}"></script>
 @endpush
