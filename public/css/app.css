@@ -2998,6 +2998,17 @@ a.bandeja-abrir {
     color: var(--color-primario-oscuro);
 }
 
+/* Logo fijo de los PDF, solo como referencia en Configuración (026) */
+.logo-documentos {
+    margin: var(--espacio-3) 0;
+}
+
+.logo-documentos img {
+    display: block;
+    max-width: 200px;
+    height: auto;
+}
+
 /* Páginas públicas (portal de autofacturación): solo la marca del negocio */
 .barra-publica {
     justify-content: center;

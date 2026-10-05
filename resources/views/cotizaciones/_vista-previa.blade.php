@@ -42,6 +42,7 @@
 </div>
 
 <div class="bandeja-documento" data-vista-previa-de="{{ $cotizacion->id }}" data-documento="cotizacion">
+    @include('documentos._aviso-emisor')
     <p class="bandeja-documento-estado">
         <span @class(['etiqueta', $cotizacion->estado->claseEtiqueta()]) data-estado-documento>{{ $cotizacion->estado->etiqueta() }}</span>
         @if ($cotizacion->facturaVigente)

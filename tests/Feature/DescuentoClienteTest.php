@@ -8,6 +8,7 @@ use App\Models\Cuenta;
 use App\Models\Factura;
 use App\Models\Pedido;
 use App\Models\User;
+use App\Services\Cotizaciones\GeneradorPdfCotizacion;
 use App\Services\Documentos\CalculadoraTotalesDocumento;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
@@ -274,7 +275,7 @@ describe('pantallas de la cotización', function () {
             ->assertOk()
             ->assertDontSee('Descuento de cliente al cotizar');
 
-        expect(view('cotizaciones.pdf', ['cotizacion' => $cotizacion->load('cliente', 'lineas')])->render())
+        expect(view('cotizaciones.pdf', app(GeneradorPdfCotizacion::class)->datos($cotizacion))->render())
             ->not->toContain('Descuento de cliente al cotizar')
             ->toContain('15%');
     });

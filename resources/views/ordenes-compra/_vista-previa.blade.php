@@ -38,6 +38,7 @@
 </div>
 
 <div class="bandeja-documento" data-vista-previa-de="{{ $orden->id }}">
+    @include('documentos._aviso-emisor')
     <p class="bandeja-documento-estado">
         <span @class(['etiqueta', $orden->estado->claseEtiqueta()]) data-estado-documento>{{ $orden->estado->etiqueta() }}</span>
         @if ($orden->estaPagada())

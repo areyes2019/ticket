@@ -167,6 +167,9 @@ Route::middleware(['auth', AsegurarUsuarioActivo::class])->group(function () {
 
     Route::get('configuracion', [ConfiguracionController::class, 'edit'])->name('configuracion.edit');
     Route::put('configuracion', [ConfiguracionController::class, 'update'])->name('configuracion.update');
+    Route::put('configuracion/emisor', [ConfiguracionController::class, 'actualizarEmisor'])
+        ->middleware('can:editar-emisor')
+        ->name('configuracion.emisor');
 
     // Inventario. Las rutas estáticas van antes de {articulo}, o se tomarían
     // por un artículo.

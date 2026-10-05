@@ -7,6 +7,10 @@
 
     @include('documentos._mensajes')
 
+    @can('editar-emisor')
+        @include('configuracion._emisor')
+    @endcan
+
     <form method="POST" action="{{ route('configuracion.update') }}">
         @csrf
         @method('PUT')

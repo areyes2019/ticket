@@ -31,6 +31,7 @@
     </div>
 
     @include('documentos._mensajes')
+    @include('documentos._aviso-emisor')
 
     @foreach (['envio', 'pago'] as $bolsa)
         @if ($errors->{$bolsa}->any())

@@ -9,6 +9,7 @@ use App\Models\OrdenCompra;
 use App\Models\Pedido;
 use App\Models\PedidoPago;
 use App\Models\User;
+use App\Services\Documentos\LogoDocumento;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
@@ -25,7 +26,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Un logo leído por petición: el correo genera el PDF varias veces.
+        $this->app->scoped(LogoDocumento::class);
     }
 
     /**
@@ -36,6 +38,8 @@ class AppServiceProvider extends ServiceProvider
         Password::defaults(fn () => Password::min(8)->mixedCase()->numbers()->symbols());
 
         Gate::define('ver-historial-accesos', fn (User $user) => $user->esAdministrador());
+        // El emisor es de toda la instalación (026): solo el administrador lo cambia.
+        Gate::define('editar-emisor', fn (User $user) => $user->esAdministrador());
 
         Route::resourceVerbs(['create' => 'crear', 'edit' => 'editar']);
 
