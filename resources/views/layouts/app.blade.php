@@ -20,14 +20,16 @@
 
         <nav class="menu">
             @auth
-                <a href="{{ route('tesoreria.movimientos.index') }}"><x-icono nombre="cash-coin" />Contabilidad</a>
-                <a href="{{ route('configuracion.edit') }}" @if (request()->routeIs('configuracion.*')) aria-current="page" @endif><x-icono nombre="gear" />Configuración</a>
                 @can('ver-historial-accesos')
                     <a href="{{ route('historial-accesos.index') }}"><x-icono nombre="clock-history" />Historial de accesos</a>
                 @endcan
                 <details class="menu-grupo menu-usuario" data-menu-grupo>
                     <summary><x-icono nombre="person-circle" />{{ auth()->user()->name }}<x-icono nombre="chevron-down" class="menu-grupo-flecha" /></summary>
                     <div class="menu-panel menu-panel-derecha">
+                        <a href="{{ route('configuracion.edit') }}" @if (request()->routeIs('configuracion.*')) aria-current="page" @endif>
+                            <span class="menu-panel-icono"><x-icono nombre="gear" /></span>
+                            <span class="menu-panel-texto"><strong>Configuración</strong></span>
+                        </a>
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
                             <x-boton variante="menu">

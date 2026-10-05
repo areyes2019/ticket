@@ -36,6 +36,17 @@
                 ['ruta' => 'existencias', 'icono' => 'boxes', 'nombre' => 'Existencias', 'detalle' => 'Piezas en bodega y reposición'],
             ],
         ],
+        [
+            'nombre' => 'Contabilidad',
+            'icono' => 'cash-coin',
+            'rutas' => ['tesoreria.*'],
+            'opciones' => [
+                ['ruta' => 'tesoreria.movimientos', 'icono' => 'arrow-left-right', 'nombre' => 'Movimientos', 'detalle' => 'Ingresos, egresos y transferencias'],
+                ['ruta' => 'tesoreria.cuentas', 'icono' => 'wallet2', 'nombre' => 'Cuentas', 'detalle' => 'Bancos, caja y tarjetas'],
+                // Saldos es una sola ruta, sin .index.
+                ['ruta' => 'tesoreria.saldos', 'indice' => 'tesoreria.saldos', 'icono' => 'bank', 'nombre' => 'Saldos', 'detalle' => 'Cuánto hay en cada cuenta'],
+            ],
+        ],
     ];
 @endphp
 
@@ -70,7 +81,7 @@
             <div class="menu-panel">
                 <p class="menu-panel-titulo">{{ $grupo['nombre'] }}</p>
                 @foreach ($grupo['opciones'] as $opcion)
-                    <a href="{{ route($opcion['ruta'].'.index') }}" @if (request()->routeIs($opcion['ruta'].'.*')) aria-current="page" @endif>
+                    <a href="{{ route($opcion['indice'] ?? $opcion['ruta'].'.index') }}" @if (request()->routeIs($opcion['ruta'], $opcion['ruta'].'.*')) aria-current="page" @endif>
                         <span class="menu-panel-icono"><x-icono :nombre="$opcion['icono']" /></span>
                         <span class="menu-panel-texto"><strong>{{ $opcion['nombre'] }}</strong><small>{{ $opcion['detalle'] }}</small></span>
                     </a>
