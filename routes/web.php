@@ -13,6 +13,7 @@ use App\Http\Controllers\CotizacionController;
 use App\Http\Controllers\CotizacionPagoController;
 use App\Http\Controllers\CuentaController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DatoBancarioController;
 use App\Http\Controllers\EnvioCotizacionController;
 use App\Http\Controllers\EnvioFacturaController;
 use App\Http\Controllers\EnvioOrdenCompraController;
@@ -170,6 +171,23 @@ Route::middleware(['auth', AsegurarUsuarioActivo::class])->group(function () {
     Route::put('configuracion/emisor', [ConfiguracionController::class, 'actualizarEmisor'])
         ->middleware('can:editar-emisor')
         ->name('configuracion.emisor');
+
+    // Datos bancarios (027): del negocio, sin scope por usuario; como el
+    // emisor, solo los cambia el administrador. La lista vive en Configuración.
+    Route::controller(DatoBancarioController::class)
+        ->prefix('configuracion/datos-bancarios')
+        ->name('configuracion.datos-bancarios.')
+        ->middleware('can:editar-emisor')
+        ->group(function () {
+            Route::get('crear', 'create')->name('create');
+            Route::post('/', 'store')->name('store');
+            Route::get('{datoBancario}/editar', 'edit')->name('edit');
+            Route::put('{datoBancario}', 'update')->name('update');
+            Route::delete('{datoBancario}', 'destroy')->name('destroy');
+            Route::patch('{datoBancario}/visible', 'alternarVisible')->name('visible');
+            Route::patch('{datoBancario}/mover/{direccion}', 'mover')->whereIn('direccion', ['arriba', 'abajo'])->name('mover');
+            Route::get('{datoBancario}/logo', 'logo')->name('logo');
+        });
 
     // Inventario. Las rutas estáticas van antes de {articulo}, o se tomarían
     // por un artículo.

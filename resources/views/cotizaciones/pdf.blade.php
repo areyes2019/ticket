@@ -15,6 +15,38 @@
     <span class="suave">Fecha</span> {{ $cotizacion->created_at->setTimezone($zona)->format('d/m/Y') }}
 @endsection
 
+@if ($datosBancarios !== [])
+    @section('encabezado-extra')
+        <div class="bancos">
+            <div class="titulo-seccion">Datos bancarios</div>
+            @foreach ($datosBancarios as $banco)
+                <div class="banco">
+                    <table>
+                        <tr>
+                            @if ($banco['logo'])
+                                <td class="icono-banco"><img src="{{ $banco['logo'] }}" alt="" style="height: {{ App\Models\Cotizacion::ALTO_LOGO_BANCO_MM }}mm; width: {{ $banco['logo_ancho_mm'] }}mm;"></td>
+                            @endif
+                            <td><strong>{{ $banco['nombre_banco'] }}</strong></td>
+                        </tr>
+                    </table>
+                    @if (filled($banco['beneficiario']))
+                        {{ $banco['beneficiario'] }}<br>
+                    @endif
+                    @if (filled($banco['numero_cuenta']))
+                        Cta: {{ $banco['numero_cuenta'] }}<br>
+                    @endif
+                    @if (filled($banco['tarjeta']))
+                        Tarjeta: {{ $banco['tarjeta'] }}<br>
+                    @endif
+                    @if (filled($banco['clabe']))
+                        CLABE: {{ $banco['clabe'] }}<br>
+                    @endif
+                </div>
+            @endforeach
+        </div>
+    @endsection
+@endif
+
 @section('emisor')
     <x-pdf.emisor :nombre="$emisor->nombre" :rfc="$emisor->rfc" :regimen="$emisor->regimen_fiscal"
         :domicilio="$emisor->domicilio" :correo="$emisor->correo" :telefono="$emisor->telefono" />

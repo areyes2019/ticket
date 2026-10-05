@@ -11,15 +11,17 @@ use RuntimeException;
 use Throwable;
 
 /**
- * Toda imagen que sube el usuario (fotos de artículos de 010 y diseños de
- * órdenes de trabajo de 022): la comprueba por contenido, la reduce, la
- * regenera como WEBP con un nombre propio en el disco privado y reemplaza la
- * anterior del modelo (columna imagen_ruta) sin dejar huecos.
+ * Toda imagen que sube el usuario (fotos de artículos de 010, diseños de
+ * órdenes de trabajo de 022 y logos de los datos bancarios de 027): la
+ * comprueba por contenido, la reduce, la regenera como WEBP con un nombre
+ * propio en el disco privado y reemplaza la anterior del modelo (columna
+ * imagen_ruta, salvo que se indique otra) sin dejar huecos.
  */
 class GuardadorImagenWebp
 {
     /**
-     * Lado largo máximo de la imagen guardada, en puntos.
+     * Lado largo máximo de la imagen guardada, en puntos, si quien llama no
+     * pide otro.
      */
     public const LADO_MAXIMO = 1200;
 
@@ -53,9 +55,9 @@ class GuardadorImagenWebp
      *
      * @throws ImagenInvalida
      */
-    public function guardar(Model $modelo, string $directorio, string $contenido): void
+    public function guardar(Model $modelo, string $directorio, string $contenido, int $ladoMaximo = self::LADO_MAXIMO, string $columna = 'imagen_ruta'): void
     {
-        $webp = $this->convertir($contenido);
+        $webp = $this->convertir($contenido, $ladoMaximo);
         $disco = Storage::disk('local');
         $ruta = $directorio.'/'.$modelo->getKey().'-'.Str::lower(Str::random(8)).'.webp';
 
@@ -63,13 +65,13 @@ class GuardadorImagenWebp
             throw new RuntimeException("No se pudo escribir la imagen {$ruta}.");
         }
 
-        $anterior = $modelo->imagen_ruta;
+        $anterior = $modelo->{$columna};
 
         try {
-            $modelo->imagen_ruta = $ruta;
+            $modelo->{$columna} = $ruta;
             $modelo->saveQuietly();
         } catch (Throwable $excepcion) {
-            $modelo->imagen_ruta = $anterior;
+            $modelo->{$columna} = $anterior;
             $disco->delete($ruta);
 
             throw $excepcion;
@@ -83,15 +85,15 @@ class GuardadorImagenWebp
     /**
      * Deja al modelo sin imagen y borra el archivo.
      */
-    public function quitar(Model $modelo): void
+    public function quitar(Model $modelo, string $columna = 'imagen_ruta'): void
     {
-        $anterior = $modelo->imagen_ruta;
+        $anterior = $modelo->{$columna};
 
         if ($anterior === null) {
             return;
         }
 
-        $modelo->imagen_ruta = null;
+        $modelo->{$columna} = null;
         $modelo->saveQuietly();
 
         Storage::disk('local')->delete($anterior);
@@ -99,11 +101,11 @@ class GuardadorImagenWebp
 
     /**
      * Regenera la imagen: orientada según su EXIF, con el lado largo en
-     * LADO_MAXIMO como máximo (nunca se amplía) y con su transparencia.
+     * $ladoMaximo como máximo (nunca se amplía) y con su transparencia.
      *
      * @throws ImagenInvalida
      */
-    private function convertir(string $contenido): string
+    private function convertir(string $contenido, int $ladoMaximo): string
     {
         $origen = $this->abrir($contenido);
         $destino = null;
@@ -111,7 +113,7 @@ class GuardadorImagenWebp
         try {
             $ancho = imagesx($origen);
             $alto = imagesy($origen);
-            $escala = min(1, self::LADO_MAXIMO / max($ancho, $alto));
+            $escala = min(1, $ladoMaximo / max($ancho, $alto));
             $nuevoAncho = max(1, (int) round($ancho * $escala));
             $nuevoAlto = max(1, (int) round($alto * $escala));
 

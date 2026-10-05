@@ -1,6 +1,7 @@
 {{-- Plantilla base de los PDF (026): cotización, factura y orden de compra.
      Parámetros: $titulo, $folio, $notaPie, $logo (data URI o null), $logoMedidas.
-     Secciones: meta, marca-agua, emisor, contraparte, conceptos, totales, extras.
+     Secciones: meta, encabezado-extra, marca-agua, emisor, contraparte, conceptos,
+     totales, extras. encabezado-extra (027) solo lo llena la cotización.
      Dompdf no lee public/css/app.css: los valores se escriben aquí. --}}
 <!DOCTYPE html>
 <html lang="es">
@@ -20,6 +21,15 @@
         .encabezado .logo { width: 55mm; height: 30mm; }
         .titulo-documento { font-size: 18pt; font-weight: bold; color: #2c3e50; }
         .folio { font-size: 13pt; color: #2c3e50; margin-bottom: 3pt; }
+
+        /* Cuentas de pago bajo el folio (027). Ojo: esta hoja viaja a los tres
+           documentos; no repetir aquí el título que imprime el bloque. */
+        .bancos { margin-top: 6pt; margin-left: 45%; font-size: 7.5pt; }
+        .bancos .titulo-seccion { border-bottom: 1px solid #2c3e50; padding-bottom: 1pt; margin-bottom: 3pt; }
+        .bancos .banco { margin-bottom: 4pt; }
+        .bancos table { margin-left: auto; }
+        .bancos td { padding: 0; vertical-align: middle; }
+        .bancos td.icono-banco { padding-right: 3pt; }
 
         .partes { width: 100%; margin-bottom: 8pt; }
         .partes td { vertical-align: top; width: 50%; padding: 2pt 8pt 2pt 0; }
@@ -60,6 +70,7 @@
                 <div class="titulo-documento">{{ $titulo }}</div>
                 <div class="folio">{{ $folio }}</div>
                 @yield('meta')
+                @yield('encabezado-extra')
             </td>
         </tr>
     </table>

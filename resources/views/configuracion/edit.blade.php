@@ -9,6 +9,7 @@
 
     @can('editar-emisor')
         @include('configuracion._emisor')
+        @include('configuracion._datos-bancarios')
     @endcan
 
     <form method="POST" action="{{ route('configuracion.update') }}">

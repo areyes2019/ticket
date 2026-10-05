@@ -6,6 +6,7 @@ use App\Enums\ClaveConfiguracion;
 use App\Http\Requests\ActualizarEmisorRequest;
 use App\Http\Requests\ConfiguracionRequest;
 use App\Models\Configuracion;
+use App\Models\DatoBancario;
 use App\Models\Emisor;
 use App\Services\Pedidos\MensajePedido;
 use Illuminate\Http\RedirectResponse;
@@ -13,8 +14,9 @@ use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
- * Almacén clave→valor por usuario (los dos mensajes de pedidos, 019) y los
- * datos del emisor de toda la instalación (026).
+ * Almacén clave→valor por usuario (los dos mensajes de pedidos, 019), los
+ * datos del emisor de toda la instalación (026) y la lista de sus datos
+ * bancarios (027; se editan en DatoBancarioController).
  */
 class ConfiguracionController extends Controller
 {
@@ -28,6 +30,7 @@ class ConfiguracionController extends Controller
             'huecos' => MensajePedido::HUECOS,
             'ejemplo' => MensajePedido::ejemplo(),
             'emisor' => Emisor::actual(),
+            'datosBancarios' => DatoBancario::query()->ordenados()->get(),
         ]);
     }
 

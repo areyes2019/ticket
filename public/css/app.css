@@ -3009,6 +3009,32 @@ a.bandeja-abrir {
     height: auto;
 }
 
+/* Datos bancarios (027): el icono del banco a la altura del texto y la fila
+   del banco que no se imprime, atenuada para que no parezca perdida. */
+.icono-banco {
+    height: 1.5em;
+    width: auto;
+    max-width: 4em;
+    vertical-align: middle;
+}
+
+.banco-nombre {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--espacio-2);
+}
+
+.logo-banco .icono-banco {
+    display: block;
+    height: 64px;
+    max-width: none;
+    margin-bottom: var(--espacio-2);
+}
+
+.datos-bancarios tr.banco-oculto td:not(:last-child) {
+    opacity: 0.55;
+}
+
 /* Páginas públicas (portal de autofacturación): solo la marca del negocio */
 .barra-publica {
     justify-content: center;

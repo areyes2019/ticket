@@ -39,6 +39,7 @@ class GeneradorPdfCotizacion
             'emisor' => Emisor::actual(),
             'logo' => $this->logo->dataUri(),
             'logoMedidas' => $this->logo->medidas(),
+            'datosBancarios' => $cotizacion->datosBancariosParaPdf(),
         ];
     }
 

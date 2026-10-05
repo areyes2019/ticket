@@ -20,6 +20,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * folio y estado no son asignables: el folio lo pone CotizacionController al
@@ -40,6 +42,10 @@ use Illuminate\Support\Collection;
  * permanente del cliente al capturarla: la escribe solo
  * congelarDescuentoCliente() y nunca llega del formulario. Es contexto; el
  * cálculo sigue saliendo del descuento de cada línea.
+ *
+ * datos_bancarios (027) es la foto de los bancos visibles al crearla (o al
+ * duplicarla): la escribe solo congelarDatosBancarios() y no se vuelve a
+ * tomar al editar, enviar ni reimprimir. null en las anteriores a 027.
  */
 #[Fillable([
     'cliente_id',
@@ -83,6 +89,56 @@ class Cotizacion extends Model
     public function congelarDescuentoCliente(): void
     {
         $this->descuento_cliente_porcentaje = Cliente::withTrashed()->whereKey($this->cliente_id)->value('descuento_permanente') ?? '0.00';
+    }
+
+    /**
+     * Copia los datos bancarios que hoy se muestran en cotizaciones, en su
+     * orden. Del logo se guarda la ruta: su archivo nunca se sobrescribe.
+     */
+    public function congelarDatosBancarios(): void
+    {
+        $this->datos_bancarios = DatoBancario::query()->paraCotizacion()->get()
+            ->map(fn (DatoBancario $dato) => $dato->foto())
+            ->all();
+    }
+
+    /**
+     * Alto del icono de banco en el PDF: la altura del renglón.
+     */
+    public const ALTO_LOGO_BANCO_MM = 5;
+
+    /**
+     * La foto con cada logo incrustado (data URI y ancho proporcional en mm),
+     * para que la vista no toque el disco. Un archivo que ya no está deja el
+     * banco sin icono: el PDF nunca falla por un logo.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function datosBancariosParaPdf(): array
+    {
+        return collect($this->datos_bancarios ?? [])->map(function (array $banco) {
+            $banco['logo'] = null;
+            $banco['logo_ancho_mm'] = null;
+            $ruta = $banco['logo_ruta'] ?? null;
+
+            if ($ruta === null) {
+                return $banco;
+            }
+
+            $contenido = Storage::disk('local')->exists($ruta) ? Storage::disk('local')->get($ruta) : null;
+            $medidas = $contenido === null ? false : @getimagesizefromstring($contenido);
+
+            if ($medidas === false || $medidas[1] <= 0) {
+                Log::warning('No se pudo leer el logo de un banco para el PDF de la cotización.', ['cotizacion' => $this->id, 'ruta' => $ruta]);
+
+                return $banco;
+            }
+
+            $banco['logo'] = 'data:image/webp;base64,'.base64_encode($contenido);
+            $banco['logo_ancho_mm'] = round(self::ALTO_LOGO_BANCO_MM * $medidas[0] / $medidas[1], 2);
+
+            return $banco;
+        })->values()->all();
     }
 
     public function tieneDescuentoCliente(): bool
@@ -704,6 +760,7 @@ class Cotizacion extends Model
             'base_exento' => 'decimal:2',
             'total' => 'decimal:2',
             'aceptada_en' => 'immutable_datetime',
+            'datos_bancarios' => 'array',
         ];
     }
 }

@@ -85,6 +85,7 @@ class CotizacionController extends Controller
             $cotizacion = $request->user()->cotizaciones()->make($request->datosCotizacion());
             $cotizacion->folio = $this->siguienteFolio($request->user());
             $cotizacion->congelarDescuentoCliente();
+            $cotizacion->congelarDatosBancarios();
             $cotizacion->aplicarTotales($request->totales());
             $cotizacion->save();
 
@@ -238,6 +239,8 @@ class CotizacionController extends Controller
             $copia->estado = EstadoCotizacion::Borrador;
             $copia->cliente_id = $request->integer('cliente_id');
             $copia->duplicada_de_id = $cotizacion->id;
+            // Sale hoy: cobra con los datos bancarios de hoy, no con los del original (027).
+            $copia->congelarDatosBancarios();
 
             $lineas = $cotizacion->lineas->map(
                 fn (CotizacionLinea $linea) => $linea->replicate(['cotizacion_id', 'created_at', 'updated_at'])->getAttributes()
