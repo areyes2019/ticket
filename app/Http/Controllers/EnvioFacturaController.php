@@ -7,6 +7,7 @@ use App\Models\Factura;
 use App\Services\Facturacion\EnviadorCorreoFactura;
 use App\Services\Facturacion\FacturapiException;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class EnvioFacturaController extends Controller
@@ -27,7 +28,9 @@ class EnvioFacturaController extends Controller
             $enviador->enviar($factura, $destinatarios);
         } catch (FacturapiException) {
             return back()->withInput()->withErrors(['destinatarios' => 'No se pudo obtener el XML de facturapi.io, así que no se envió el correo. Intenta de nuevo.'], 'envio');
-        } catch (Throwable) {
+        } catch (Throwable $error) {
+            Log::error('No se pudo enviar la factura por correo.', ['factura' => $factura->id, 'error' => $error->getMessage()]);
+
             return back()->withInput()->withErrors(['destinatarios' => 'No se pudo enviar el correo. Revisa la configuración del servidor de correo e intenta de nuevo.'], 'envio');
         }
 
