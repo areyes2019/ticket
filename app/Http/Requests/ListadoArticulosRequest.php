@@ -36,6 +36,10 @@ class ListadoArticulosRequest extends FormRequest
             $filtros[$filtro] = $this->string($filtro)->trim()->toString();
         }
 
+        // Catálogo exacto; un valor que no es un id se ignora.
+        $catalogo = $this->string('catalogo_id')->trim()->toString();
+        $filtros['catalogo_id'] = ctype_digit($catalogo) ? $catalogo : '';
+
         return $filtros;
     }
 

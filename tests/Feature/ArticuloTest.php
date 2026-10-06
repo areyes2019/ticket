@@ -511,7 +511,7 @@ describe('listado', function () {
         $this->catalogoZeta->update(['descuento' => 10, 'utilidad_porcentaje' => 50]);
 
         $this->actingAs($this->usuario)
-            ->get('/articulos')
+            ->get('/articulos/buscar', cabecerasAjax())
             ->assertDontSee('Zeta Sellos')
             ->assertDontSee('Alfa')
             ->assertSeeInOrder(['Costo', 'Precio con IVA'])
@@ -623,13 +623,30 @@ describe('listado', function () {
             ->assertSee(e(route('articulos.exportar', ['nombre' => 'sello', 'orden' => 'precio', 'direccion' => 'desc'])), false);
     });
 
-    it('trunca los textos largos y deja el texto completo en el título', function () {
+    it('muestra el nombre largo completo, sin truncarlo', function () {
         $largo = str_repeat('Sello automático de fechador ', 3);
         Articulo::factory()->for($this->catalogoAcme)->create(['nombre' => $largo]);
 
         $this->actingAs($this->usuario)
             ->get('/articulos')
-            ->assertSee('class="celda-truncada enlace-ficha" title="'.e($largo).'"', false);
+            ->assertSee('data-ficha', false)
+            ->assertSee('>'.e($largo).'</a>', false)
+            ->assertDontSee('class="celda-truncada enlace-ficha"', false);
+    });
+
+    it('filtra por catálogo y ofrece solo los catálogos del usuario', function () {
+        $ajeno = Catalogo::factory()->create(['nombre' => 'Catálogo ajeno']);
+
+        $this->actingAs($this->usuario)
+            ->get('/articulos')
+            ->assertSee('Todos los catálogos')
+            ->assertSee('value="'.$this->catalogoZeta->id.'"', false)
+            ->assertDontSee('Catálogo ajeno');
+
+        $this->actingAs($this->usuario)
+            ->get("/articulos/buscar?catalogo_id={$this->catalogoZeta->id}", cabecerasAjax())
+            ->assertSee('Almohadilla')
+            ->assertDontSee('Sello redondo');
     });
 });
 

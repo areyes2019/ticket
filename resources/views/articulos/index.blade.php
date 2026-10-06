@@ -21,6 +21,7 @@
         @include('articulos._orden')
         {{-- La búsqueda es dinámica; el botón solo existe como respaldo cuando no hay JavaScript. --}}
         <noscript><x-boton icono="search">Buscar</x-boton></noscript>
+        <x-campo nombre="catalogo_id" etiqueta="Catálogo" tipo="select" :opciones="$catalogos" :valor="$filtros['catalogo_id']" vacia="Todos los catálogos" />
         <x-boton :href="route('articulos.index')" variante="secundario" icono="x-lg">Limpiar</x-boton>
     </form>
 
@@ -35,7 +36,7 @@
                 <col class="col-precio">
                 <col class="col-precio">
                 <col class="col-existencias">
-                <col class="col-acciones">
+                <col class="col-acciones-chicas">
             </colgroup>
             <thead>
                 @include('articulos._titulos')

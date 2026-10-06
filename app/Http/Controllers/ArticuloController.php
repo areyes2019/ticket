@@ -27,7 +27,10 @@ class ArticuloController extends Controller
      */
     public function index(ListadoArticulosRequest $request): View
     {
-        return view('articulos.index', $this->datosListado($request, $this->articulos($request)));
+        return view('articulos.index', [
+            ...$this->datosListado($request, $this->articulos($request)),
+            'catalogos' => $request->user()->catalogos()->disponibles()->get()->pluck('etiqueta', 'id')->all(),
+        ]);
     }
 
     /**

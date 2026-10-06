@@ -225,8 +225,8 @@ class Articulo extends Model
     }
 
     /**
-     * Aplica los filtros del listado (coincidencia parcial, combinados con Y).
-     * Los filtros vacíos se ignoran.
+     * Aplica los filtros del listado (coincidencia parcial, combinados con Y;
+     * el catálogo, exacto). Los filtros vacíos se ignoran.
      *
      * @param  Builder<self>  $consulta
      * @param  array<string, string>  $filtros
@@ -240,6 +240,10 @@ class Articulo extends Model
             if ($termino !== '') {
                 $consulta->where($columna, 'like', "%{$termino}%");
             }
+        }
+
+        if (($filtros['catalogo_id'] ?? '') !== '') {
+            $consulta->where('catalogo_id', (int) $filtros['catalogo_id']);
         }
     }
 

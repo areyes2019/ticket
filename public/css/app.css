@@ -64,6 +64,7 @@
     --ancho-columna-precio: 9.5rem;
     --ancho-columna-acciones: 6.5rem;
     --lado-boton-fila: 2.25rem;
+    --lado-boton-fila-chico: 1.75rem;
 
     /* Imágenes de artículos */
     --ancho-ficha: 52rem;
@@ -786,7 +787,18 @@ h1.tarjeta-titulo {
 }
 
 .tabla-fija .col-existencias {
-    width: 9rem;
+    width: 4.75rem;
+}
+
+/* Botones de fila más chicos, para dejar espacio a las columnas de texto. */
+.tabla .acciones-chicas .boton-icono {
+    width: var(--lado-boton-fila-chico);
+    height: var(--lado-boton-fila-chico);
+    font-size: var(--texto-mini);
+}
+
+.tabla-fija .col-acciones-chicas {
+    width: calc(2 * var(--lado-boton-fila-chico) + var(--espacio-1) + 2 * var(--espacio-3));
 }
 
 /* Constancia de Situación Fiscal (clientes) */
@@ -1334,6 +1346,10 @@ h1 .etiqueta {
 .buscador .campo:has(input[type="date"]) {
     flex: 0 1 12rem;
     min-width: 10rem;
+}
+
+.buscador .campo:has(select[name="catalogo_id"]) {
+    flex: 0 1 24rem;
 }
 
 /* Tabla de líneas del formulario (documento-lineas.js) */

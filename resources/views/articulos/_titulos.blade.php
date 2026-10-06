@@ -20,6 +20,6 @@
             </a>
         </th>
     @endforeach
-    <th>En existencias</th>
+    <th title="En existencias">Exist.</th>
     <th>Acciones</th>
 </tr>

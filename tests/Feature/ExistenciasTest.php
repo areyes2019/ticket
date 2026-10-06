@@ -268,7 +268,7 @@ describe('pantallas existentes', function () {
         $respuesta = $this->actingAs($this->user)->get('/articulos');
         $consultas = collect(DB::getQueryLog())->filter(fn (array $consulta) => str_contains($consulta['query'], 'existencias'));
 
-        $respuesta->assertSee('Pasar a existencias')->assertSee(route('existencias.show', $this->articulo));
+        $respuesta->assertSee('title="Pasar a existencias">No</a>', false)->assertSee(route('existencias.show', $this->articulo));
         expect($consultas)->toHaveCount(1);
     });
 
