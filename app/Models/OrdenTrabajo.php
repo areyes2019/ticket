@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Enums\EstadoOrdenTrabajo;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -72,6 +74,19 @@ class OrdenTrabajo extends Model
     public function lineas(): HasMany
     {
         return $this->hasMany(OrdenTrabajoLinea::class);
+    }
+
+    /**
+     * Las órdenes "En proceso", de la venta más antigua a la más reciente:
+     * la hoja de producción (022) y sus etiquetas (030).
+     *
+     * @param  Builder<self>  $consulta
+     */
+    #[Scope]
+    protected function enProduccion(Builder $consulta): void
+    {
+        $consulta->where('estado', EstadoOrdenTrabajo::EnProceso->value)
+            ->orderBy(Pedido::select('folio')->whereColumn('pedidos.id', 'ordenes_trabajo.pedido_id'));
     }
 
     /**

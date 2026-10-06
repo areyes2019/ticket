@@ -17,6 +17,7 @@ use App\Http\Controllers\EnvioCotizacionController;
 use App\Http\Controllers\EnvioFacturaController;
 use App\Http\Controllers\EnvioOrdenCompraController;
 use App\Http\Controllers\EstilosController;
+use App\Http\Controllers\EtiquetasProduccionController;
 use App\Http\Controllers\ExistenciaController;
 use App\Http\Controllers\ExportacionArticulosController;
 use App\Http\Controllers\FacturaController;
@@ -149,6 +150,7 @@ Route::middleware(['auth', AsegurarUsuarioActivo::class])->group(function () {
 
     // Orden de trabajo de la venta (022): una por venta, así que cuelga del pedido sin id propio.
     Route::get('pedidos/produccion', HojaProduccionController::class)->name('pedidos.produccion');
+    Route::get('pedidos/produccion/etiquetas', EtiquetasProduccionController::class)->name('pedidos.produccion.etiquetas');
     Route::controller(OrdenTrabajoController::class)->prefix('pedidos/{pedido}/orden-trabajo')->name('pedidos.orden-trabajo.')->group(function () {
         Route::get('crear', 'create')->name('create');
         Route::post('/', 'store')->name('store');

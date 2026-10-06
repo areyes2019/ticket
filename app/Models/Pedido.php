@@ -132,6 +132,22 @@ class Pedido extends Model
     }
 
     /**
+     * Los modelos de sus líneas de trabajo, sin repetir y en su orden, para la
+     * etiqueta de producción (030). Las líneas sin modelo no cuentan.
+     *
+     * @return list<string>
+     */
+    public function modelosDeTrabajo(): array
+    {
+        return $this->lineasDeTrabajo()
+            ->map(fn (PedidoLinea $linea) => trim((string) $linea->modelo))
+            ->filter(fn (string $modelo) => $modelo !== '')
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
      * La factura vigente de su cotización: una sola factura entre la
      * cotización aceptada y su venta (021).
      */

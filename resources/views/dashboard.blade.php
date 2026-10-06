@@ -84,6 +84,7 @@
                     <x-icono nombre="clipboard-check" />Órdenes de trabajo
                     <span class="bandeja-lista-herramientas">
                         <x-boton :href="route('pedidos.produccion')" variante="secundario" icono="printer" descripcion="Hoja de producción" title="Hoja de producción" target="_blank" />
+                        <x-boton :href="route('pedidos.produccion.etiquetas')" variante="secundario" icono="tags" descripcion="Imprimir etiquetas" title="Imprimir etiquetas" target="_blank" />
                     </span>
                 </h2>
                 <x-bandeja.encabezado-lista texto="Buscar orden" :carpetas="false" />
