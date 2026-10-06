@@ -3,11 +3,14 @@
 /*
  * Datos del negocio que imprime el ticket de pedido (019). Cada dato vacío se
  * omite. El logo es una ruta relativa al disco "public"
- * (storage/app/public), p. ej. "negocio/logo.png".
+ * (storage/app/public), p. ej. "negocio/logo.png"; sin él, el ticket usa el
+ * logo de los documentos (public/img/marca).
  */
 return [
     'nombre' => env('NEGOCIO_NOMBRE') ?: env('APP_NAME'),
-    'telefono' => env('NEGOCIO_TELEFONO'),
-    'domicilio' => env('NEGOCIO_DOMICILIO'),
+    'domicilio' => env('NEGOCIO_DOMICILIO', 'Real del Seminario 122, Valle del Real.'),
+    'ciudad' => env('NEGOCIO_CIUDAD', 'Celaya, Gto.'),
+    'telefono' => env('NEGOCIO_TELEFONO', '4613581090'),
+    'sitio_web' => env('NEGOCIO_SITIO_WEB', 'www.sellopronto.com.mx'),
     'logo' => env('NEGOCIO_LOGO'),
 ];

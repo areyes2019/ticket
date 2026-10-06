@@ -2250,39 +2250,13 @@ a.bandeja-abrir {
     text-align: right;
 }
 
-/* Ticket de venta: membrete centrado (logo y datos del negocio) y el folio debajo. */
-.hoja-encabezado-ticket {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-}
-
-.hoja-encabezado-ticket .hoja-folio {
-    text-align: center;
-}
-
-.hoja-membrete {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--espacio-2);
-    color: var(--color-texto-suave);
-}
-
-.hoja-logo {
-    display: block;
-    max-width: 12rem;
-    max-height: 6rem;
-    width: auto;
-    height: auto;
-}
-
 .ticket-copiar {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
+    justify-content: center;
     gap: var(--espacio-2) var(--espacio-3);
-    margin: 0 0 var(--espacio-4);
+    margin-top: var(--espacio-3);
 }
 
 .hoja-suave,

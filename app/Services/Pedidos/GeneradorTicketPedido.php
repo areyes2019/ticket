@@ -4,6 +4,7 @@ namespace App\Services\Pedidos;
 
 use App\Models\Pedido;
 use App\Models\PedidoLinea;
+use App\Services\Documentos\LogoDocumento;
 use GdImage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -97,16 +98,19 @@ class GeneradorTicketPedido
 
         $logo = $this->logo();
 
+        // El logo ya dice quién es el negocio; sin logo va el nombre.
         if ($logo !== null) {
             $renglones[] = ['tipo' => 'imagen', 'imagen' => $logo, 'margen' => 12];
+        } else {
+            foreach ($this->ajustar((string) config('negocio.nombre'), self::TAM_GRANDE) as $texto) {
+                $renglones[] = $this->texto($texto, centro: true, negrita: true, tamano: self::TAM_GRANDE);
+            }
         }
 
-        foreach ($this->ajustar((string) config('negocio.nombre'), self::TAM_GRANDE) as $texto) {
-            $renglones[] = $this->texto($texto, centro: true, negrita: true, tamano: self::TAM_GRANDE);
-        }
+        $telefono = (string) config('negocio.telefono');
 
-        foreach (['telefono', 'domicilio'] as $dato) {
-            foreach ($this->ajustar((string) config("negocio.{$dato}"), self::TAM_NORMAL) as $texto) {
+        foreach ([config('negocio.domicilio'), config('negocio.ciudad'), filled($telefono) ? 'Tel '.$telefono : '', config('negocio.sitio_web')] as $dato) {
+            foreach ($this->ajustar((string) $dato, self::TAM_NORMAL) as $texto) {
                 $renglones[] = $this->texto($texto, centro: true);
             }
         }
@@ -282,25 +286,28 @@ class GeneradorTicketPedido
     }
 
     /**
-     * Logo del negocio reducido a ANCHO_LOGO como máximo. El ticket nunca
-     * falla por su logo: si no está o GD no lo lee, se omite.
+     * Logo del negocio reducido a ANCHO_LOGO como máximo: el configurado o, sin
+     * él, el de los documentos. El ticket nunca falla por su logo: si no está
+     * o GD no lo lee, se omite.
      */
     private function logo(): ?GdImage
     {
         $ruta = config('negocio.logo');
 
-        if (blank($ruta)) {
-            return null;
-        }
-
         try {
-            $disco = Storage::disk('public');
+            if (blank($ruta)) {
+                $archivo = public_path(LogoDocumento::RUTA);
+                $contenido = is_file($archivo) ? file_get_contents($archivo) : false;
+            } else {
+                $disco = Storage::disk('public');
+                $contenido = $disco->exists($ruta) ? $disco->get($ruta) : false;
+            }
 
-            if (! $disco->exists($ruta)) {
+            if (! is_string($contenido)) {
                 return null;
             }
 
-            $original = @imagecreatefromstring($disco->get($ruta));
+            $original = @imagecreatefromstring($contenido);
 
             if ($original === false) {
                 return null;
