@@ -117,9 +117,17 @@
                 </x-alerta>
             @endif
 
-            <article class="hoja" aria-label="Venta {{ $pedido->folio_formateado }}">
-                <header class="hoja-encabezado">
-                    <p class="hoja-negocio">{{ config('negocio.nombre') }}</p>
+            <article class="hoja" id="ticket-venta" aria-label="Venta {{ $pedido->folio_formateado }}">
+                <header class="hoja-encabezado hoja-encabezado-ticket">
+                    <div class="hoja-membrete">
+                        <img src="{{ asset(App\Services\Documentos\LogoDocumento::RUTA) }}" alt="{{ config('negocio.nombre') }}" class="hoja-logo">
+                        <p>
+                            Real del Seminario 122, Valle del Real.<br>
+                            Celaya, Gto.<br>
+                            Tel 4613581090<br>
+                            www.sellopronto.com.mx
+                        </p>
+                    </div>
                     <p class="hoja-folio">
                         <strong>Ticket No. {{ $pedido->numero_ticket }}</strong><br>
                         <span class="hoja-suave">{{ $pedido->created_at->setTimezone($zona)->format('d/m/Y H:i') }}</span>
@@ -183,6 +191,12 @@
                     <div class="hoja-saldo"><dt>Saldo pendiente</dt><dd>{{ $pesos($pedido->saldoPendiente()) }}</dd></div>
                 </dl>
             </article>
+
+            <div class="ticket-copiar">
+                <x-boton tipo="button" variante="secundario" icono="clipboard" data-copiar-ticket="#ticket-venta"
+                    data-archivo="ticket-{{ $pedido->folio_formateado }}.png">Copiar ticket como imagen</x-boton>
+                <span class="ayuda" role="status" data-copiar-ticket-estado></span>
+            </div>
 
             <x-card titulo="Pagos">
                 @if ($pagos->isEmpty())
@@ -260,4 +274,6 @@
 
 @push('scripts')
     <script src="{{ asset('js/compartir-pdf.js') }}?v={{ filemtime(public_path('js/compartir-pdf.js')) }}"></script>
+    <script src="{{ asset('vendor/html2canvas.min.js') }}"></script>
+    <script src="{{ asset('js/copiar-ticket.js') }}?v={{ filemtime(public_path('js/copiar-ticket.js')) }}"></script>
 @endpush
