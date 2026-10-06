@@ -7,6 +7,8 @@
     'domicilio' => null,
     'correo' => null,
     'telefono' => null,
+    'sitioWeb' => null,
+    'whatsapp' => null,
 ])
 
 <div class="rotulo">Emisor</div>
@@ -25,5 +27,11 @@
 @endif
 @if (filled($telefono))
     Tel. {{ $telefono }}<br>
+@endif
+@if (filled($sitioWeb))
+    {{ $sitioWeb }}<br>
+@endif
+@if (filled($whatsapp))
+    WhatsApp {{ substr($whatsapp, -10) }}<br>
 @endif
 {{ $slot }}

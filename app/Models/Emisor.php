@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
  * orden de compra; la factura solo toma de aquí los datos de contacto, porque
  * lo fiscal es la copia del timbrado.
  */
-#[Fillable(['nombre', 'rfc', 'regimen_fiscal', 'domicilio', 'correo', 'telefono'])]
+#[Fillable(['nombre', 'rfc', 'regimen_fiscal', 'domicilio', 'correo', 'telefono', 'sitio_web', 'whatsapp'])]
 class Emisor extends Model
 {
     protected $table = 'emisor';

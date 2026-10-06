@@ -72,6 +72,13 @@ describe('contenido', function () {
             ->toContain($this->factura->folioVisible(), 'data:image/png;base64,', 'representación impresa de un CFDI');
     });
 
+    it('la cotización imprime sitio web y WhatsApp del emisor; la factura no', function () {
+        emisorCompleto()->update(['sitio_web' => 'www.sellopronto.com.mx', 'whatsapp' => '+524613581090']);
+
+        expect(htmlCotizacion($this->cotizacion))->toContain('www.sellopronto.com.mx', 'WhatsApp 4613581090')
+            ->and(htmlFactura($this->factura))->not->toContain('www.sellopronto.com.mx');
+    });
+
     it('con el emisor vacío cotización y orden usan el nombre de la aplicación', function () {
         expect(htmlCotizacion($this->cotizacion))->toContain(e(config('app.name')))
             ->and(htmlOrden($this->orden))->toContain(e(config('app.name')));

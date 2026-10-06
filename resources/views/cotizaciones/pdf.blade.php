@@ -49,7 +49,8 @@
 
 @section('emisor')
     <x-pdf.emisor :nombre="$emisor->nombre" :rfc="$emisor->rfc" :regimen="$emisor->regimen_fiscal"
-        :domicilio="$emisor->domicilio" :correo="$emisor->correo" :telefono="$emisor->telefono" />
+        :domicilio="$emisor->domicilio" :correo="$emisor->correo" :telefono="$emisor->telefono"
+        :sitio-web="$emisor->sitio_web" :whatsapp="$emisor->whatsapp" />
 @endsection
 
 @section('contraparte')
