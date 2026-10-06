@@ -1352,6 +1352,11 @@ h1 .etiqueta {
     flex: 0 1 24rem;
 }
 
+/* Solo guarda el orden en campos ocultos; no debe ocupar lugar en el buscador. */
+#articulos-orden {
+    display: none;
+}
+
 /* Tabla de líneas del formulario (documento-lineas.js) */
 .barra-lineas {
     display: flex;
