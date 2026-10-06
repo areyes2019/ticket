@@ -218,8 +218,8 @@ describe('exportación', function () {
             ->assertDownload('articulos-'.now()->format('Y-m-d').'.csv');
 
         expect($respuesta->streamedContent())->toBe("\xEF\xBB\xBF".ENCABEZADO_CSV_COMPLETO
-            ."Almohadilla,A-1,44121600,H87,01,35.00,,\n"
-            ."\"Sello redondo de Ø X 45 mm\",R-45,44121604,H87,02,100.50,35.00,\n");
+            ."\"Sello redondo de Ø X 45 mm\",R-45,44121604,H87,02,100.50,35.00,\n"
+            ."Almohadilla,A-1,44121600,H87,01,35.00,,\n");
     });
 
     it('respeta los filtros y el orden del listado, sin paginar', function () {

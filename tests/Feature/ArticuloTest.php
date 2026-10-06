@@ -520,10 +520,12 @@ describe('listado', function () {
             ->assertSee('data-confirmar="¿Eliminar este artículo?"', false);
     });
 
-    it('ordena por nombre de forma predeterminada', function () {
+    it('ordena por id (orden de alta o de importación) de forma predeterminada', function () {
+        Articulo::factory()->for($this->catalogoAcme)->create(['nombre' => 'Abanico']);
+
         $this->actingAs($this->usuario)
             ->get('/articulos')
-            ->assertSeeInOrder(['Almohadilla', 'Sello fechador', 'Sello redondo']);
+            ->assertSeeInOrder(['Almohadilla', 'Sello fechador', 'Sello redondo', 'Abanico']);
     });
 
     it('ordena por cada columna en ambas direcciones', function (string $orden, array $ascendente) {

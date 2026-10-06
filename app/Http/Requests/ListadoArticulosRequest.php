@@ -13,7 +13,7 @@ use Illuminate\Foundation\Http\FormRequest;
  */
 class ListadoArticulosRequest extends FormRequest
 {
-    public const ORDEN_DEFECTO = 'nombre';
+    public const ORDEN_DEFECTO = 'id';
 
     public const POR_PAGINA_DEFECTO = 25;
 

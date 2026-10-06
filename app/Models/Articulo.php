@@ -62,7 +62,7 @@ class Articulo extends Model
     /**
      * Columnas por las que se puede ordenar el listado.
      */
-    public const ORDENES = ['nombre', 'modelo', 'proveedor', 'catalogo', 'costo', 'precio', 'distribuidor'];
+    public const ORDENES = ['id', 'nombre', 'modelo', 'proveedor', 'catalogo', 'costo', 'precio', 'distribuidor'];
 
     /**
      * Filas por página que se pueden elegir en el listado.
@@ -248,7 +248,8 @@ class Articulo extends Model
     }
 
     /**
-     * Ordena por una de las columnas de ORDENES; desempata por id para que la
+     * Ordena por una de las columnas de ORDENES (por defecto, id: el orden en
+     * que se dieron de alta o se importaron); desempata por id para que la
      * paginación sea estable.
      *
      * @param  Builder<self>  $consulta
@@ -272,6 +273,7 @@ class Articulo extends Model
             'costo' => $consulta->orderBy('costo_con_descuento', $direccion),
             'precio' => $consulta->orderBy('precio_unitario_sin_iva', $direccion),
             'distribuidor' => $consulta->orderBy('precio_distribuidor_sin_iva', $direccion),
+            'id' => null,
             default => $consulta->orderBy($columna, $direccion),
         };
 
