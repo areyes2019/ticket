@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Mail\Concerns\CopiaAlNegocio;
 use App\Models\Factura;
 use App\Services\Facturacion\GeneradorPdfFactura;
 use Illuminate\Mail\Attachment;
@@ -15,12 +16,15 @@ use Illuminate\Mail\Mailables\Envelope;
  */
 class FacturaMail extends Mailable
 {
+    use CopiaAlNegocio;
+
     public function __construct(public Factura $factura, public string $xml) {}
 
     public function envelope(): Envelope
     {
         return new Envelope(
             subject: 'Factura '.$this->factura->folioVisible().' — '.config('app.name'),
+            bcc: $this->copiaAlNegocio(),
         );
     }
 

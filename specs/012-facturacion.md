@@ -386,7 +386,9 @@ En `routes/web.php`, dentro del grupo `['auth', AsegurarUsuarioActivo::class]`, 
 - **`EnvioFacturaController::correo`**: `EnviarFacturaRequest`; solo si `puedeEnviarse()`. Pide el
   XML a facturapi.io **antes** de armar el correo; si falla, no envía nada y avisa. Envía
   `FacturaMail` (asunto "Factura {serie}{folio} — {negocio}", cuerpo breve con total y UUID, XML y
-  PDF adjuntos). No cambia el estado ni registra el envío.
+  PDF adjuntos). No cambia el estado ni registra el envío. Lleva copia oculta al buzón del negocio
+  (`negocio.copia_correos`, de fábrica `ventas@sellopronto.com.mx`): ver
+  [032](032-copia-correos-negocio.md).
 - **`ComplementoPagoController::store`**: `ComplementoPagoRequest`; solo si
   `puedeRegistrarComplemento()`. Crea (o, si el existente quedó en `error`, actualiza) el
   complemento en `pendiente`, timbra con el mismo candado por factura y guarda sellos (`timbrado`)

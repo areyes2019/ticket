@@ -731,7 +731,9 @@ servicio `App\Services\Pedidos\Autofacturador::facturar(Pedido $pedido, array $d
    - `Timbrada`: limpia `autofactura_error` y envía la factura por correo al correo capturado con
      `App\Services\Facturacion\EnviadorCorreoFactura` (se extrae de `EnvioFacturaController::correo`,
      que pasa a usarlo). Si el correo falla, la factura queda timbrada igual: el acuse lo dice ("No
-     pudimos enviarla por correo; descárgala aquí") y el error queda en el log.
+     pudimos enviarla por correo; descárgala aquí") y el error queda en el log. Como es el mismo
+     `FacturaMail`, lleva la copia oculta al buzón del negocio de
+     [032](032-copia-correos-negocio.md).
    - `ErrorDatos`: guarda el motivo en `autofactura_error` y regresa al formulario con los datos
      capturados y el motivo, para corregir y reintentar ahí mismo. facturapi.io responde en
      español; el mensaje se muestra con el prefijo "No se pudo timbrar tu factura:".

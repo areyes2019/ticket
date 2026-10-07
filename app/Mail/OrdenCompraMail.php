@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Mail\Concerns\AdjuntaPdf;
+use App\Mail\Concerns\CopiaAlNegocio;
 use App\Models\OrdenCompra;
 use App\Services\OrdenesCompra\GeneradorPdfOrdenCompra;
 use Illuminate\Mail\Attachment;
@@ -16,7 +17,7 @@ use Illuminate\Mail\Mailables\Envelope;
  */
 class OrdenCompraMail extends Mailable
 {
-    use AdjuntaPdf;
+    use AdjuntaPdf, CopiaAlNegocio;
 
     public function __construct(public OrdenCompra $orden) {}
 
@@ -24,6 +25,7 @@ class OrdenCompraMail extends Mailable
     {
         return new Envelope(
             subject: 'Orden de compra '.$this->orden->folio_formateado.' — '.config('app.name'),
+            bcc: $this->copiaAlNegocio(),
         );
     }
 

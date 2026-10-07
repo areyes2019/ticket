@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Mail\Concerns\AdjuntaPdf;
+use App\Mail\Concerns\CopiaAlNegocio;
 use App\Models\Cotizacion;
 use App\Services\Cotizaciones\GeneradorPdfCotizacion;
 use Illuminate\Mail\Attachment;
@@ -16,7 +17,7 @@ use Illuminate\Mail\Mailables\Envelope;
  */
 class CotizacionMail extends Mailable
 {
-    use AdjuntaPdf;
+    use AdjuntaPdf, CopiaAlNegocio;
 
     public function __construct(public Cotizacion $cotizacion) {}
 
@@ -24,6 +25,7 @@ class CotizacionMail extends Mailable
     {
         return new Envelope(
             subject: 'Cotización '.$this->cotizacion->folio_formateado.' — '.config('app.name'),
+            bcc: $this->copiaAlNegocio(),
         );
     }
 

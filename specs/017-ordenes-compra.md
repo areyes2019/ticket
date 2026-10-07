@@ -350,6 +350,8 @@ de la operación diaria: no se paga una orden desde una cuenta sin fondos.
 
 - `OrdenCompraMail`: asunto "Orden de compra OC-0015 — {app.name}", vista `emails/orden-compra`,
   síncrono (sin cola), PDF adjunto.
+- Copia oculta al buzón del negocio (`negocio.copia_correos`, de fábrica `ventas@sellopronto.com.mx`)
+  con el trait `CopiaAlNegocio`: ver [032](032-copia-correos-negocio.md).
 - **Trait `App\Mail\Concerns\AdjuntaPdf`**: un método `adjuntoPdf(string $contenido, string $nombre): Attachment`
   con `Attachment::fromData(...)->withMime('application/pdf')`. Lo usan `CotizacionMail` y
   `OrdenCompraMail` en lugar de repetir el adjunto. `FacturaMail` no cambia (adjunta XML y PDF).

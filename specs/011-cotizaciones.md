@@ -345,6 +345,8 @@ fallaría (lección de la remota).
 
 - Asunto "Cotización COT-0012 — {nombre del negocio}", cuerpo breve en Blade (saludo, total,
   folio) y el PDF adjunto generado al vuelo con el mismo servicio.
+- Copia oculta al buzón del negocio (`negocio.copia_correos`, de fábrica `ventas@sellopronto.com.mx`)
+  con el trait `CopiaAlNegocio`: ver [032](032-copia-correos-negocio.md).
 
 ### Caducidad automática (`cotizaciones:purgar-vencidas`)
 
