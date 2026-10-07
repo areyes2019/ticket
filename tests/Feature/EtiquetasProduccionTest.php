@@ -47,7 +47,8 @@ it('hace una etiqueta por cada orden en proceso del usuario, por folio', functio
         ->assertSeeInOrder([$primera->folio_formateado, 'Cliente primero', $segunda->folio_formateado, 'Cliente segundo'])
         ->assertSee($segunda->telefono_legible)
         ->assertSee('P-1')
-        ->assertSee('2 órdenes en proceso · 1 hoja')
+        ->assertSee('2 órdenes en proceso')
+        ->assertSee('3 × 8 = 24 por hoja · 1 hoja')
         ->assertSee('js/etiquetas-produccion.js')
         ->assertDontSee('imprimir-al-cargar.js')
         ->assertDontSee('Cliente en dibujo')
@@ -117,7 +118,7 @@ it('pasa a otra hoja cada 24 casillas, contando las vacías', function (int $ven
 it('sin órdenes en proceso lo dice y no pinta la hoja', function () {
     $respuesta = $this->actingAs($this->user)->get('/pedidos/produccion/etiquetas')->assertOk()
         ->assertSee('No hay órdenes en proceso.')
-        ->assertDontSee('js/etiquetas-produccion.js');
+        ->assertDontSee('data-imprimir', false);
 
     expect(substr_count($respuesta->getContent(), 'class="planilla-hoja"'))->toBe(0);
 });

@@ -3,6 +3,10 @@
 > **Estado: implementada** el 2026-10-06, el mismo día en que se definió con el usuario. Ver "Estado de
 > implementación".
 
+> **Desde [031](031-formatos-etiquetas.md)** (definida el 2026-10-06): la planilla ya no es fija. El
+> tamaño de la etiqueta, las separaciones y los márgenes se ajustan y se guardan como formatos.
+> Con los valores de fábrica sale igual que aquí.
+
 **Extiende:** [022-ordenes-trabajo.md](022-ordenes-trabajo.md) (hoja de producción). Usa las mismas
 órdenes "En proceso" que la hoja de producción, en el mismo orden, y las presenta como etiquetas
 recortables con ticket, cliente, teléfono, saldo y modelo.

@@ -137,6 +137,16 @@ class User extends Authenticatable
     }
 
     /**
+     * Formatos de planilla de etiquetas (031), por nombre.
+     *
+     * @return HasMany<FormatoEtiqueta, $this>
+     */
+    public function formatosEtiqueta(): HasMany
+    {
+        return $this->hasMany(FormatoEtiqueta::class)->orderBy('nombre');
+    }
+
+    /**
      * @return HasMany<Configuracion, $this>
      */
     public function configuraciones(): HasMany

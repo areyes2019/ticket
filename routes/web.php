@@ -21,6 +21,7 @@ use App\Http\Controllers\EtiquetasProduccionController;
 use App\Http\Controllers\ExistenciaController;
 use App\Http\Controllers\ExportacionArticulosController;
 use App\Http\Controllers\FacturaController;
+use App\Http\Controllers\FormatoEtiquetaController;
 use App\Http\Controllers\GenerarOrdenesCompraController;
 use App\Http\Controllers\HistorialAccesoController;
 use App\Http\Controllers\HojaProduccionController;
@@ -150,7 +151,15 @@ Route::middleware(['auth', AsegurarUsuarioActivo::class])->group(function () {
 
     // Orden de trabajo de la venta (022): una por venta, así que cuelga del pedido sin id propio.
     Route::get('pedidos/produccion', HojaProduccionController::class)->name('pedidos.produccion');
-    Route::get('pedidos/produccion/etiquetas', EtiquetasProduccionController::class)->name('pedidos.produccion.etiquetas');
+    Route::get('pedidos/produccion/etiquetas', [EtiquetasProduccionController::class, 'index'])->name('pedidos.produccion.etiquetas');
+    Route::post('pedidos/produccion/etiquetas', [EtiquetasProduccionController::class, 'aplicar'])->name('pedidos.produccion.etiquetas.aplicar');
+
+    // Formatos de planilla de etiquetas (031). "Guardar" sale del mismo formulario POST
+    // de medidas (formaction), así que la edición es POST y no PUT.
+    Route::post('formatos-etiqueta', [FormatoEtiquetaController::class, 'store'])->name('formatos-etiqueta.store');
+    Route::post('formatos-etiqueta/{formatoEtiqueta}', [FormatoEtiquetaController::class, 'update'])->name('formatos-etiqueta.update');
+    Route::post('formatos-etiqueta/{formatoEtiqueta}/duplicar', [FormatoEtiquetaController::class, 'duplicar'])->name('formatos-etiqueta.duplicar');
+    Route::delete('formatos-etiqueta/{formatoEtiqueta}', [FormatoEtiquetaController::class, 'destroy'])->name('formatos-etiqueta.destroy');
     Route::controller(OrdenTrabajoController::class)->prefix('pedidos/{pedido}/orden-trabajo')->name('pedidos.orden-trabajo.')->group(function () {
         Route::get('crear', 'create')->name('create');
         Route::post('/', 'store')->name('store');

@@ -1,0 +1,32 @@
+[
+    {
+        "descripcion": "Fábrica: 60 × 30 mm sin separación, 3 × 8 centrada (030)",
+        "medidas": { "ancho": "60.0", "alto": "30.0", "separacion_horizontal": "0.0", "separacion_vertical": "0.0", "margen_superior": "19.7", "margen_izquierdo": "17.9" },
+        "columnas": 3, "renglones": 8, "por_hoja": 24,
+        "centrado": { "margen_superior": "19.7", "margen_izquierdo": "17.9" }
+    },
+    {
+        "descripcion": "66.7 × 25.4 mm con 3.2 mm entre columnas: 3 × 10",
+        "medidas": { "ancho": "66.7", "alto": "25.4", "separacion_horizontal": "3.2", "separacion_vertical": "0.0", "margen_superior": "12.7", "margen_izquierdo": "4.8" },
+        "columnas": 3, "renglones": 10, "por_hoja": 30,
+        "centrado": { "margen_superior": "12.7", "margen_izquierdo": "4.7" }
+    },
+    {
+        "descripcion": "Separaciones a los dos lados: 50 × 25 mm, 5 mm, márgenes de 10 mm",
+        "medidas": { "ancho": "50.0", "alto": "25.0", "separacion_horizontal": "5.0", "separacion_vertical": "5.0", "margen_superior": "10.0", "margen_izquierdo": "10.0" },
+        "columnas": 3, "renglones": 9, "por_hoja": 27,
+        "centrado": { "margen_superior": "7.2", "margen_izquierdo": "27.9" }
+    },
+    {
+        "descripcion": "No cabe ninguna: 200 mm de ancho con 20 mm de margen; centrar usa lo que cabría con margen 0",
+        "medidas": { "ancho": "200.0", "alto": "30.0", "separacion_horizontal": "0.0", "separacion_vertical": "0.0", "margen_superior": "0.0", "margen_izquierdo": "20.0" },
+        "columnas": 0, "renglones": 9, "por_hoja": 0,
+        "centrado": { "margen_superior": "4.7", "margen_izquierdo": "7.9" }
+    },
+    {
+        "descripcion": "Límite exacto: una etiqueta del tamaño de la hoja",
+        "medidas": { "ancho": "215.9", "alto": "279.4", "separacion_horizontal": "0.0", "separacion_vertical": "0.0", "margen_superior": "0.0", "margen_izquierdo": "0.0" },
+        "columnas": 1, "renglones": 1, "por_hoja": 1,
+        "centrado": { "margen_superior": "0.0", "margen_izquierdo": "0.0" }
+    }
+]
