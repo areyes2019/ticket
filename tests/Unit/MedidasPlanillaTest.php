@@ -21,6 +21,7 @@ it('reparte la hoja como dice el fixture compartido', function (array $caso) {
         ->and($medidas->renglones())->toBe($caso['renglones'])
         ->and($medidas->porHoja())->toBe($caso['por_hoja'])
         ->and($medidas->cabe())->toBe($caso['por_hoja'] > 0)
+        ->and(number_format($medidas->escalaLetra(), 4, '.', ''))->toBe($caso['escala_letra'])
         ->and($centrada->milimetros('margen_superior'))->toBe($caso['centrado']['margen_superior'])
         ->and($centrada->milimetros('margen_izquierdo'))->toBe($caso['centrado']['margen_izquierdo'])
         ->and($centrada->milimetros('ancho'))->toBe($caso['medidas']['ancho']);

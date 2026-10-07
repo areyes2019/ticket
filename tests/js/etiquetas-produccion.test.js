@@ -2,7 +2,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
-const { tamanoQueCabe, distribucion, centrar } = require(path.join(__dirname, '../../public/js/etiquetas-produccion.js'));
+const { tamanoQueCabe, distribucion, centrar, escalaLetra } = require(path.join(__dirname, '../../public/js/etiquetas-produccion.js'));
 const casos = require(path.join(__dirname, '../Fixtures/planillas-etiquetas.json'));
 
 test('si el texto cabe, conserva el tamaño', function () {
@@ -33,6 +33,7 @@ for (const caso of casos) {
         assert.equal(dist.columnas, caso.columnas);
         assert.equal(dist.renglones, caso.renglones);
         assert.equal(dist.porHoja, caso.por_hoja);
+        assert.equal(escalaLetra(medidas).toFixed(4), caso.escala_letra);
         assert.equal((margenes.margen_superior / 10).toFixed(1), caso.centrado.margen_superior);
         assert.equal((margenes.margen_izquierdo / 10).toFixed(1), caso.centrado.margen_izquierdo);
     });

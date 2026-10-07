@@ -137,6 +137,16 @@ final class MedidasPlanilla
     }
 
     /**
+     * Cuánto se escala la letra de la etiqueta con su alto (031, corrección
+     * 1): el alto menos los 4 mm de orilla, contra los 26 mm de la etiqueta
+     * de 30 mm de 030, que es la escala 1.
+     */
+    public function escalaLetra(): float
+    {
+        return max(0, $this->decimas['alto'] - 40) / 260;
+    }
+
+    /**
      * Los márgenes que dejan en medio de la hoja el bloque de columnas y
      * renglones que se ve ahora. Si hoy no cabe nada, centra lo que cabría
      * con margen 0.

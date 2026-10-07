@@ -136,6 +136,11 @@ it('al abrir usa el predeterminado; con formato, ese; con fabrica, ninguno', fun
     ($this->pagina)('?formato=fabrica')->assertSee('--ancho: 60.0mm', false);
 });
 
+it('escala la letra con el alto de la etiqueta', function () {
+    ($this->pagina)()->assertSee('--escala: 1.0000;', false);
+    ($this->pagina)('?alto=50')->assertSee('--escala: 1.7692;', false);
+});
+
 it('las medidas de la dirección mandan sobre el formato y las inválidas se ignoran', function () {
     $formato = ($this->formato)();
 

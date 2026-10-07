@@ -1,7 +1,8 @@
 // Etiquetas de producción (030, 031): vista previa en vivo de las medidas de
-// la planilla, "Centrar", y el ajuste de letra de cada renglón que no cabe.
+// la planilla, "Centrar", la escala de la letra con el alto y el ajuste de
+// letra de cada renglón que no cabe a lo ancho.
 //
-// distribucion() y centrar() son espejo exacto de MedidasPlanilla (PHP): las
+// distribucion(), centrar() y escalaLetra() son espejo exacto de MedidasPlanilla (PHP): las
 // dos recorren tests/Fixtures/planillas-etiquetas.json. Se cuenta en décimas
 // de milímetro para que las divisiones sean enteras.
 (function (raiz) {
@@ -61,7 +62,13 @@
         };
     }
 
-    const EtiquetasProduccion = { tamanoQueCabe: tamanoQueCabe, distribucion: distribucion, centrar: centrar, MINIMO_PX: MINIMO_PX };
+    // Cuánto se escala la letra con el alto (031, corrección 1): el alto menos
+    // los 4 mm de orilla, contra los 26 mm de la etiqueta de 30 mm (escala 1).
+    function escalaLetra(m) {
+        return Math.max(0, m.alto - 40) / 260;
+    }
+
+    const EtiquetasProduccion = { tamanoQueCabe: tamanoQueCabe, distribucion: distribucion, centrar: centrar, escalaLetra: escalaLetra, MINIMO_PX: MINIMO_PX };
 
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = EtiquetasProduccion;
@@ -206,6 +213,7 @@
             estilo.setProperty('--margen-izq', medidas.margen_izquierdo / 10 + 'mm');
             estilo.setProperty('--columnas', String(Math.max(1, dist.columnas)));
             estilo.setProperty('--renglones', String(Math.max(1, dist.renglones)));
+            estilo.setProperty('--escala', escalaLetra(medidas).toFixed(4));
 
             inicio.max = String(Math.max(1, dist.porHoja));
 

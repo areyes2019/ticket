@@ -62,18 +62,19 @@
             overflow: hidden;
             white-space: nowrap;
             text-overflow: ellipsis;
-            font-size: 10pt;
+            font-size: max(7pt, calc(10pt * var(--escala)));
         }
 
-        .planilla-etiqueta .planilla-ticket { font-size: 14pt; font-weight: bold; }
+        /* La letra crece y se achica con el alto de la etiqueta (031, corrección 1). */
+        .planilla-etiqueta .planilla-ticket { font-size: max(7pt, calc(14pt * var(--escala))); font-weight: bold; }
 
-        .planilla-etiqueta .planilla-saldo { font-size: 11pt; font-weight: bold; }
+        .planilla-etiqueta .planilla-saldo { font-size: max(7pt, calc(11pt * var(--escala))); font-weight: bold; }
 
         .planilla-prueba {
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 14pt;
+            font-size: max(7pt, calc(14pt * var(--escala)));
             font-weight: bold;
         }
 
@@ -198,7 +199,7 @@
         <x-alerta tipo="advertencia" id="planilla-aviso" :hidden="$medidas->cabe()">Con estas medidas no cabe ninguna etiqueta en la hoja carta.</x-alerta>
     </div>
 
-    <div id="planilla" style="--ancho: {{ $medidas->milimetros('ancho') }}mm; --alto: {{ $medidas->milimetros('alto') }}mm; --sep-h: {{ $medidas->milimetros('separacion_horizontal') }}mm; --sep-v: {{ $medidas->milimetros('separacion_vertical') }}mm; --margen-sup: {{ $medidas->milimetros('margen_superior') }}mm; --margen-izq: {{ $medidas->milimetros('margen_izquierdo') }}mm; --columnas: {{ max(1, $medidas->columnas()) }}; --renglones: {{ max(1, $medidas->renglones()) }};">
+    <div id="planilla" style="--ancho: {{ $medidas->milimetros('ancho') }}mm; --alto: {{ $medidas->milimetros('alto') }}mm; --sep-h: {{ $medidas->milimetros('separacion_horizontal') }}mm; --sep-v: {{ $medidas->milimetros('separacion_vertical') }}mm; --margen-sup: {{ $medidas->milimetros('margen_superior') }}mm; --margen-izq: {{ $medidas->milimetros('margen_izquierdo') }}mm; --columnas: {{ max(1, $medidas->columnas()) }}; --renglones: {{ max(1, $medidas->renglones()) }}; --escala: {{ number_format($medidas->escalaLetra(), 4, '.', '') }};">
         @foreach ($hojas as $casillas)
             <div class="planilla-hoja">
                 @foreach ($casillas as $casilla)

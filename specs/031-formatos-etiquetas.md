@@ -3,6 +3,9 @@
 > **Estado: implementada** el 2026-10-06, el mismo día en que se definió con el usuario. Ver "Estado de
 > implementación".
 
+> **Corrección 1 (2026-10-07, implementada):** la letra de la etiqueta se escala con el alto. Reemplaza la
+> asunción 12. Ver la sección "Corrección 1".
+
 **Modifica:** [030-etiquetas-produccion.md](030-etiquetas-produccion.md). La planilla deja de ser
 fija (60 × 30 mm, 3 × 8, centrada y sin separación): el usuario ajusta el tamaño de la etiqueta, la
 separación entre etiquetas y los márgenes de la hoja, y guarda esas medidas como **formatos** con
@@ -330,3 +333,63 @@ Implementada el 2026-10-06.
   numerada, y la vista previa en vivo con "Centrar" (actualiza la planilla, el resumen y la
   dirección).
 - **Al desplegar hay que correr la migración** (no usar `--sin-migrar`).
+
+## Corrección 1: la letra se ajusta al alto de la etiqueta
+
+### Historia de usuario
+
+Como usuario, quiero que el tamaño de la letra se ajuste al tamaño de la etiqueta.
+
+### Qué cambia
+
+Reemplaza la asunción 12 ("la letra no cambia de tamaño base con la etiqueta"). Ahora los cinco
+renglones crecen o se achican con el **alto** de la etiqueta, en la misma proporción entre ellos.
+
+```
+escala_letra = max(0, alto − 4 mm) / 26 mm
+```
+
+Los 4 mm son la orilla interior (2 mm arriba y 2 mm abajo). Con 30 mm de alto la escala es **1**, y
+la letra queda como en 030: ticket 14 pt, saldo 11 pt, y cliente, teléfono y modelo 10 pt. Ejemplos:
+25.4 mm → 0.8231; 50 mm → 1.7692.
+
+- Cada renglón mide `max(7 pt, tamaño_base × escala_letra)`: nunca baja de 7 pt (asunción 4). En
+  una etiqueta muy baja, los renglones de abajo se cortan.
+- No hay tope (asunción 5).
+- Después de escalar, el ajuste al ancho de 030 sigue igual: el renglón que no cabe a lo ancho se
+  achica hasta 7 pt y, si aun así no cabe, se corta con "…".
+- El número de cada rectángulo de la hoja de prueba también se escala (14 pt × escala).
+- La vista previa en vivo actualiza la escala al cambiar el alto.
+- No se guarda nada nuevo en los formatos: la escala se calcula de su alto.
+
+### Implementación
+
+- `MedidasPlanilla::escalaLetra(): float` y su espejo `escalaLetra(medidas)` en
+  `etiquetas-produccion.js`, en décimas de milímetro: `max(0, alto − 40) / 260`.
+- `planillas-etiquetas.json` gana `escala_letra` (cuatro decimales) en cada caso; las dos pruebas lo
+  comparan.
+- La vista pasa la escala como `--escala` en `#planilla` y los tamaños usan
+  `max(7pt, calc(10pt * var(--escala)))` (14 pt y 11 pt en ticket y saldo; 14 pt en la prueba).
+
+### Supuestos de la corrección
+
+Revisados con el usuario el 2026-10-07. Se aprobaron todos sin cambios.
+
+1. La letra se ajusta al **alto** de la etiqueta, para que los 5 renglones la llenen.
+2. Se mantiene la proporción entre renglones (14 / 11 / 10 pt a 30 mm).
+3. Si al crecer un renglón no cabe a lo ancho, se achica solo, como hoy.
+4. Nunca baja de 7 pt; en una etiqueta muy baja, los renglones de abajo se cortan.
+5. Sin tope de crecimiento.
+6. Con 30 mm de alto queda igual que hoy.
+7. La vista previa muestra el ajuste al momento.
+8. El número de la hoja de prueba también se escala.
+9. No se guarda nada nuevo en los formatos.
+
+Sin adiciones técnicas.
+
+### Estado de implementación de la corrección 1
+
+Implementada el 2026-10-07 tal como está escrita. Suite completa, `pint` y `node --test` en verde.
+Revisado en Chrome sin interfaz: 100 × 50 mm (escala 1.7692), 60 × 20 mm (la letra queda en el
+mínimo de 7 pt y caben los cinco renglones) y la vista previa en vivo al pasar el alto a 40 mm
+(escala 1.3846, ticket a 19.4 pt). El nombre largo se sigue achicando a lo ancho.
