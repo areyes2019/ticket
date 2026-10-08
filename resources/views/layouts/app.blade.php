@@ -7,6 +7,8 @@
 
     <title>@yield('title', config('app.name'))</title>
 
+    @include('layouts._pwa')
+
     <link rel="stylesheet" href="{{ asset('vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
     <link rel="stylesheet" href="{{ asset('css/app.css') }}?v={{ filemtime(public_path('css/app.css')) }}">
 </head>
@@ -20,6 +22,10 @@
 
         <nav class="menu">
             @auth
+                @if (request()->routeIs('dashboard'))
+                    {{-- Lo muestra pwa.js solo cuando el navegador ofrece instalar (033). --}}
+                    <x-boton tipo="button" variante="secundario" icono="phone" hidden data-instalar-app>Instalar aplicación</x-boton>
+                @endif
                 @can('ver-historial-accesos')
                     <a href="{{ route('historial-accesos.index') }}"><x-icono nombre="clock-history" />Historial de accesos</a>
                 @endcan
@@ -47,11 +53,13 @@
     </header>
 
     <main class="contenido @yield('contenido-clase')">
+        <x-alerta tipo="advertencia" hidden data-sin-conexion>Sin conexión. Revisa el internet e inténtalo de nuevo.</x-alerta>
         @yield('content')
     </main>
 
     <script src="{{ asset('vendor/axios.min.js') }}"></script>
     <script src="{{ asset('js/app.js') }}?v={{ filemtime(public_path('js/app.js')) }}"></script>
+    <script src="{{ asset('js/pwa.js') }}?v={{ filemtime(public_path('js/pwa.js')) }}"></script>
     @stack('scripts')
 </body>
 </html>

@@ -1,40 +1,59 @@
 /*
- * Service worker de APAGADO de la PWA anterior.
+ * Service worker de la aplicación de mostrador (033).
  *
- * Esta aplicación no registra ningún service worker. Pero antes de ella,
- * este mismo dominio servía el sistema "facturacion" como PWA, y quien la
- * tenga instalada conserva registrado su service worker, que sigue sirviendo la
- * interfaz vieja desde su caché sin que la petición llegue nunca al servidor.
+ * Hace dos cosas, y nada más:
  *
- * Cuando el navegador comprueba si hay versión nueva, pide este archivo. Al ser
- * distinto del anterior, se instala, y este es todo su trabajo: borrar las
- * cachés, desregistrarse y recargar las ventanas abiertas. A partir de ahí el
- * origen queda limpio y la ventana carga esta aplicación como cualquier visitante.
+ * 1. Termina el APAGADO de la PWA anterior. Antes de esta aplicación, este
+ *    mismo dominio servía el sistema "facturacion" como PWA, y quien la tenga
+ *    instalada conserva su service worker sirviendo la interfaz vieja desde su
+ *    caché. Cuando el navegador pide este archivo y lo encuentra distinto, lo
+ *    instala; al activarse borra toda caché que no sea la suya y toma las
+ *    ventanas abiertas. (La versión anterior de este archivo además se
+ *    desregistraba; ahora se queda porque la aplicación sí lo usa.)
  *
- * Se ejecuta una sola vez por dispositivo. Después de eso el archivo sigue aquí
- * para los que todavía no hayan abierto la aplicación instalada.
+ * 2. Avisa sin conexión. Las navegaciones van SIEMPRE a la red; si la red
+ *    falla, responde el aviso sin-conexion.html guardado al instalarse.
+ *
+ * Nunca guarda una respuesta del sistema: ni páginas, ni PDF, ni tickets, ni
+ * tarjetas. Cada pantalla la pinta el servidor en cada visita, así que no hay
+ * versión vieja que servir ni datos de otra sesión que mostrar.
+ *
+ * Sube VERSION cuando cambien sin-conexion.html o los iconos.
  */
 
-self.addEventListener('install', () => {
-    // Sin esperar a que se cierren las ventanas de la versión anterior: el
-    // objetivo es justamente reemplazar a un service worker que está sirviendo
-    // una aplicación que ya no existe.
-    self.skipWaiting();
+const VERSION = 1;
+const CACHE = 'mostrador-' + VERSION;
+const ARCHIVOS = ['/sin-conexion.html', '/img/pwa/icono-192.png'];
+
+self.addEventListener('install', (event) => {
+    event.waitUntil(
+        caches.open(CACHE)
+            .then((cache) => cache.addAll(ARCHIVOS))
+            .then(() => self.skipWaiting()),
+    );
 });
 
 self.addEventListener('activate', (event) => {
     event.waitUntil((async () => {
         const nombres = await caches.keys();
-        await Promise.all(nombres.map((nombre) => caches.delete(nombre)));
+        await Promise.all(nombres.filter((nombre) => nombre !== CACHE).map((nombre) => caches.delete(nombre)));
 
-        await self.registration.unregister();
-
-        // Recargar las ventanas abiertas. Sin esto, la pestaña que ya estaba
-        // abierta sigue mostrando la aplicación vieja hasta que el usuario la
-        // recargue a mano, y lo que ve es una interfaz que no responde.
-        const ventanas = await self.clients.matchAll({ type: 'window' });
-        for (const ventana of ventanas) {
-            ventana.navigate(ventana.url);
-        }
+        await self.clients.claim();
     })());
+});
+
+self.addEventListener('fetch', (event) => {
+    const peticion = event.request;
+
+    // El icono del aviso sin conexión: de la caché si no hay red.
+    if (peticion.method === 'GET' && new URL(peticion.url).pathname === '/img/pwa/icono-192.png') {
+        event.respondWith(fetch(peticion).catch(() => caches.match('/img/pwa/icono-192.png')));
+        return;
+    }
+
+    if (peticion.mode !== 'navigate') {
+        return;
+    }
+
+    event.respondWith(fetch(peticion).catch(() => caches.match('/sin-conexion.html')));
 });

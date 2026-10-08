@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\TipoMovimiento;
 use App\Exceptions\OperacionTesoreriaRechazada;
+use App\Http\Controllers\Concerns\RegresaAMostrador;
 use App\Http\Requests\PedidoPagoRequest;
 use App\Models\Pedido;
 use App\Models\PedidoPago;
@@ -16,6 +17,8 @@ use Illuminate\Validation\ValidationException;
 
 class PedidoPagoController extends Controller
 {
+    use RegresaAMostrador;
+
     public function __construct(private readonly RegistradorMovimientos $registrador) {}
 
     /**
@@ -56,7 +59,7 @@ class PedidoPagoController extends Controller
             return $pago;
         });
 
-        return redirect()->route('pedidos.show', $pedido)
+        return redirect()->route($this->vieneDelMostrador($request) ? 'mostrador.venta.listo' : 'pedidos.show', $pedido)
             ->with('exito', 'Pago de $'.number_format((float) $pago->monto, 2)." registrado en {$cuenta->nombre}.");
     }
 

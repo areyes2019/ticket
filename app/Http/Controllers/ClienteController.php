@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\RegresaAMostrador;
 use App\Http\Requests\ClienteRequest;
 use App\Models\Cliente;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -12,6 +13,8 @@ use Illuminate\View\View;
 
 class ClienteController extends Controller
 {
+    use RegresaAMostrador;
+
     /**
      * Página completa del listado, con los filtros de la URL.
      */
@@ -43,9 +46,18 @@ class ClienteController extends Controller
         return view('clientes.crear');
     }
 
+    /**
+     * Desde el mostrador (033) regresa a la captura con el cliente elegido.
+     */
     public function store(ClienteRequest $request): RedirectResponse
     {
-        $request->user()->clientes()->create($request->validated());
+        $cliente = $request->user()->clientes()->create($request->validated());
+        $flujo = $request->input('flujo');
+
+        if ($this->vieneDelMostrador($request) && in_array($flujo, MostradorController::FLUJOS_CON_CLIENTE, true)) {
+            return redirect()->route("mostrador.{$flujo}", ['cliente' => $cliente->id])
+                ->with('exito', "Cliente {$cliente->razon_social} creado.");
+        }
 
         return redirect()->route('clientes.index')->with('exito', 'Cliente creado.');
     }

@@ -7,6 +7,7 @@ use App\Enums\EstadoPedido;
 use App\Enums\MotivoMovimientoInventario;
 use App\Enums\TasaIva;
 use App\Enums\TipoDescuento;
+use App\Http\Controllers\Concerns\RegresaAMostrador;
 use App\Http\Requests\ListadoCotizacionesRequest;
 use App\Http\Requests\ListadoPedidosRequest;
 use App\Http\Requests\PedidoRequest;
@@ -32,6 +33,8 @@ use Illuminate\View\View;
 
 class PedidoController extends Controller
 {
+    use RegresaAMostrador;
+
     public function __construct(
         private readonly RegistradorInventario $inventario,
         private readonly ConservadorColores $colores,
@@ -102,6 +105,11 @@ class PedidoController extends Controller
 
             return $pedido;
         });
+
+        // Desde el mostrador (033) sigue al cobro: la venta ya existe y solo falta el pago.
+        if ($this->vieneDelMostrador($request)) {
+            return redirect()->route('mostrador.venta.cobro', $pedido);
+        }
 
         return redirect()->route('pedidos.show', $pedido)
             ->with('exito', "Venta {$pedido->folio_formateado} creada. Registra el pago para compartir el ticket.");

@@ -3213,3 +3213,400 @@ a.bandeja-abrir {
     margin-bottom: var(--espacio-2);
     font-weight: 600;
 }
+
+/*
+ * Aplicación de mostrador (033): pantallas para el dedo en un celular. Sin
+ * desplazamiento horizontal a 375 puntos; todo lo tocable mide al menos 44 px.
+ */
+.mostrador {
+    --mostrador-toque: 2.75rem;
+    --mostrador-alto-barra: 3.25rem;
+}
+
+.barra-mostrador {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    flex-wrap: nowrap;
+    min-height: var(--mostrador-alto-barra);
+    padding: var(--espacio-2) var(--espacio-4);
+}
+
+.barra-mostrador .marca {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--mostrador-toque);
+}
+
+.contenido-mostrador {
+    max-width: 40rem;
+    padding: var(--espacio-4);
+}
+
+/* Inicio: tres accesos que ocupan el alto disponible en partes iguales */
+.mostrador-accesos {
+    display: grid;
+    grid-template-rows: repeat(3, 1fr);
+    gap: var(--espacio-3);
+    min-height: calc(100vh - var(--mostrador-alto-barra) - 8rem);
+    min-height: calc(100dvh - var(--mostrador-alto-barra) - 8rem);
+}
+
+.mostrador-acceso {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--espacio-2);
+    min-height: 6rem;
+    padding: var(--espacio-4);
+    font-size: var(--texto-titulo);
+    font-weight: 600;
+    color: var(--color-texto-invertido);
+    text-align: center;
+    text-decoration: none;
+    background: var(--color-primario);
+    border-radius: var(--radio);
+}
+
+.mostrador-acceso:hover,
+.mostrador-acceso:focus-visible {
+    background: var(--color-primario-oscuro);
+}
+
+.mostrador-acceso .icono {
+    font-size: 2.75rem;
+}
+
+.mostrador-salir {
+    display: flex;
+    justify-content: center;
+    margin-top: var(--espacio-5);
+}
+
+/* Captura por pasos */
+.mostrador-indicador {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--espacio-2);
+    margin: 0 0 var(--espacio-4);
+    color: var(--color-texto-suave);
+}
+
+.mostrador-indicador strong {
+    color: var(--color-texto);
+    font-size: var(--texto-subtitulo);
+}
+
+.mostrador-paso {
+    display: flex;
+    flex-direction: column;
+    gap: var(--espacio-3);
+}
+
+.mostrador-paso .campo {
+    margin: 0;
+}
+
+.mostrador-acciones-cliente {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--espacio-3);
+}
+
+.mostrador-acciones-cliente .boton,
+.mostrador-paso > .boton,
+.mostrador-pie .boton,
+.mostrador-acciones-resultado .boton {
+    min-height: var(--mostrador-toque);
+}
+
+.mostrador-cliente-elegido {
+    margin: 0;
+    padding: var(--espacio-2) var(--espacio-3);
+    font-weight: 600;
+    background: var(--color-info-fondo);
+    border: 1px solid var(--color-info-borde);
+}
+
+/* Listas de fichas tocables (clientes, artículos y opciones) */
+.mostrador-lista,
+.mostrador-opciones {
+    display: flex;
+    flex-direction: column;
+    gap: var(--espacio-2);
+}
+
+.mostrador-lista-articulos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+}
+
+.mostrador-ficha {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--espacio-1);
+    min-height: var(--mostrador-toque);
+    padding: var(--espacio-3);
+    color: var(--color-texto);
+    text-decoration: none;
+    background: var(--color-superficie);
+    border: 1px solid var(--color-borde);
+    border-radius: var(--radio);
+    overflow-wrap: anywhere;
+}
+
+.mostrador-ficha:hover,
+.mostrador-ficha:focus-visible {
+    border-color: var(--color-primario);
+}
+
+.mostrador-ficha:active {
+    background: var(--color-precargado);
+}
+
+.mostrador-ficha-titulo {
+    font-size: var(--texto-subtitulo);
+}
+
+.mostrador-ficha-dato {
+    color: var(--color-texto-suave);
+    font-size: var(--texto-pequeno);
+}
+
+.mostrador-ficha-dato .icono {
+    margin-right: var(--icono-separacion);
+}
+
+.mostrador-rfc {
+    font-family: ui-monospace, Consolas, monospace;
+}
+
+.mostrador-ficha .etiqueta {
+    align-self: flex-start;
+}
+
+.mostrador-ficha-imagen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1;
+    color: var(--color-texto-suave);
+    font-size: 2rem;
+    background: var(--color-superficie-suave);
+}
+
+.mostrador-ficha-imagen img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.mostrador-ficha-precio {
+    font-weight: 600;
+}
+
+.mostrador-ficha-precio small {
+    color: var(--color-texto-suave);
+    font-weight: 400;
+}
+
+.mostrador-ficha-cantidad {
+    position: absolute;
+    top: var(--espacio-2);
+    right: var(--espacio-2);
+    padding: var(--espacio-1) var(--espacio-2);
+    font-weight: 700;
+    color: var(--color-texto-invertido);
+    background: var(--color-primario);
+}
+
+.mostrador-ficha-agregada {
+    border-color: var(--color-primario);
+}
+
+.mostrador-opcion {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--espacio-3);
+}
+
+.mostrador-opcion-clave {
+    min-width: 3rem;
+}
+
+.mostrador-opcion-grande {
+    min-height: 5rem;
+    font-size: var(--texto-subtitulo);
+}
+
+.mostrador-opcion-palomita {
+    margin-left: auto;
+    color: var(--color-primario);
+    font-size: 1.4rem;
+    visibility: hidden;
+}
+
+.mostrador-opcion-elegida {
+    border-color: var(--color-primario);
+    background: var(--color-info-fondo);
+}
+
+.mostrador-opcion-elegida .mostrador-opcion-palomita {
+    visibility: visible;
+}
+
+.mostrador-vacio,
+.mostrador-cargando {
+    margin: 0;
+    padding: var(--espacio-4);
+    color: var(--color-texto-suave);
+    text-align: center;
+}
+
+.mostrador-lista-articulos .mostrador-vacio,
+.mostrador-lista-articulos .mostrador-cargando {
+    grid-column: 1 / -1;
+}
+
+.mostrador-vacio .icono {
+    margin-right: var(--icono-separacion);
+}
+
+/* Carrito */
+.mostrador-carrito {
+    display: flex;
+    flex-direction: column;
+    gap: var(--espacio-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.mostrador-renglon {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--espacio-2) var(--espacio-3);
+    padding: var(--espacio-3);
+    background: var(--color-superficie);
+    border: 1px solid var(--color-borde);
+}
+
+.mostrador-renglon-datos {
+    display: flex;
+    flex-direction: column;
+    gap: var(--espacio-1);
+    grid-column: 1 / -1;
+    overflow-wrap: anywhere;
+}
+
+.mostrador-renglon-error {
+    color: var(--color-error);
+    font-size: var(--texto-pequeno);
+}
+
+.mostrador-renglon-controles {
+    display: flex;
+    align-items: center;
+    gap: var(--espacio-2);
+}
+
+.mostrador-renglon-controles .boton {
+    min-width: var(--mostrador-toque);
+    min-height: var(--mostrador-toque);
+}
+
+.mostrador-renglon-cantidad {
+    min-width: 2rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.mostrador-renglon-importe {
+    align-self: center;
+    font-weight: 600;
+}
+
+/* Barra fija al pie con conteo, total y el botón que sigue */
+.mostrador-pie {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--espacio-3);
+    margin: var(--espacio-3) calc(-1 * var(--espacio-4)) 0;
+    padding: var(--espacio-3) var(--espacio-4);
+    background: var(--color-superficie);
+    border-top: 1px solid var(--color-borde);
+}
+
+.mostrador-pie > .boton-bloque {
+    flex: 1;
+}
+
+.mostrador-pie-resumen {
+    font-weight: 600;
+}
+
+/* Revisión y resultados */
+.mostrador-revision {
+    display: flex;
+    flex-direction: column;
+    gap: var(--espacio-1);
+    margin-bottom: var(--espacio-4);
+    padding: var(--espacio-4);
+    background: var(--color-superficie);
+    border: 1px solid var(--color-borde);
+}
+
+.mostrador-revision p {
+    margin: 0;
+}
+
+.mostrador-revision-nombre {
+    font-size: var(--texto-titulo);
+    font-weight: 700;
+}
+
+.mostrador-revision-total {
+    font-size: var(--texto-titulo);
+    font-weight: 700;
+    color: var(--color-primario-oscuro);
+}
+
+.mostrador-revision-fiscal {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--espacio-1) var(--espacio-3);
+    margin: var(--espacio-3) 0 0;
+    font-size: var(--texto-pequeno);
+    color: var(--color-texto-suave);
+}
+
+.mostrador-revision-fiscal dd {
+    margin: 0;
+}
+
+.mostrador-acciones-resultado {
+    display: flex;
+    flex-direction: column;
+    gap: var(--espacio-3);
+}
+
+.mostrador-ticket {
+    display: block;
+    width: 100%;
+    max-width: 24rem;
+    margin: 0 auto var(--espacio-4);
+    border: 1px solid var(--color-borde);
+}
+
+.mostrador-alta form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--espacio-4);
+}

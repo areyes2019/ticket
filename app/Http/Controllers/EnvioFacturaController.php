@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\RegresaAMostrador;
 use App\Http\Requests\EnviarFacturaRequest;
 use App\Models\Factura;
 use App\Services\Facturacion\EnviadorCorreoFactura;
@@ -12,6 +13,8 @@ use Throwable;
 
 class EnvioFacturaController extends Controller
 {
+    use RegresaAMostrador;
+
     /**
      * Correo síncrono con el XML y el PDF. Si el XML no llega, no se envía
      * nada. Enviar no cambia el estado.
@@ -34,7 +37,7 @@ class EnvioFacturaController extends Controller
             return back()->withInput()->withErrors(['destinatarios' => 'No se pudo enviar el correo. Revisa la configuración del servidor de correo e intenta de nuevo.'], 'envio');
         }
 
-        return redirect()->route('facturas.show', $factura)
+        return redirect()->route($this->vieneDelMostrador($request) ? 'mostrador.factura.listo' : 'facturas.show', $factura)
             ->with('exito', 'Factura enviada a '.implode(', ', $destinatarios).'.');
     }
 }

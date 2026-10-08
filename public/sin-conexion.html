@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#1e3a5f">
+    <title>Sin conexión</title>
+    <!-- Aviso sin conexión de la aplicación (033). Lo sirve sw.js cuando una
+         navegación no llega a la red, así que no puede depender de nada más:
+         estilos en línea y ningún recurso externo. -->
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            padding: 1.5rem;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            color: #1f2937;
+            background: #f3f4f6;
+            text-align: center;
+        }
+
+        img {
+            width: 7rem;
+            height: auto;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.4rem;
+        }
+
+        p {
+            margin: 0;
+            max-width: 22rem;
+        }
+
+        button {
+            min-height: 3rem;
+            padding: 0 2rem;
+            border: 0;
+            border-radius: 0;
+            font: inherit;
+            font-weight: 600;
+            color: #fff;
+            background: #2563eb;
+        }
+    </style>
+</head>
+<body>
+    <img src="/img/pwa/icono-192.png" alt="">
+    <h1>Sin conexión</h1>
+    <p>Revisa el internet e inténtalo de nuevo. Lo que estabas capturando sigue guardado en esta ventana.</p>
+    <button type="button" onclick="location.reload()">Reintentar</button>
+</body>
+</html>

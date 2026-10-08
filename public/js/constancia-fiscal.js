@@ -161,7 +161,10 @@
 
             if (existente && String(existente.id) !== clienteId) {
                 texto('[data-constancia-existente-nombre]', existente.razon_social);
-                contenedor.querySelector('[data-constancia-abrir]').href = existente.url_editar;
+                // El mostrador (033) sigue con ese cliente en lugar de abrir su ficha.
+                contenedor.querySelector('[data-constancia-abrir]').href = contenedor.dataset.urlExistente
+                    ? contenedor.dataset.urlExistente.replace('{id}', existente.id)
+                    : existente.url_editar;
                 alertaExistente.hidden = false;
                 pendiente = resultado;
                 return;

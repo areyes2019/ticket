@@ -28,6 +28,9 @@ use App\Http\Controllers\HojaProduccionController;
 use App\Http\Controllers\ImagenesArticulosController;
 use App\Http\Controllers\ImportacionArticulosController;
 use App\Http\Controllers\ImportacionClientesController;
+use App\Http\Controllers\MostradorController;
+use App\Http\Controllers\MostradorResultadoController;
+use App\Http\Controllers\MostradorTarjetasController;
 use App\Http\Controllers\MovimientoController;
 use App\Http\Controllers\OrdenCompraController;
 use App\Http\Controllers\OrdenCompraPagoController;
@@ -39,6 +42,7 @@ use App\Http\Controllers\ProveedorController;
 use App\Http\Controllers\SaldoController;
 use App\Http\Controllers\TransferenciaController;
 use App\Http\Middleware\AsegurarUsuarioActivo;
+use App\Http\Middleware\CandadoMostrador;
 use Illuminate\Support\Facades\Route;
 
 // La raíz no tiene vista propia: lleva al panel o al login según haya sesión.
@@ -52,8 +56,27 @@ Route::middleware('throttle:autofactura')->group(function () {
     Route::post('autofactura/{token}', [AutofacturaController::class, 'store'])->where('token', '[A-Za-z0-9]{64}')->name('autofactura.store');
 });
 
-Route::middleware(['auth', AsegurarUsuarioActivo::class])->group(function () {
+// CandadoMostrador (033): con la sesión del mostrador, solo sus pantallas y lo que usan.
+Route::middleware(['auth', AsegurarUsuarioActivo::class, CandadoMostrador::class])->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
+
+    // Aplicación de mostrador (033). /mostrador es la start_url de la aplicación
+    // instalada y enciende el candado. Las altas van a las rutas de siempre.
+    Route::prefix('mostrador')->name('mostrador.')->group(function () {
+        Route::get('/', [MostradorController::class, 'inicio'])->name('inicio');
+        Route::get('venta', [MostradorController::class, 'venta'])->name('venta');
+        Route::get('factura', [MostradorController::class, 'factura'])->name('factura');
+        Route::get('cotizacion', [MostradorController::class, 'cotizacion'])->name('cotizacion');
+        Route::get('{flujo}/cliente-nuevo', [MostradorController::class, 'clienteNuevo'])
+            ->whereIn('flujo', MostradorController::FLUJOS_CON_CLIENTE)
+            ->name('cliente-nuevo');
+        Route::get('tarjetas/clientes', [MostradorTarjetasController::class, 'clientes'])->name('tarjetas.clientes');
+        Route::get('tarjetas/articulos', [MostradorTarjetasController::class, 'articulos'])->name('tarjetas.articulos');
+        Route::get('ventas/{pedido}/cobro', [MostradorResultadoController::class, 'cobro'])->name('venta.cobro');
+        Route::get('ventas/{pedido}', [MostradorResultadoController::class, 'venta'])->name('venta.listo');
+        Route::get('cotizaciones/{cotizacion}', [MostradorResultadoController::class, 'cotizacion'])->name('cotizacion.listo');
+        Route::get('facturas/{factura}', [MostradorResultadoController::class, 'factura'])->name('factura.listo');
+    });
 
     Route::get('/historial-accesos', [HistorialAccesoController::class, 'index'])
         ->middleware('can:ver-historial-accesos')

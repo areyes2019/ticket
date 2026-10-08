@@ -2,8 +2,10 @@
     Carga de la Constancia de Situación Fiscal (specs/006). Queda fuera del
     formulario del cliente para que el archivo nunca se envíe al guardar, y
     oculta hasta que carga constancia-fiscal.js: sin JavaScript no aparece.
+    El mostrador (033) pasa $urlExistente ("…?cliente={id}") y $textoAbrir para
+    seguir con el cliente que ya existe en lugar de abrir su ficha.
 --}}
-<div hidden data-constancia="{{ route('clientes.constancia') }}" @isset($cliente) data-cliente-id="{{ $cliente->id }}" @endisset>
+<div hidden data-constancia="{{ route('clientes.constancia') }}" @isset($cliente) data-cliente-id="{{ $cliente->id }}" @endisset @isset($urlExistente) data-url-existente="{{ $urlExistente }}" @endisset>
     <x-card titulo="Constancia de Situación Fiscal">
         <div class="constancia-zona" data-constancia-zona>
             <p>
@@ -22,7 +24,7 @@
         <x-alerta tipo="advertencia" hidden data-constancia-existente>
             <p>Ya tienes registrado a <strong data-constancia-existente-nombre></strong> con este RFC.</p>
             <div class="acciones">
-                <x-boton href="#" variante="secundario" icono="box-arrow-up-right" data-constancia-abrir>Abrir su ficha</x-boton>
+                <x-boton href="#" variante="secundario" icono="box-arrow-up-right" data-constancia-abrir>{{ $textoAbrir ?? 'Abrir su ficha' }}</x-boton>
                 <x-boton tipo="button" variante="secundario" icono="arrow-down-square" data-constancia-precargar>Precargar de todos modos</x-boton>
             </div>
         </x-alerta>

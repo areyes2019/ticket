@@ -225,6 +225,27 @@ class Articulo extends Model
     }
 
     /**
+     * Una sola caja de texto contra nombre, modelo o proveedor (combinados con
+     * O), para las tarjetas del mostrador (033). Vacía no filtra.
+     *
+     * @param  Builder<self>  $consulta
+     */
+    #[Scope]
+    protected function buscarTexto(Builder $consulta, string $texto): void
+    {
+        $termino = trim($texto);
+
+        if ($termino === '') {
+            return;
+        }
+
+        $consulta->where(fn (Builder $grupo) => $grupo
+            ->where('nombre', 'like', "%{$termino}%")
+            ->orWhere('modelo', 'like', "%{$termino}%")
+            ->orWhereHas('proveedor', fn (Builder $proveedor) => $proveedor->where('nombre_comercial', 'like', "%{$termino}%")));
+    }
+
+    /**
      * Aplica los filtros del listado (coincidencia parcial, combinados con Y;
      * el catálogo, exacto). Los filtros vacíos se ignoran.
      *

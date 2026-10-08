@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\RegresaABandeja;
+use App\Http\Controllers\Concerns\RegresaAMostrador;
 use App\Http\Requests\EnviarCotizacionRequest;
 use App\Mail\CotizacionMail;
 use App\Models\Cotizacion;
@@ -16,6 +17,7 @@ use Throwable;
 class EnvioCotizacionController extends Controller
 {
     use RegresaABandeja;
+    use RegresaAMostrador;
 
     /**
      * Envía el correo con el PDF adjunto (síncrono) y marca la cotización como
@@ -36,7 +38,11 @@ class EnvioCotizacionController extends Controller
 
         $cotizacion->marcarEnviada();
 
-        return redirect()->to($this->destinoCotizacion($request, $cotizacion))
+        $destino = $this->vieneDelMostrador($request)
+            ? route('mostrador.cotizacion.listo', $cotizacion)
+            : $this->destinoCotizacion($request, $cotizacion);
+
+        return redirect()->to($destino)
             ->with('exito', 'Cotización enviada a '.implode(', ', $destinatarios).'.');
     }
 

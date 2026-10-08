@@ -10,6 +10,7 @@ use App\Enums\MotivoCancelacion;
 use App\Enums\TasaIva;
 use App\Enums\TipoDescuento;
 use App\Enums\UsoCfdi;
+use App\Http\Controllers\Concerns\RegresaAMostrador;
 use App\Http\Requests\CancelarFacturaRequest;
 use App\Http\Requests\FacturaRequest;
 use App\Http\Requests\ListadoCotizacionesRequest;
@@ -40,6 +41,8 @@ use Illuminate\View\View;
 
 class FacturaController extends Controller
 {
+    use RegresaAMostrador;
+
     public function __construct(private TimbradorFacturas $timbrador) {}
 
     /**
@@ -120,7 +123,7 @@ class FacturaController extends Controller
             return $resultado;
         }
 
-        return $this->respuestaTimbrado($resultado, $this->timbrador->timbrar($resultado));
+        return $this->respuestaTimbrado($resultado, $this->timbrador->timbrar($resultado), $this->vieneDelMostrador($request));
     }
 
     /**
@@ -300,7 +303,7 @@ class FacturaController extends Controller
     /**
      * Reintento con los mismos datos de una factura pendiente.
      */
-    public function timbrar(Factura $factura): RedirectResponse
+    public function timbrar(Request $request, Factura $factura): RedirectResponse
     {
         Gate::authorize('operar', $factura);
 
@@ -308,7 +311,7 @@ class FacturaController extends Controller
             return back()->with('error', 'Solo se reintenta el timbrado de una factura pendiente.');
         }
 
-        return $this->respuestaTimbrado($factura, $this->timbrador->timbrar($factura));
+        return $this->respuestaTimbrado($factura, $this->timbrador->timbrar($factura), $this->vieneDelMostrador($request));
     }
 
     public function cancelar(CancelarFacturaRequest $request, Factura $factura, CanceladorFacturas $cancelador): RedirectResponse
@@ -372,13 +375,18 @@ class FacturaController extends Controller
     /**
      * A dónde lleva cada resultado del timbrado: al detalle si se timbró o si
      * falló el PAC (se reintenta igual), al formulario si facturapi.io rechazó
-     * los datos (se corrigen).
+     * los datos (se corrigen). Desde el mostrador (033), siempre a su pantalla
+     * de resultado, que lee el estado de la factura.
      */
-    private function respuestaTimbrado(Factura $factura, ResultadoTimbrado $resultado): RedirectResponse
+    private function respuestaTimbrado(Factura $factura, ResultadoTimbrado $resultado, bool $mostrador = false): RedirectResponse
     {
         $factura->refresh();
 
-        $ruta = $resultado === ResultadoTimbrado::ErrorDatos && $factura->esEditable() ? 'facturas.edit' : 'facturas.show';
+        $ruta = match (true) {
+            $mostrador => 'mostrador.factura.listo',
+            $resultado === ResultadoTimbrado::ErrorDatos && $factura->esEditable() => 'facturas.edit',
+            default => 'facturas.show',
+        };
         $redireccion = redirect()->route($ruta, $factura);
         $mensaje = $this->mensajeTimbrado($factura, $resultado);
 

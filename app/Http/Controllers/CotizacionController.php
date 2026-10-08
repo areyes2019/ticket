@@ -97,10 +97,13 @@ class CotizacionController extends Controller
             return $cotizacion;
         });
 
-        // Desde la ventana del dashboard, la nueva queda abierta en su visor.
-        $destino = $request->input('origen') === 'dashboard'
-            ? route('dashboard', ['cotizacion' => $cotizacion->id])
-            : route('cotizaciones.show', $cotizacion);
+        // Desde la ventana del dashboard, la nueva queda abierta en su visor;
+        // desde el mostrador (033), en su pantalla de envío.
+        $destino = match ($request->input('origen')) {
+            'dashboard' => route('dashboard', ['cotizacion' => $cotizacion->id]),
+            'mostrador' => route('mostrador.cotizacion.listo', $cotizacion),
+            default => route('cotizaciones.show', $cotizacion),
+        };
 
         return redirect()->to($destino)
             ->with('exito', "Cotización {$cotizacion->folio_formateado} creada.");

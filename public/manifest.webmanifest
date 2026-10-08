@@ -1,0 +1,21 @@
+{
+    "name": "Ticket Factura · Mostrador",
+    "short_name": "Mostrador",
+    "description": "Factura, cotización y venta al público desde el mostrador.",
+    "lang": "es-MX",
+    "start_url": "/mostrador",
+    "scope": "/",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#ffffff",
+    "theme_color": "#1e3a5f",
+    "icons": [
+        { "src": "/img/pwa/icono-192.png", "sizes": "192x192", "type": "image/png" },
+        { "src": "/img/pwa/icono-512.png", "sizes": "512x512", "type": "image/png" },
+        { "src": "/img/pwa/icono-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    ],
+    "shortcuts": [
+        { "name": "Nueva venta", "url": "/mostrador/venta", "icons": [{ "src": "/img/pwa/icono-192.png", "sizes": "192x192" }] },
+        { "name": "Nueva cotización", "url": "/mostrador/cotizacion", "icons": [{ "src": "/img/pwa/icono-192.png", "sizes": "192x192" }] }
+    ]
+}

@@ -100,6 +100,29 @@ class Cliente extends Model
         }
     }
 
+    /**
+     * Una sola caja de texto contra razón social, nombre comercial o RFC
+     * (combinados con O), para las tarjetas del mostrador (033). Vacía no filtra.
+     *
+     * @param  Builder<self>  $consulta
+     */
+    #[Scope]
+    protected function buscarTexto(Builder $consulta, string $texto): void
+    {
+        $termino = trim($texto);
+
+        if ($termino === '') {
+            return;
+        }
+
+        $rfc = strtoupper(preg_replace('/\s+/', '', $termino));
+
+        $consulta->where(fn (Builder $grupo) => $grupo
+            ->where('razon_social', 'like', "%{$termino}%")
+            ->orWhere('nombre_comercial', 'like', "%{$termino}%")
+            ->orWhere('rfc', 'like', "%{$rfc}%"));
+    }
+
     public function tieneDescuentoPermanente(): bool
     {
         return (float) $this->descuento_permanente > 0;
