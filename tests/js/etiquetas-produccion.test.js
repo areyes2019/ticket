@@ -27,10 +27,13 @@ for (const caso of casos) {
             medidas[campo] = Math.round(parseFloat(valor) * 10);
         }
 
+        medidas.columnas = caso.columnas_elegidas ?? null;
+
         const dist = distribucion(medidas);
         const margenes = centrar(medidas);
 
         assert.equal(dist.columnas, caso.columnas);
+        assert.equal(dist.columnasQueCaben, caso.columnas_que_caben ?? caso.columnas);
         assert.equal(dist.renglones, caso.renglones);
         assert.equal(dist.porHoja, caso.por_hoja);
         assert.equal(escalaLetra(medidas).toFixed(4), caso.escala_letra);

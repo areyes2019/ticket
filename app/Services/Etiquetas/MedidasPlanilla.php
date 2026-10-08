@@ -3,8 +3,9 @@
 namespace App\Services\Etiquetas;
 
 /**
- * Las seis medidas de una planilla de etiquetas sobre hoja carta (031) y lo
- * que se deriva de ellas: columnas, renglones y márgenes centrados.
+ * Las seis medidas de una planilla de etiquetas sobre hoja carta (031), las
+ * columnas elegidas (corrección 2: automático, 1, 2 o 3) y lo que se deriva
+ * de ellas: columnas, renglones y márgenes centrados.
  *
  * Todo se cuenta en décimas de milímetro (la precisión de las medidas), así
  * las divisiones son enteras y no hay ruido de punto flotante. El espejo en
@@ -33,6 +34,11 @@ final class MedidasPlanilla
         'margen_izquierdo' => [0, 1000, 179],
     ];
 
+    /** Columnas que se pueden elegir; "auto" (null) pone todas las que caben. */
+    public const COLUMNAS = [1, 2, 3];
+
+    public const COLUMNAS_AUTOMATICO = 'auto';
+
     /** @var array<string, string> */
     public const ETIQUETAS = [
         'ancho' => 'Ancho',
@@ -45,8 +51,9 @@ final class MedidasPlanilla
 
     /**
      * @param  array<string, int>  $decimas
+     * @param  int|null  $columnasElegidas  1, 2 o 3; null es automático.
      */
-    private function __construct(private readonly array $decimas) {}
+    private function __construct(private readonly array $decimas, private readonly ?int $columnasElegidas = null) {}
 
     public static function fabrica(): self
     {
@@ -54,14 +61,14 @@ final class MedidasPlanilla
     }
 
     /**
-     * @param  array<string, float|int|string>  $milimetros  Las seis medidas, ya válidas.
+     * @param  array<string, mixed>  $milimetros  Las seis medidas, ya válidas, y opcionalmente columnas.
      */
     public static function desdeMilimetros(array $milimetros): self
     {
         return new self(array_map(
             fn (string $campo) => self::aDecimas($milimetros[$campo]),
             array_combine(array_keys(self::CAMPOS), array_keys(self::CAMPOS))
-        ));
+        ), self::leerColumnas($milimetros['columnas'] ?? null) ?: null);
     }
 
     /**
@@ -88,19 +95,25 @@ final class MedidasPlanilla
             }
         }
 
-        return new self($decimas);
+        $columnas = array_key_exists('columnas', $datos) ? self::leerColumnas($datos['columnas']) : false;
+
+        return new self($decimas, $columnas === false ? $base->columnasElegidas : $columnas);
     }
 
     /**
-     * Reglas de validación de las seis medidas, en milímetros.
+     * Reglas de validación de las seis medidas, en milímetros, y de las
+     * columnas (sin ellas, automático).
      *
      * @return array<string, array<int, string>>
      */
     public static function reglas(): array
     {
-        return array_map(fn (array $campo) => [
-            'required', 'numeric', 'decimal:0,1', 'between:'.self::aMilimetros($campo[0]).','.self::aMilimetros($campo[1]),
-        ], self::CAMPOS);
+        return [
+            ...array_map(fn (array $campo) => [
+                'required', 'numeric', 'decimal:0,1', 'between:'.self::aMilimetros($campo[0]).','.self::aMilimetros($campo[1]),
+            ], self::CAMPOS),
+            'columnas' => ['nullable', 'in:'.implode(',', [self::COLUMNAS_AUTOMATICO, ...self::COLUMNAS])],
+        ];
     }
 
     public function milimetros(string $campo): string
@@ -116,9 +129,43 @@ final class MedidasPlanilla
         return array_map(fn (int $valor) => self::aMilimetros($valor), $this->decimas);
     }
 
+    /**
+     * 1, 2 o 3, o null si es automático.
+     */
+    public function columnasElegidas(): ?int
+    {
+        return $this->columnasElegidas;
+    }
+
+    /**
+     * Las columnas como van en la dirección y en el select: 1, 2, 3 o "auto".
+     */
+    public function columnasParaDireccion(): string
+    {
+        return (string) ($this->columnasElegidas ?? self::COLUMNAS_AUTOMATICO);
+    }
+
+    /**
+     * Las que se pintan: las elegidas si caben, o todas las que caben.
+     */
     public function columnas(): int
     {
+        return $this->limitarColumnas($this->columnasQueCaben());
+    }
+
+    public function columnasQueCaben(): int
+    {
         return self::caben(self::HOJA_ANCHO - $this->decimas['margen_izquierdo'], $this->decimas['ancho'], $this->decimas['separacion_horizontal']);
+    }
+
+    /**
+     * Se eligieron más columnas de las que caben (y cabe al menos una).
+     */
+    public function columnasRecortadas(): bool
+    {
+        $caben = $this->columnasQueCaben();
+
+        return $this->columnasElegidas !== null && $caben > 0 && $this->columnasElegidas > $caben;
     }
 
     public function renglones(): int
@@ -155,13 +202,32 @@ final class MedidasPlanilla
     {
         $d = $this->decimas;
 
-        $columnas = $this->columnas() ?: self::caben(self::HOJA_ANCHO, $d['ancho'], $d['separacion_horizontal']);
+        $columnas = $this->columnas() ?: $this->limitarColumnas(self::caben(self::HOJA_ANCHO, $d['ancho'], $d['separacion_horizontal']));
         $renglones = $this->renglones() ?: self::caben(self::HOJA_ALTO, $d['alto'], $d['separacion_vertical']);
 
         $d['margen_izquierdo'] = self::margenCentrado(self::HOJA_ANCHO, $columnas, $d['ancho'], $d['separacion_horizontal']);
         $d['margen_superior'] = self::margenCentrado(self::HOJA_ALTO, $renglones, $d['alto'], $d['separacion_vertical']);
 
-        return new self($d);
+        return new self($d, $this->columnasElegidas);
+    }
+
+    private function limitarColumnas(int $caben): int
+    {
+        return $this->columnasElegidas === null ? $caben : min($this->columnasElegidas, $caben);
+    }
+
+    /**
+     * 1, 2 o 3; null para automático ("auto" o vacío); false si no es válido.
+     */
+    private static function leerColumnas(mixed $valor): int|false|null
+    {
+        if ($valor === null || $valor === '' || $valor === self::COLUMNAS_AUTOMATICO) {
+            return null;
+        }
+
+        $columnas = filter_var($valor, FILTER_VALIDATE_INT);
+
+        return in_array($columnas, self::COLUMNAS, true) ? $columnas : false;
     }
 
     private static function caben(int $espacio, int $tamano, int $separacion): int

@@ -28,5 +28,40 @@
         "medidas": { "ancho": "215.9", "alto": "279.4", "separacion_horizontal": "0.0", "separacion_vertical": "0.0", "margen_superior": "0.0", "margen_izquierdo": "0.0" },
         "columnas": 1, "renglones": 1, "por_hoja": 1, "escala_letra": "10.5923",
         "centrado": { "margen_superior": "0.0", "margen_izquierdo": "0.0" }
+    },
+    {
+        "descripcion": "Corrección 2: fábrica con 2 columnas elegidas, 2 × 8; centrar centra el bloque de 2",
+        "medidas": { "ancho": "60.0", "alto": "30.0", "separacion_horizontal": "0.0", "separacion_vertical": "0.0", "margen_superior": "19.7", "margen_izquierdo": "17.9" },
+        "columnas_elegidas": 2,
+        "columnas": 2, "columnas_que_caben": 3, "columnas_recortadas": false, "renglones": 8, "por_hoja": 16, "escala_letra": "1.0000",
+        "centrado": { "margen_superior": "19.7", "margen_izquierdo": "47.9" }
+    },
+    {
+        "descripcion": "Corrección 2: 66.7 × 25.4 mm con 2 columnas elegidas, 2 × 10",
+        "medidas": { "ancho": "66.7", "alto": "25.4", "separacion_horizontal": "3.2", "separacion_vertical": "0.0", "margen_superior": "12.7", "margen_izquierdo": "4.8" },
+        "columnas_elegidas": 2,
+        "columnas": 2, "columnas_que_caben": 3, "columnas_recortadas": false, "renglones": 10, "por_hoja": 20, "escala_letra": "0.8231",
+        "centrado": { "margen_superior": "12.7", "margen_izquierdo": "39.6" }
+    },
+    {
+        "descripcion": "Corrección 2: 3 columnas elegidas donde solo caben 2 (100 mm de ancho)",
+        "medidas": { "ancho": "100.0", "alto": "30.0", "separacion_horizontal": "0.0", "separacion_vertical": "0.0", "margen_superior": "19.7", "margen_izquierdo": "10.0" },
+        "columnas_elegidas": 3,
+        "columnas": 2, "columnas_que_caben": 2, "columnas_recortadas": true, "renglones": 8, "por_hoja": 16, "escala_letra": "1.0000",
+        "centrado": { "margen_superior": "19.7", "margen_izquierdo": "7.9" }
+    },
+    {
+        "descripcion": "Corrección 2: fábrica con 1 columna elegida, centrada",
+        "medidas": { "ancho": "60.0", "alto": "30.0", "separacion_horizontal": "0.0", "separacion_vertical": "0.0", "margen_superior": "19.7", "margen_izquierdo": "17.9" },
+        "columnas_elegidas": 1,
+        "columnas": 1, "columnas_que_caben": 3, "columnas_recortadas": false, "renglones": 8, "por_hoja": 8, "escala_letra": "1.0000",
+        "centrado": { "margen_superior": "19.7", "margen_izquierdo": "77.9" }
+    },
+    {
+        "descripcion": "Corrección 2: no cabe ninguna con 3 elegidas; centrar usa la que cabría con margen 0, sin aviso de columnas",
+        "medidas": { "ancho": "200.0", "alto": "30.0", "separacion_horizontal": "0.0", "separacion_vertical": "0.0", "margen_superior": "0.0", "margen_izquierdo": "20.0" },
+        "columnas_elegidas": 3,
+        "columnas": 0, "columnas_que_caben": 0, "columnas_recortadas": false, "renglones": 9, "por_hoja": 0, "escala_letra": "1.0000",
+        "centrado": { "margen_superior": "4.7", "margen_izquierdo": "7.9" }
     }
 ]

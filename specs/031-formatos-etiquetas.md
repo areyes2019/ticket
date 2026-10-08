@@ -6,6 +6,9 @@
 > **Corrección 1 (2026-10-07, implementada):** la letra de la etiqueta se escala con el alto. Reemplaza la
 > asunción 12. Ver la sección "Corrección 1".
 
+> **Corrección 2 (2026-10-08, implementada):** número de columnas
+> elegible (automático, 1, 2 o 3). Modifica la asunción 5. Ver la sección "Corrección 2".
+
 **Modifica:** [030-etiquetas-produccion.md](030-etiquetas-produccion.md). La planilla deja de ser
 fija (60 × 30 mm, 3 × 8, centrada y sin separación): el usuario ajusta el tamaño de la etiqueta, la
 separación entre etiquetas y los márgenes de la hoja, y guarda esas medidas como **formatos** con
@@ -250,7 +253,8 @@ un formato con separaciones, uno donde no cabe nada y uno en el límite exacto d
 - Formatos de fábrica de marcas comerciales (asunción 11).
 - Cambiar el tamaño base de la letra o el contenido de la etiqueta (asunciones 12 y 13).
 - Ocultar el borde de corte (asunción 15).
-- Columnas o renglones capturados a mano (asunción 5).
+- Columnas o renglones capturados a mano (asunción 5). *La corrección 2 permite elegir 1, 2 o 3
+  columnas; los renglones siguen calculándose solos.*
 - Compartir formatos entre usuarios.
 
 ## Criterios de aceptación
@@ -393,3 +397,141 @@ Implementada el 2026-10-07 tal como está escrita. Suite completa, `pint` y `nod
 Revisado en Chrome sin interfaz: 100 × 50 mm (escala 1.7692), 60 × 20 mm (la letra queda en el
 mínimo de 7 pt y caben los cinco renglones) y la vista previa en vivo al pasar el alto a 40 mm
 (escala 1.3846, ticket a 19.4 pt). El nombre largo se sigue achicando a lo ancho.
+
+## Corrección 2: elegir 1, 2 o 3 columnas
+
+### Caso de uso
+
+Hay planillas que traen 2 columnas de etiquetas y otras que, con el mismo tamaño de etiqueta, traen
+3. Con el cálculo automático, el sistema pone todas las columnas que caben, y en una planilla de 2
+columnas puede meter una tercera que no existe en el papel.
+
+### Historia de usuario
+
+Como usuario, quiero elegir si la planilla tiene 1, 2 o 3 columnas, además de las otras medidas,
+para que la impresión coincida con las columnas reales de la hoja de etiquetas.
+
+### Qué cambia
+
+Un campo nuevo, **"Columnas"**, junto a las seis medidas, con cuatro opciones:
+
+| Opción | Valor en la petición (`columnas`) | Qué hace |
+|---|---|---|
+| Automático (de fábrica) | vacío | Como hoy: pone todas las columnas que caben (fórmula de "Distribución"). |
+| 1 | `1` | Una columna. |
+| 2 | `2` | Dos columnas. |
+| 3 | `3` | Tres columnas. |
+
+- **Automático es el valor de fábrica**, así que sin tocar el campo la planilla sale igual que hoy
+  (y que en 030).
+- Con 1, 2 o 3, las columnas de la planilla son **las elegidas, si caben**:
+
+  ```
+  caben    = piso((215.9 − margen_izquierdo + separacion_horizontal) / (ancho + separacion_horizontal))
+  columnas = elegidas = vacío ? caben : min(elegidas, caben)
+  ```
+
+- Si se eligen más columnas de las que caben, se usan las que caben y la barra avisa: **"Con estas
+  medidas solo caben N columnas."** (no es error; el formulario se acepta).
+- Los **renglones no cambian**: se siguen calculando solos con el alto, la separación vertical y el
+  margen superior.
+- **"Centrar"** centra el bloque con las columnas que se ven, así que con 2 columnas elegidas el
+  bloque de 2 queda en medio de la hoja.
+- "Empezar en la etiqueta", la hoja de prueba, la escala de la letra (corrección 1), la vista previa
+  en vivo y el reparto en hojas usan `por_hoja = columnas × renglones` con las columnas ya
+  resueltas; no necesitan otro cambio.
+- En la prioridad de "Qué medidas se usan al abrir la página", `columnas` se comporta como una
+  medida más: dirección → `formato` → predeterminado → fábrica (automático). Un valor distinto de
+  vacío, 1, 2 o 3 en la dirección se ignora sin error.
+
+### Backend
+
+- **Migración nueva** `2026_10_16_100000_add_columnas_to_formatos_etiqueta_table.php`: columna
+  `columnas` `unsignedTinyInteger` **nullable** en `formatos_etiqueta` (null = automático). Los
+  formatos que ya existen quedan en null, o sea, como hoy.
+- **`MedidasPlanilla`:** guarda `columnas` (`?int`, null = automático) junto a las seis medidas.
+  - `columnas()` devuelve `min(elegidas, caben)` o `caben` si es automático.
+  - `columnasQueCaben(): int` (el cálculo de hoy) y `columnasRecortadas(): bool` (se eligieron más de
+    las que caben), para el aviso.
+  - `fabrica()` la deja en null; `desdePeticion()` acepta vacío, 1, 2 o 3 e ignora lo demás;
+    `toArray()` la incluye (vacío para automático).
+  - `centrada()` ya usa `columnas()`, así que centra las elegidas sin cambio.
+- **`MedidasPlanillaRequest`:** `columnas` `nullable|integer|in:1,2,3`. Lo hereda
+  `FormatoEtiquetaRequest`, así que "Guardar" y "Guardar como nuevo" la guardan con el formato.
+- **`FormatoEtiqueta`:** `columnas` en `$fillable`; `medidas()` y `duplicar()` la pasan.
+- **`EtiquetasProduccionController::aplicar`:** la incluye en la dirección de la redirección.
+
+### Vista y JavaScript
+
+- **Barra, grupo "Medidas":** un `select` "Columnas" con `<x-campo>` (Automático, 1, 2, 3), después
+  de "Ancho" y antes de las separaciones. Junto a él, el aviso de columnas recortadas (oculto si no
+  aplica).
+- **`etiquetas-produccion.js`:** `distribucion(medidas)` recibe `columnas` (null o 1–3) y devuelve,
+  además de `{ columnas, renglones, porHoja }`, `columnasQueCaben`. Al cambiar el `select`, la vista
+  previa en vivo recalcula igual que con los otros campos, muestra u oculta el aviso y actualiza la
+  dirección con `history.replaceState`.
+
+### Pruebas
+
+- `planillas-etiquetas.json` gana el campo `columnas` en cada caso (null en los de hoy, que no
+  cambian) y casos nuevos: fábrica con 2 columnas (2 × 8 = 16), 66.7 × 25.4 con 2 (2 × 10 = 20),
+  3 elegidas donde solo caben 2 (2, recortadas), 1 columna centrada. Lo recorren
+  `MedidasPlanillaTest` y `etiquetas-produccion.test.js`.
+- `FormatosEtiquetaTest`, casos nuevos:
+  1. Sin `columnas`, la planilla sale con 24 por hoja (fábrica sin cambio).
+  2. `columnas=2` pinta 16 por hoja con las medidas de fábrica y el resumen dice "2 × 8".
+  3. Más columnas de las que caben muestra el aviso y usa las que caben.
+  4. "Guardar" y "Guardar como nuevo" guardan las columnas; al cargar el formato se usan; duplicar
+     las copia.
+  5. Un formato viejo (columnas null) sale en automático.
+  6. `columnas=5` o `columnas=x` en la dirección se ignora; en `aplicar` da error de validación.
+  7. `aplicar` con `centrar=1` y 2 columnas centra el bloque de 2.
+- Todas las pruebas de 030, 031 y la corrección 1 siguen verdes sin cambios (requisito: no romper
+  las otras configuraciones).
+
+### Criterios de aceptación de la corrección
+
+1. En la barra se elige Automático, 1, 2 o 3 columnas, y la vista previa cambia al momento.
+2. Con Automático (o sin formatos), la planilla sale igual que antes de esta corrección.
+3. Ancho, alto, separaciones, márgenes, "Centrar", "Empezar en la etiqueta", la hoja de prueba, la
+   escala de la letra y los formatos siguen funcionando igual.
+4. Las columnas se guardan con el formato y se recuperan al cargarlo.
+5. Si las columnas elegidas no caben, se avisa y se usan las que caben.
+6. `php artisan test`, `pint` y `node --test "tests/js/*.test.js"` en verde.
+
+### Supuestos de la corrección
+
+Aprobados por el usuario el 2026-10-08 (pidió implementar sin cambios).
+
+1. Las opciones son **Automático, 1, 2 y 3**; Automático es el de fábrica y conserva el cálculo de
+   hoy.
+2. Elegir columnas no cambia el ancho de la etiqueta ni la separación: solo cuántas columnas se
+   pintan.
+3. Los renglones se siguen calculando solos.
+4. Si las columnas elegidas no caben, se usan las que caben y se avisa (no es error).
+5. Las columnas se guardan en el formato, como las demás medidas.
+6. Los formatos que ya existen quedan en Automático.
+7. "Centrar" centra el bloque con las columnas elegidas.
+8. La vista previa en vivo refleja el cambio al momento.
+
+Sin adiciones técnicas.
+
+### Estado de implementación de la corrección 2
+
+Implementada el 2026-10-08. Suite completa (1339 pruebas), `pint` y `node --test` en verde.
+
+- **Diferencias con lo redactado:**
+  - Automático viaja como **`columnas=auto`**, no vacío: la redirección de `aplicar` quita los valores
+    vacíos, y sin el valor un formato con 2 columnas ganaría sobre el "Automático" elegido. Un
+    `columnas` vacío en la dirección también se toma como automático.
+  - `MedidasPlanilla::toArray()` sigue con solo las seis medidas (lo usa `asignarMedidas()` para las
+    columnas `_mm`); las columnas salen de `columnasElegidas()` (`?int`) y de
+    `columnasParaDireccion()` (`"1"`, `"2"`, `"3"` o `"auto"`).
+  - El aviso dice "solo cabe 1 columna" en singular.
+  - `planillas-etiquetas.json`: los casos nuevos llevan `columnas_elegidas`, `columnas_que_caben` y
+    `columnas_recortadas`; en los de antes no están y valen automático.
+  - En `FormatosEtiquetaTest`, la prueba de `aplicar` ahora espera `columnas=auto` en la redirección.
+- Migración `2026_10_16_100000_add_columnas_to_formatos_etiqueta_table`. **Al desplegar hay que correr
+  la migración.**
+- No se revisó en Chrome: la vista previa en vivo del `select` está cubierta solo por las funciones
+  puras (`distribucion()`, `centrar()`) y por las pruebas del HTML del servidor.

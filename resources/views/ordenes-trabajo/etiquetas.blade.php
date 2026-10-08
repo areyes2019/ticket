@@ -129,7 +129,7 @@
         @if ($prueba)
             <p class="planilla-resumen">{{ $medidas->columnas() }} × {{ $medidas->renglones() }} = {{ $medidas->porHoja() }} por hoja. Imprímela en papel normal y empálmala con la planilla contra la luz.</p>
             <div class="planilla-grupo">
-                <x-boton :href="route('pedidos.produccion.etiquetas', array_filter(['formato' => request('formato'), ...$medidas->toArray()]))" variante="secundario" icono="arrow-left">Volver</x-boton>
+                <x-boton :href="route('pedidos.produccion.etiquetas', array_filter(['formato' => request('formato'), ...$medidas->toArray(), 'columnas' => $medidas->columnasParaDireccion()]))" variante="secundario" icono="arrow-left">Volver</x-boton>
                 <x-boton tipo="button" icono="printer" data-imprimir>Imprimir</x-boton>
             </div>
         @else
@@ -165,6 +165,10 @@
                     @foreach (\App\Services\Etiquetas\MedidasPlanilla::CAMPOS as $campo => [$minimo, $maximo])
                         <x-campo :nombre="$campo" :etiqueta="\App\Services\Etiquetas\MedidasPlanilla::ETIQUETAS[$campo].' (mm)'" tipo="number"
                             :valor="$medidas->milimetros($campo)" step="0.1" :min="$minimo / 10" :max="$maximo / 10" data-medida />
+                        @if ($campo === 'alto')
+                            <x-campo nombre="columnas" etiqueta="Columnas" tipo="select" :vacia="false" :valor="$medidas->columnasParaDireccion()"
+                                :opciones="[\App\Services\Etiquetas\MedidasPlanilla::COLUMNAS_AUTOMATICO => 'Automático', 1 => '1', 2 => '2', 3 => '3']" data-columnas />
+                        @endif
                     @endforeach
                     <x-campo nombre="inicio" etiqueta="Empezar en la etiqueta" tipo="number" :valor="$inicio" min="1" :max="max(1, $medidas->porHoja())" />
                 </div>
@@ -197,6 +201,7 @@
         @endif
 
         <x-alerta tipo="advertencia" id="planilla-aviso" :hidden="$medidas->cabe()">Con estas medidas no cabe ninguna etiqueta en la hoja carta.</x-alerta>
+        <x-alerta tipo="advertencia" id="planilla-aviso-columnas" :hidden="! $medidas->columnasRecortadas()">Con estas medidas solo <span data-columnas-que-caben>{{ $medidas->columnasQueCaben() === 1 ? 'cabe 1 columna' : 'caben '.$medidas->columnasQueCaben().' columnas' }}</span>.</x-alerta>
     </div>
 
     <div id="planilla" style="--ancho: {{ $medidas->milimetros('ancho') }}mm; --alto: {{ $medidas->milimetros('alto') }}mm; --sep-h: {{ $medidas->milimetros('separacion_horizontal') }}mm; --sep-v: {{ $medidas->milimetros('separacion_vertical') }}mm; --margen-sup: {{ $medidas->milimetros('margen_superior') }}mm; --margen-izq: {{ $medidas->milimetros('margen_izquierdo') }}mm; --columnas: {{ max(1, $medidas->columnas()) }}; --renglones: {{ max(1, $medidas->renglones()) }}; --escala: {{ number_format($medidas->escalaLetra(), 4, '.', '') }};">

@@ -68,6 +68,7 @@ class EtiquetasProduccionController extends Controller
         return redirect()->route('pedidos.produccion.etiquetas', array_filter([
             'formato' => $request->validated('formato'),
             ...$medidas->toArray(),
+            'columnas' => $medidas->columnasParaDireccion(),
             'inicio' => $request->validated('inicio'),
             'prueba' => $request->boolean('prueba') ? 1 : null,
         ], fn ($valor) => $valor !== null && $valor !== ''));

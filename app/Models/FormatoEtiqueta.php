@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Un formato de planilla para las etiquetas de producción (031): nombre y las
- * seis medidas de MedidasPlanilla. Uno solo por usuario es el predeterminado;
+ * seis medidas de MedidasPlanilla, más las columnas (null: automático). Uno solo por usuario es el predeterminado;
  * lo escribe solo marcarPredeterminado().
  */
 #[Fillable([
@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\DB;
     'separacion_vertical_mm',
     'margen_superior_mm',
     'margen_izquierdo_mm',
+    'columnas',
 ])]
 class FormatoEtiqueta extends Model
 {
@@ -45,6 +46,7 @@ class FormatoEtiqueta extends Model
             'separacion_vertical_mm' => 'decimal:1',
             'margen_superior_mm' => 'decimal:1',
             'margen_izquierdo_mm' => 'decimal:1',
+            'columnas' => 'integer',
             'es_predeterminado' => 'boolean',
         ];
     }
@@ -59,10 +61,13 @@ class FormatoEtiqueta extends Model
 
     public function medidas(): MedidasPlanilla
     {
-        return MedidasPlanilla::desdeMilimetros(array_map(
-            fn (string $campo) => $this->{$campo.'_mm'},
-            array_combine(array_keys(MedidasPlanilla::CAMPOS), array_keys(MedidasPlanilla::CAMPOS))
-        ));
+        return MedidasPlanilla::desdeMilimetros([
+            ...array_map(
+                fn (string $campo) => $this->{$campo.'_mm'},
+                array_combine(array_keys(MedidasPlanilla::CAMPOS), array_keys(MedidasPlanilla::CAMPOS))
+            ),
+            'columnas' => $this->columnas,
+        ]);
     }
 
     public function asignarMedidas(MedidasPlanilla $medidas): void
@@ -70,6 +75,8 @@ class FormatoEtiqueta extends Model
         foreach ($medidas->toArray() as $campo => $milimetros) {
             $this->{$campo.'_mm'} = $milimetros;
         }
+
+        $this->columnas = $medidas->columnasElegidas();
     }
 
     /**

@@ -235,6 +235,7 @@ it('aplicar valida y regresa al GET con las medidas, centradas si se pide', func
         'separacion_vertical' => '0.0',
         'margen_superior' => '12.7',
         'margen_izquierdo' => '4.7',
+        'columnas' => 'auto',
         'inicio' => '3',
     ]));
 
@@ -244,4 +245,76 @@ it('aplicar valida y regresa al GET con las medidas, centradas si se pide', func
     $this->actingAs($this->user)->from('/pedidos/produccion/etiquetas')
         ->post('/pedidos/produccion/etiquetas', ($this->datos)(['ancho' => '']))
         ->assertSessionHasErrors('ancho');
+});
+
+// 031, corrección 2: 1, 2 o 3 columnas elegidas.
+
+it('sin columnas elegidas la planilla sale en automático', function () {
+    ($this->ventas)(1);
+
+    ($this->pagina)()
+        ->assertSee('3 × 8 = 24 por hoja')
+        ->assertSee('<option value="auto" selected>Automático</option>', false)
+        ->assertSee('--columnas: 3;', false);
+});
+
+it('con columnas elegidas pinta esas columnas', function () {
+    ($this->ventas)(1);
+
+    ($this->pagina)('?columnas=2')
+        ->assertSee('2 × 8 = 16 por hoja')
+        ->assertSee('<option value="2" selected>2</option>', false)
+        ->assertSee('--columnas: 2;', false);
+});
+
+it('si las columnas elegidas no caben avisa y usa las que caben', function () {
+    $respuesta = ($this->pagina)('?columnas=3&ancho=100&margen_izquierdo=10')->assertSee('2 × 8 = 16 por hoja');
+
+    expect($respuesta->getContent())->toContain('Con estas medidas solo <span data-columnas-que-caben>caben 2 columnas</span>.')
+        ->not->toMatch('/id="planilla-aviso-columnas"[^>]*hidden/');
+
+    expect(($this->pagina)('?columnas=2')->getContent())->toMatch('/id="planilla-aviso-columnas"[^>]*hidden/');
+});
+
+it('guarda las columnas con el formato, las usa al cargarlo y las copia al duplicar', function () {
+    $this->actingAs($this->user)->post('/formatos-etiqueta', ($this->datos)(['columnas' => '2']));
+    $formato = FormatoEtiqueta::first();
+
+    expect($formato->columnas)->toBe(2);
+    ($this->pagina)("?formato={$formato->id}")->assertSee('2 × 10 = 20 por hoja');
+
+    $this->actingAs($this->user)->post("/formatos-etiqueta/{$formato->id}", ($this->datos)(['columnas' => 'auto']));
+    expect($formato->fresh()->columnas)->toBeNull();
+
+    $this->actingAs($this->user)->post("/formatos-etiqueta/{$formato->id}", ($this->datos)(['columnas' => '1']));
+    $this->actingAs($this->user)->post("/formatos-etiqueta/{$formato->id}/duplicar");
+
+    expect(FormatoEtiqueta::whereKeyNot($formato->id)->first()->columnas)->toBe(1);
+});
+
+it('un formato sin columnas sale en automático y la dirección manda sobre él', function () {
+    $formato = ($this->formato)();
+    $conDos = ($this->formato)(['nombre' => 'Dos', 'columnas' => 2]);
+
+    ($this->pagina)("?formato={$formato->id}")->assertSee('3 × 9 = 27 por hoja');
+    ($this->pagina)("?formato={$conDos->id}")->assertSee('2 × 9 = 18 por hoja');
+    ($this->pagina)("?formato={$conDos->id}&columnas=auto")->assertSee('3 × 9 = 27 por hoja');
+});
+
+it('columnas inválidas se ignoran en la dirección y no pasan la validación', function (string $valor) {
+    ($this->pagina)("?columnas={$valor}")->assertSee('3 × 8 = 24 por hoja');
+
+    $this->actingAs($this->user)->from('/pedidos/produccion/etiquetas')
+        ->post('/pedidos/produccion/etiquetas', ($this->datos)(['columnas' => $valor]))
+        ->assertSessionHasErrors('columnas');
+
+    $this->actingAs($this->user)->from('/pedidos/produccion/etiquetas')
+        ->post('/formatos-etiqueta', ($this->datos)(['columnas' => $valor]))
+        ->assertSessionHasErrors('columnas');
+})->with(['5', 'x', '0']);
+
+it('aplicar con centrar centra el bloque de las columnas elegidas', function () {
+    $this->actingAs($this->user)->post('/pedidos/produccion/etiquetas', [...($this->datos)(), 'columnas' => '2', 'centrar' => '1'])
+        ->assertRedirectContains('margen_izquierdo=39.6')
+        ->assertRedirectContains('columnas=2');
 });

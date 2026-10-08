@@ -1,5 +1,5 @@
-// Etiquetas de producción (030, 031): vista previa en vivo de las medidas de
-// la planilla, "Centrar", la escala de la letra con el alto y el ajuste de
+// Etiquetas de producción (030, 031): vista previa en vivo de las medidas y
+// las columnas elegidas de la planilla, "Centrar", la escala de la letra con el alto y el ajuste de
 // letra de cada renglón que no cabe a lo ancho.
 //
 // distribucion(), centrar() y escalaLetra() son espejo exacto de MedidasPlanilla (PHP): las
@@ -31,12 +31,19 @@
         return Math.max(0, Math.floor((espacio + separacion) / (tamano + separacion)));
     }
 
-    // Medidas en décimas de milímetro → { columnas, renglones, porHoja }.
+    // Las elegidas (m.columnas: 1, 2 o 3) si caben; sin elegir, todas las que caben.
+    function limitarColumnas(m, cabenColumnas) {
+        return m.columnas ? Math.min(m.columnas, cabenColumnas) : cabenColumnas;
+    }
+
+    // Medidas en décimas de milímetro, más m.columnas (null: automático) →
+    // { columnas, columnasQueCaben, renglones, porHoja }.
     function distribucion(m) {
-        const columnas = caben(HOJA_ANCHO - m.margen_izquierdo, m.ancho, m.separacion_horizontal);
+        const columnasQueCaben = caben(HOJA_ANCHO - m.margen_izquierdo, m.ancho, m.separacion_horizontal);
+        const columnas = limitarColumnas(m, columnasQueCaben);
         const renglones = caben(HOJA_ALTO - m.margen_superior, m.alto, m.separacion_vertical);
 
-        return { columnas: columnas, renglones: renglones, porHoja: columnas * renglones };
+        return { columnas: columnas, columnasQueCaben: columnasQueCaben, renglones: renglones, porHoja: columnas * renglones };
     }
 
     function margenCentrado(hoja, cuantas, tamano, separacion) {
@@ -53,7 +60,7 @@
     // ve ahora; si no cabe nada, lo que cabría con margen 0.
     function centrar(m) {
         const actual = distribucion(m);
-        const columnas = actual.columnas || caben(HOJA_ANCHO, m.ancho, m.separacion_horizontal);
+        const columnas = actual.columnas || limitarColumnas(m, caben(HOJA_ANCHO, m.ancho, m.separacion_horizontal));
         const renglones = actual.renglones || caben(HOJA_ALTO, m.alto, m.separacion_vertical);
 
         return {
@@ -128,9 +135,11 @@
 
     if (formulario && planilla) {
         const campos = Array.from(formulario.querySelectorAll('[data-medida]'));
+        const columnas = formulario.querySelector('[data-columnas]');
         const inicio = formulario.elements.inicio;
         const resumen = document.getElementById('planilla-distribucion');
         const aviso = document.getElementById('planilla-aviso');
+        const avisoColumnas = document.getElementById('planilla-aviso-columnas');
         // Las etiquetas se pintan una vez; al cambiar las medidas se reparten de nuevo.
         const etiquetas = Array.from(planilla.querySelectorAll('.planilla-etiqueta'));
 
@@ -149,6 +158,8 @@
 
                 medidas[campo.name] = decimas(campo);
             }
+
+            medidas.columnas = parseInt(columnas.value, 10) || null;
 
             return medidas;
         }
@@ -189,6 +200,7 @@
             campos.forEach(function (campo) {
                 parametros.set(campo.name, campo.value);
             });
+            parametros.set('columnas', columnas.value);
             parametros.set('inicio', inicio.value);
             parametros.set('formato', formulario.elements.formato.value);
 
@@ -226,6 +238,10 @@
             const hojas = repartir(dist.porHoja, primera);
 
             aviso.hidden = dist.porHoja > 0;
+            avisoColumnas.hidden = !(medidas.columnas && dist.columnasQueCaben > 0 && medidas.columnas > dist.columnasQueCaben);
+            avisoColumnas.querySelector('[data-columnas-que-caben]').textContent = dist.columnasQueCaben === 1
+                ? 'cabe 1 columna'
+                : 'caben ' + dist.columnasQueCaben + ' columnas';
             resumen.textContent = dist.columnas + ' × ' + dist.renglones + ' = ' + dist.porHoja + ' por hoja'
                 + (hojas > 0 ? ' · ' + plural(hojas, 'hoja', 'hojas') : '');
 
@@ -233,7 +249,7 @@
             ajustarLetra();
         }
 
-        campos.concat([inicio]).forEach(function (campo) {
+        campos.concat([inicio, columnas]).forEach(function (campo) {
             campo.addEventListener('input', actualizar);
         });
 
