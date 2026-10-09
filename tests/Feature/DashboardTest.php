@@ -23,13 +23,12 @@ it('muestra la bandeja de correo de demostración en el dashboard', function () 
         ->assertSee(asset('js/bandeja-correo.js'), false);
 });
 
-it('abre el correo desde un menú de aplicaciones con un sobre', function () {
+it('no muestra el enlace a Correo en el menú de aplicaciones', function () {
     $this->actingAs(User::factory()->create())
         ->get('/dashboard')
         ->assertOk()
         ->assertSee('aria-label="Aplicaciones"', false)
-        ->assertSee('data-abrir-app="correo"', false)
-        ->assertSee('bi-envelope', false)
+        ->assertDontSee('data-abrir-app="correo"', false)
         ->assertSee('data-app="correo"  hidden', false)
         ->assertSee(asset('js/dashboard-apps.js'), false);
 });
@@ -48,8 +47,8 @@ it('muestra el menú de aplicaciones fijo en las demás páginas', function () {
         ->assertOk()
         ->assertSee('class="con-menu-apps"', false)
         ->assertSee('aria-label="Aplicaciones"', false)
-        ->assertSee(route('dashboard', ['app' => 'correo']), false)
-        ->assertSeeInOrder(['Dashboard', 'Correo', 'Ventas', 'Compras', 'Inventario'])
+        ->assertDontSee(route('dashboard', ['app' => 'correo']), false)
+        ->assertSeeInOrder(['Dashboard', 'Ventas', 'Compras', 'Inventario'])
         ->assertSee('menu-apps-seccion-activa', false)
         ->assertDontSee(asset('js/dashboard-apps.js'), false);
 });

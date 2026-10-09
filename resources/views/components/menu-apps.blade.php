@@ -1,8 +1,6 @@
 @php
-    // Insignia del sobre: no leídos de la Bandeja de entrada de demostración.
-    $noLeidos = collect(app(\App\Support\Demo\BandejaCorreoDemo::class)->carpetas())->firstWhere('clave', 'entrada')['no_leidos'];
-
-    // En el dashboard, ?app=correo llega con la aplicación ya abierta.
+    // En el dashboard, ?app=correo llega con la aplicación ya abierta (el enlace
+    // a Correo se quitó del menú; el módulo sigue disponible por la dirección).
     $appAbierta = request()->routeIs('dashboard') ? request('app') : null;
 
     $grupos = [
@@ -51,25 +49,14 @@
 @endphp
 
 {{-- Menú de aplicaciones: barra fija a la izquierda en todo el sistema (abajo en
-     celular). En el dashboard, Dashboard y Correo cambian la aplicación sin
-     recargar (dashboard-apps.js); en otras páginas son enlaces normales. La
-     insignia la mantiene al día bandeja-correo.js. Los grupos son <details
+     celular). En el dashboard, Dashboard cambia la aplicación sin recargar
+     (dashboard-apps.js); en otras páginas es un enlace normal. Los grupos son <details
      data-menu-grupo>, que app.js cierra al hacer clic fuera. --}}
 <nav {{ $attributes->class('menu-apps') }} aria-label="Aplicaciones">
     <a href="{{ route('dashboard') }}" class="menu-apps-opcion" title="Dashboard" data-abrir-app=""
        @if (request()->routeIs('dashboard') && ! $appAbierta) aria-current="page" @endif>
         <span class="menu-apps-icono"><x-icono nombre="speedometer2" /></span>
         <span class="menu-apps-texto">Dashboard</span>
-    </a>
-
-    <a href="{{ route('dashboard', ['app' => 'correo']) }}" class="menu-apps-opcion" title="Correo" data-abrir-app="correo"
-       @if ($appAbierta === 'correo') aria-current="page" @endif>
-        <span class="menu-apps-icono">
-            <x-icono nombre="envelope" class="menu-apps-cerrado" />
-            <x-icono nombre="envelope-open" class="menu-apps-abierto" />
-            <span class="menu-apps-insignia" data-contador="entrada" @if ($noLeidos === 0) hidden @endif>{{ $noLeidos }}</span>
-        </span>
-        <span class="menu-apps-texto">Correo</span>
     </a>
 
     @foreach ($grupos as $grupo)
