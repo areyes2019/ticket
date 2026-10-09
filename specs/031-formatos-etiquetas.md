@@ -9,6 +9,9 @@
 > **Corrección 2 (2026-10-08, implementada):** número de columnas
 > elegible (automático, 1, 2 o 3). Modifica la asunción 5. Ver la sección "Corrección 2".
 
+> **Corrección 3 (2026-10-08, implementada):** nuevo acomodo de la etiqueta y marco solo en pantalla.
+> Reemplaza la asunción 15 y el orden de renglones de 030. Ver la sección "Corrección 3".
+
 **Modifica:** [030-etiquetas-produccion.md](030-etiquetas-produccion.md). La planilla deja de ser
 fija (60 × 30 mm, 3 × 8, centrada y sin separación): el usuario ajusta el tamaño de la etiqueta, la
 separación entre etiquetas y los márgenes de la hoja, y guarda esas medidas como **formatos** con
@@ -252,7 +255,7 @@ un formato con separaciones, uno donde no cabe nada y uno en el límite exacto d
 - Otros tamaños de hoja además de carta (asunción 14).
 - Formatos de fábrica de marcas comerciales (asunción 11).
 - Cambiar el tamaño base de la letra o el contenido de la etiqueta (asunciones 12 y 13).
-- Ocultar el borde de corte (asunción 15).
+- Ocultar el borde de corte (asunción 15). *La corrección 3 lo quita del impreso.*
 - Columnas o renglones capturados a mano (asunción 5). *La corrección 2 permite elegir 1, 2 o 3
   columnas; los renglones siguen calculándose solos.*
 - Compartir formatos entre usuarios.
@@ -535,3 +538,33 @@ Implementada el 2026-10-08. Suite completa (1339 pruebas), `pint` y `node --test
   la migración.**
 - No se revisó en Chrome: la vista previa en vivo del `select` está cubierta solo por las funciones
   puras (`distribucion()`, `centrar()`) y por las pruebas del HTML del servidor.
+
+## Corrección 3: acomodo de la etiqueta y marco solo en pantalla
+
+### Historia de usuario
+
+Como usuario, quiero la etiqueta acomodada como en mi imagen de referencia (número de pedido más
+grande, nombre más grande, más espacio a la izquierda y el saldo abajo a la derecha), y un marco de
+guiones que me sirva de referencia en la pantalla pero que **no salga impreso**.
+
+### Qué cambia
+
+- **Número de pedido** más grande: 18 pt a escala 1 (antes 14 pt).
+- **Nombre del cliente** un nivel más grande y en negritas: 12 pt (antes 10 pt).
+- **Más espacio a la izquierda:** el margen interior pasa de 2 mm a 4 mm a la izquierda; arriba,
+  abajo y a la derecha sigue en 2 mm (la escala de la letra de la corrección 1 no cambia).
+- **Acomodo:** arriba el número y el nombre; abajo, a la izquierda, teléfono y modelo (10 pt, en
+  negritas) y, a la derecha, el saldo (11 pt, negritas), alineado con el último renglón. Si el
+  saldo no cabe a lo ancho, se achica como los demás renglones.
+- **Marco:** en pantalla, cada etiqueta lleva un marco de guiones gris (`outline` de 0.2 mm, que no
+  le quita espacio al texto). **Al imprimir no lleva ningún marco.**
+- La **hoja de prueba sí conserva** sus rectángulos al imprimir: su uso es empalmarla con la
+  planilla contra la luz.
+- El texto del saldo no cambia ("SALDO: $1,234.00" o "PAGADO"), ni los datos de la etiqueta.
+
+### Estado de implementación de la corrección 3
+
+Implementada el 2026-10-08 en `ordenes-trabajo/etiquetas` (solo vista y estilos). Pruebas de
+etiquetas, suite completa y `pint` en verde. Revisado en Chrome sin interfaz: pantalla con el marco
+de guiones e impresión a PDF sin marco, en 60 × 30 mm y en 100 × 50 mm, con un nombre largo (se
+achica a lo ancho) y una venta sin teléfono.

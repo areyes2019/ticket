@@ -43,18 +43,32 @@
         .planilla-hoja:last-child { break-after: auto; }
 
         .planilla-etiqueta,
-        .planilla-prueba {
-            border: 0.2mm solid #000;
-            overflow: hidden;
-        }
+        .planilla-prueba { overflow: hidden; }
 
+        /* La hoja de prueba sí imprime sus rectángulos: es para empalmarla con la planilla. */
+        .planilla-prueba { border: 0.2mm solid #000; }
+
+        /* La etiqueta no imprime marco (031, corrección 3); en pantalla lleva uno
+           de guiones como referencia. Es outline: no le quita espacio al texto. */
         .planilla-etiqueta {
             display: flex;
             flex-direction: column;
             justify-content: center;
-            padding: 2mm;
+            padding: 2mm 2mm 2mm 4mm;
             line-height: 1.2;
         }
+
+        /* Teléfono y modelo a la izquierda; el saldo abajo a la derecha. */
+        .planilla-pie {
+            display: flex;
+            align-items: flex-end;
+            gap: 2mm;
+            min-width: 0;
+        }
+
+        .planilla-datos { flex: 1 1 0; min-width: 0; font-weight: bold; }
+
+        .planilla-pie .planilla-saldo { flex: 0 1 auto; min-width: 0; }
 
         /* Un renglón que no cabe achica su letra (etiquetas-produccion.js) y, al mínimo, se corta. */
         .planilla-etiqueta p {
@@ -66,7 +80,9 @@
         }
 
         /* La letra crece y se achica con el alto de la etiqueta (031, corrección 1). */
-        .planilla-etiqueta .planilla-ticket { font-size: max(7pt, calc(14pt * var(--escala))); font-weight: bold; }
+        .planilla-etiqueta .planilla-ticket { font-size: max(7pt, calc(18pt * var(--escala))); font-weight: bold; }
+
+        .planilla-etiqueta .planilla-cliente { font-size: max(7pt, calc(12pt * var(--escala))); font-weight: bold; }
 
         .planilla-etiqueta .planilla-saldo { font-size: max(7pt, calc(11pt * var(--escala))); font-weight: bold; }
 
@@ -82,6 +98,8 @@
 
         @media screen {
             body { padding: 1rem; background: #eee; }
+
+            .planilla-etiqueta { outline: 0.2mm dashed #888; outline-offset: -0.2mm; }
 
             .planilla-barra {
                 display: flex;
@@ -217,10 +235,14 @@
                         @php($modelos = $pedido->modelosDeTrabajo())
                         <div class="planilla-etiqueta">
                             <p class="planilla-ticket">{{ $pedido->folio_formateado }}</p>
-                            <p>{{ $pedido->cliente_nombre }}</p>
-                            <p>{{ $pedido->telefono_legible }}&nbsp;</p>
-                            <p class="planilla-saldo">{{ $pedido->tieneSaldo() ? 'SALDO: $'.number_format((float) $pedido->saldoPendiente(), 2) : 'PAGADO' }}</p>
-                            <p>{{ $modelos === [] ? '—' : implode(', ', $modelos) }}</p>
+                            <p class="planilla-cliente">{{ $pedido->cliente_nombre }}</p>
+                            <div class="planilla-pie">
+                                <div class="planilla-datos">
+                                    <p>{{ $pedido->telefono_legible }}&nbsp;</p>
+                                    <p>{{ $modelos === [] ? '—' : implode(', ', $modelos) }}</p>
+                                </div>
+                                <p class="planilla-saldo">{{ $pedido->tieneSaldo() ? 'SALDO: $'.number_format((float) $pedido->saldoPendiente(), 2) : 'PAGADO' }}</p>
+                            </div>
                         </div>
                     @endif
                 @endforeach
