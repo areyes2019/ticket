@@ -159,7 +159,8 @@ página de tarjetas y `data-siguiente` salvo en la última.
 - `facturas(Request)`: facturas del usuario, más recientes primero, 20 por página, con la misma regla
   de los 30 días sin `q`. Con `q`, el scope nuevo `Factura::buscarTexto()` (abajo).
 - `catalogo(Request)`: artículos del usuario sin borrados, con `Articulo::buscarTexto()` de 033
-  (nombre, modelo o proveedor), ordenados por nombre, 24 por página.
+  (nombre, modelo o proveedor), ordenados por `id` de menor a mayor —el orden de la lista de
+  artículos del escritorio— (corrección 1), 24 por página.
 
 **Los 30 días** salen de la caducidad de la cotización ([011](011-cotizaciones.md)): la lista sin
 filtrar es, casi exactamente, lo que sigue vivo. Las facturas usan el mismo plazo para que las dos
@@ -681,3 +682,10 @@ Implementada el 2026-10-08.
 
   **Falta probar en el celular real**: timbrar desde una cotización contra facturapi.io, el menú de
   compartir con el PDF y con la foto en JPEG, y la barra con la zona segura del aparato.
+
+### Corrección 1 (2026-10-08): el catálogo en el orden de la lista de artículos
+
+**Pedido del usuario:** el catálogo del mostrador se ordena como la lista de artículos del
+escritorio, por `id` de menor a mayor (el orden de alta o de importación), en vez de por nombre. Con
+búsqueda se conserva ese orden. Solo cambia `PaginaTarjetasMostrador::paginaCatalogo()`; las tarjetas
+del paso de artículos de la captura (033) siguen por nombre.

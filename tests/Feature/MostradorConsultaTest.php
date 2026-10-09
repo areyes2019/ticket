@@ -181,6 +181,17 @@ describe('listas', function () {
         $respuesta->assertSee('data-siguiente="'.e(route('mostrador.tarjetas.cotizaciones', ['page' => 3])).'"', false);
     });
 
+    it('el catálogo va en el orden de la lista de artículos: por id, de menor a mayor', function () {
+        $zeta = articuloFacturable($this->user, ['nombre' => 'Zeta tinta']);
+        $alfa = articuloFacturable($this->user, ['nombre' => 'Alfa cojín']);
+
+        ($this->mostrador)()->get(route('mostrador.catalogo'))
+            ->assertSeeInOrder(['Sello automático', 'Zeta tinta', 'Alfa cojín']);
+
+        ($this->mostrador)()->get(route('mostrador.tarjetas.catalogo', ['q' => 'a']))
+            ->assertSeeInOrder([route('mostrador.catalogo.ver', $zeta), route('mostrador.catalogo.ver', $alfa)]);
+    });
+
     it('el catálogo lleva el precio con IVA y nunca costo, utilidad ni precio distribuidor', function () {
         $ajeno = articuloFacturable(User::factory()->create(), ['nombre' => 'Artículo ajeno']);
         $borrado = articuloFacturable($this->user, ['nombre' => 'Artículo borrado']);

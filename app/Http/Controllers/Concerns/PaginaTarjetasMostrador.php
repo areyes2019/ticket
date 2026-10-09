@@ -63,6 +63,9 @@ trait PaginaTarjetasMostrador
     }
 
     /**
+     * En el orden de la lista de artículos del escritorio: por id, de menor a
+     * mayor (el orden de alta o de importación).
+     *
      * @return array{elementos: LengthAwarePaginator, siguiente: string|null, q: string}
      */
     protected function paginaCatalogo(Request $request): array
@@ -70,7 +73,6 @@ trait PaginaTarjetasMostrador
         $q = $this->textoBuscado($request);
         $consulta = $request->user()->articulos()
             ->buscarTexto($q)
-            ->orderBy('nombre')
             ->orderBy('id');
 
         return $this->pagina($request, $consulta, self::CATALOGO_POR_PAGINA, $q, 'mostrador.tarjetas.catalogo');
