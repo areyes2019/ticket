@@ -28,6 +28,7 @@ use App\Http\Controllers\HojaProduccionController;
 use App\Http\Controllers\ImagenesArticulosController;
 use App\Http\Controllers\ImportacionArticulosController;
 use App\Http\Controllers\ImportacionClientesController;
+use App\Http\Controllers\MostradorConsultaController;
 use App\Http\Controllers\MostradorController;
 use App\Http\Controllers\MostradorResultadoController;
 use App\Http\Controllers\MostradorTarjetasController;
@@ -74,8 +75,21 @@ Route::middleware(['auth', AsegurarUsuarioActivo::class, CandadoMostrador::class
         Route::get('tarjetas/articulos', [MostradorTarjetasController::class, 'articulos'])->name('tarjetas.articulos');
         Route::get('ventas/{pedido}/cobro', [MostradorResultadoController::class, 'cobro'])->name('venta.cobro');
         Route::get('ventas/{pedido}', [MostradorResultadoController::class, 'venta'])->name('venta.listo');
-        Route::get('cotizaciones/{cotizacion}', [MostradorResultadoController::class, 'cotizacion'])->name('cotizacion.listo');
-        Route::get('facturas/{factura}', [MostradorResultadoController::class, 'factura'])->name('factura.listo');
+
+        // Consulta (034): listas, detalles, facturar y cobrar una cotización, y el
+        // catálogo. El detalle es también donde terminan la cotización y la
+        // factura capturadas aquí.
+        Route::get('tarjetas/cotizaciones', [MostradorTarjetasController::class, 'cotizaciones'])->name('tarjetas.cotizaciones');
+        Route::get('tarjetas/facturas', [MostradorTarjetasController::class, 'facturas'])->name('tarjetas.facturas');
+        Route::get('tarjetas/catalogo', [MostradorTarjetasController::class, 'catalogo'])->name('tarjetas.catalogo');
+        Route::get('cotizaciones', [MostradorConsultaController::class, 'cotizaciones'])->name('cotizaciones');
+        Route::get('cotizaciones/{cotizacion}', [MostradorConsultaController::class, 'cotizacion'])->name('cotizaciones.ver');
+        Route::get('cotizaciones/{cotizacion}/facturar', [MostradorConsultaController::class, 'facturar'])->name('cotizaciones.facturar');
+        Route::get('cotizaciones/{cotizacion}/pago', [MostradorConsultaController::class, 'pago'])->name('cotizaciones.pago');
+        Route::get('facturas', [MostradorConsultaController::class, 'facturas'])->name('facturas');
+        Route::get('facturas/{factura}', [MostradorConsultaController::class, 'factura'])->name('facturas.ver');
+        Route::get('catalogo', [MostradorConsultaController::class, 'catalogo'])->name('catalogo');
+        Route::get('catalogo/{articulo}', [MostradorConsultaController::class, 'articulo'])->name('catalogo.ver');
     });
 
     Route::get('/historial-accesos', [HistorialAccesoController::class, 'index'])

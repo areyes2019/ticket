@@ -1,4 +1,4 @@
-// Captura por pasos de la aplicación de mostrador (033).
+// Aplicación de mostrador: captura por pasos (033) y consulta (034).
 //
 // Se activa en un form[data-mostrador-captura] con data-flujo (venta, factura o
 // cotizacion). Muestra un paso a la vez (<section data-paso>), lleva el carrito
@@ -14,6 +14,14 @@
 //   esté abierta; tras un error de validación manda lo enviado (data-anterior).
 // - Descuento permanente solo en la cotización (023) y precio distribuidor en
 //   cotización y factura (028), igual que documento-lineas.js.
+//
+// La consulta (034) reutiliza las listas y las pantallas de opción:
+// - Listas de cotizaciones, facturas y catálogo, con el texto buscado y las
+//   páginas cargadas en la URL (replaceState), así "atrás" desde un detalle
+//   regresa a la misma lista y altura sin guardar nada en el aparato.
+// - Facturar una cotización: los pasos fiscales, sin carrito.
+// - Pago de una cotización: el tipo se deduce del monto.
+// - Ficha del catálogo: la foto en JPEG (imagen-compartible.js) y el texto.
 (function (raiz) {
     // ---- Funciones puras del carrito (se prueban con node --test) ----
 
@@ -154,6 +162,44 @@
         });
     }
 
+    // ---- Funciones puras de la consulta (034) ----
+
+    function centavos(valor) {
+        return Math.round((Number(valor) || 0) * 100);
+    }
+
+    // El tipo de pago que exige el servidor, deducido del monto: con un
+    // anticipo ya registrado solo queda el saldo; sin él, el saldo completo es
+    // pago total y menos es anticipo. En centavos: dos flotantes iguales
+    // pueden diferir en la decimoquinta cifra.
+    function tipoDePago(monto, saldo, tieneAnticipo) {
+        if (tieneAnticipo) {
+            return 'saldo';
+        }
+
+        return centavos(monto) < centavos(saldo) ? 'anticipo' : 'pago_total';
+    }
+
+    // La dirección de la lista con el texto buscado y las páginas cargadas
+    // (las que el servidor vuelve a pintar al regresar).
+    function urlDeLista(href, termino, paginas) {
+        const url = new URL(href);
+
+        ['q', 'paginas', 'page'].forEach(function (clave) {
+            url.searchParams.delete(clave);
+        });
+
+        if (termino) {
+            url.searchParams.set('q', termino);
+        }
+
+        if (paginas > 1) {
+            url.searchParams.set('paginas', String(paginas));
+        }
+
+        return url.pathname + url.search + url.hash;
+    }
+
     const Carrito = {
         reglasDe: reglasDe,
         agregarArticulo: agregarArticulo,
@@ -165,6 +211,8 @@
         piezas: piezas,
         camposFormulario: camposFormulario,
         lineasDeAnterior: lineasDeAnterior,
+        tipoDePago: tipoDePago,
+        urlDeLista: urlDeLista,
     };
 
     if (typeof module !== 'undefined' && module.exports) {
@@ -209,6 +257,473 @@
         borrarBorradores();
     }
 
+    // ---- Piezas comunes de la captura y la consulta ----
+
+    const ESPERA_MS = 300;
+
+    function leerJson(texto) {
+        try {
+            return texto ? JSON.parse(texto) : null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    // -- Listas de fichas (HTML de Blade) --
+    //
+    // opciones: contenedor, url (la de las tarjetas), buscador (opcional),
+    // alPreparar (después de pintar una página) y alCambiar (cambió el texto
+    // o el número de páginas). Cada página termina con [data-siguiente]; al
+    // llegar a él se pide la que sigue (IntersectionObserver).
+
+    function crearLista(opciones) {
+        const lista = Object.assign({ pedida: 0, termino: '', paginas: 1, observador: null }, opciones);
+        let temporizador = null;
+
+        lista.observador = 'IntersectionObserver' in window ? new IntersectionObserver(function (entradas) {
+            entradas.forEach(function (entrada) {
+                if (entrada.isIntersecting) {
+                    cargarSiguiente(lista, entrada.target);
+                }
+            });
+        }, { rootMargin: '200px' }) : null;
+
+        if (lista.buscador) {
+            lista.termino = lista.buscador.value.trim();
+            lista.buscador.addEventListener('input', function () {
+                clearTimeout(temporizador);
+                temporizador = setTimeout(function () {
+                    cargar(lista, lista.buscador.value.trim());
+                }, ESPERA_MS);
+            });
+        }
+
+        return lista;
+    }
+
+    // Vuelve a pedir la primera página, con el texto buscado.
+    function cargar(lista, termino) {
+        lista.termino = termino;
+        traer(lista, lista.url + (termino ? '?q=' + encodeURIComponent(termino) : ''), ++lista.pedida, null);
+    }
+
+    function cargarSiguiente(lista, marcador) {
+        if (marcador.dataset.cargando) {
+            return;
+        }
+
+        marcador.dataset.cargando = '1';
+        traer(lista, marcador.dataset.siguiente, lista.pedida, marcador);
+    }
+
+    // Sin marcador reinicia la lista; con él, agrega la página en su lugar. Se
+    // pide como AJAX (Accept JSON de app.js) para que una sesión caída responda
+    // 401 en lugar de la página del login; el cuerpo es el HTML de Blade.
+    function traer(lista, url, pedida, marcador) {
+        axios.get(url, { responseType: 'text' })
+            .then(function (respuesta) {
+                if (pedida !== lista.pedida) {
+                    return;
+                }
+
+                if (marcador) {
+                    marcador.insertAdjacentHTML('beforebegin', respuesta.data);
+                    marcador.remove();
+                    lista.paginas += 1;
+                } else {
+                    lista.contenedor.innerHTML = respuesta.data;
+                    lista.paginas = 1;
+                }
+
+                prepararLista(lista);
+
+                if (lista.alCambiar) {
+                    lista.alCambiar(lista);
+                }
+            })
+            .catch(function (error) {
+                const codigo = error.response && error.response.status;
+
+                if (codigo === 401 || codigo === 419) {
+                    window.location.reload();
+                    return;
+                }
+
+                if (pedida !== lista.pedida) {
+                    return;
+                }
+
+                mostrarErrorLista(lista, url, marcador);
+            });
+    }
+
+    function mostrarErrorLista(lista, url, marcador) {
+        const aviso = document.createElement('p');
+        const boton = document.createElement('button');
+
+        aviso.className = 'mostrador-vacio';
+        aviso.textContent = navigator.onLine === false ? 'Sin conexión. ' : 'No se pudo cargar la lista. ';
+        boton.type = 'button';
+        boton.className = 'boton boton-secundario';
+        boton.textContent = 'Reintentar';
+        boton.addEventListener('click', function () {
+            aviso.remove();
+            traer(lista, url, lista.pedida, marcador ? marcador : null);
+        });
+        aviso.appendChild(boton);
+
+        if (marcador) {
+            delete marcador.dataset.cargando;
+            marcador.before(aviso);
+        } else {
+            lista.contenedor.innerHTML = '';
+            lista.contenedor.appendChild(aviso);
+        }
+    }
+
+    function prepararLista(lista) {
+        const marcador = lista.contenedor.querySelector('[data-siguiente]');
+
+        if (marcador) {
+            if (lista.observador) {
+                lista.observador.observe(marcador);
+            } else {
+                cargarSiguiente(lista, marcador);
+            }
+        }
+
+        if (lista.alPreparar) {
+            lista.alPreparar();
+        }
+    }
+
+    // -- Pantallas de opción (uso de CFDI, forma y método de pago) --
+
+    function marcarOpcion(contenedor, nombre, valor) {
+        const campo = contenedor.querySelector('[data-campo-opcion="' + nombre + '"]');
+
+        if (campo) {
+            campo.value = valor;
+        }
+
+        contenedor.querySelectorAll('[data-opciones="' + nombre + '"] [data-opcion]').forEach(function (ficha) {
+            const elegida = ficha.dataset.opcion === valor;
+
+            ficha.classList.toggle('mostrador-opcion-elegida', elegida);
+            ficha.setAttribute('aria-current', elegida ? 'true' : 'false');
+        });
+    }
+
+    function textoDeOpcion(contenedor, nombre, valor) {
+        const ficha = contenedor.querySelector('[data-opciones="' + nombre + '"] [data-opcion="' + valor + '"]');
+
+        return ficha ? ficha.dataset.texto : '';
+    }
+
+    function sinAcentos(texto) {
+        return texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    }
+
+    // El buscador de cada pantalla de opción filtra lo ya pintado, al instante.
+    function activarFiltroOpciones(raizOpciones) {
+        raizOpciones.querySelectorAll('[data-filtrar-opciones]').forEach(function (buscador) {
+            const contenedor = raizOpciones.querySelector('[data-opciones="' + buscador.dataset.filtrarOpciones + '"]');
+
+            buscador.addEventListener('input', function () {
+                const termino = sinAcentos(buscador.value.trim());
+                let visibles = 0;
+
+                contenedor.querySelectorAll('[data-opcion]').forEach(function (ficha) {
+                    ficha.hidden = termino !== '' && sinAcentos(ficha.dataset.texto).indexOf(termino) === -1;
+                    visibles += ficha.hidden ? 0 : 1;
+                });
+
+                contenedor.querySelector('[data-opciones-vacio]').hidden = visibles > 0;
+            });
+        });
+    }
+
+    // ---- La consulta (034) ----
+
+    // -- Listas de cotizaciones, facturas y catálogo --
+    // La primera página (o las ya cargadas) la pintó el servidor. El texto y
+    // las páginas viajan en la URL: al volver de un detalle, el servidor
+    // pinta lo mismo y el navegador regresa a la altura en que se iba.
+
+    const consulta = document.querySelector('[data-lista-consulta]');
+
+    if (consulta) {
+        const listaConsulta = crearLista({
+            contenedor: consulta.querySelector('[data-lista]'),
+            url: consulta.dataset.tarjetas,
+            buscador: consulta.querySelector('[data-buscar-consulta]'),
+            alCambiar: function (lista) {
+                history.replaceState(history.state, '', urlDeLista(location.href, lista.termino, lista.paginas));
+            },
+        });
+
+        listaConsulta.paginas = Number(new URL(location.href).searchParams.get('paginas')) || 1;
+        prepararLista(listaConsulta);
+
+        // Enter en el buscador no hace nada: la lista ya se filtra al escribir.
+        listaConsulta.buscador.addEventListener('keydown', function (evento) {
+            if (evento.key === 'Enter') {
+                evento.preventDefault();
+            }
+        });
+    }
+
+    // -- Regresar a la lista --
+    // Si se llegó desde esa lista, "atrás" la devuelve donde estaba; si no
+    // (tras enviar un correo o desde una captura), el enlace la abre.
+
+    document.querySelectorAll('[data-volver-lista]').forEach(function (enlace) {
+        enlace.addEventListener('click', function (evento) {
+            let anterior = null;
+
+            try {
+                anterior = document.referrer ? new URL(document.referrer) : null;
+            } catch (error) {
+                anterior = null;
+            }
+
+            if (anterior && anterior.origin === location.origin && anterior.pathname === new URL(enlace.href).pathname && history.length > 1) {
+                evento.preventDefault();
+                history.back();
+            }
+        });
+    });
+
+    // -- Facturar una cotización: los pasos fiscales, sin carrito --
+
+    const facturar = document.querySelector('form[data-mostrador-facturar]');
+
+    if (facturar) {
+        iniciarFacturar(facturar);
+    }
+
+    function iniciarFacturar(formFacturar) {
+        const secciones = Array.from(formFacturar.querySelectorAll('[data-paso]'));
+        const pasosFiscales = secciones.map(function (seccion) {
+            return seccion.dataset.paso;
+        });
+        const total = Number(formFacturar.dataset.totalPasos) || pasosFiscales.length;
+        const orden = ['uso', 'forma', 'metodo'];
+        const elegidas = { uso: '', forma: '', metodo: '' };
+
+        // Se recorren en orden: no se salta uno sin elegir.
+        function permitido(paso) {
+            const indice = pasosFiscales.indexOf(paso);
+
+            return indice >= 0 && orden.slice(0, indice).every(function (nombre) {
+                return elegidas[nombre] !== '';
+            });
+        }
+
+        function mostrar(paso, agregarHistoria) {
+            if (!permitido(paso)) {
+                paso = pasosFiscales.filter(permitido).pop();
+            }
+
+            const indice = pasosFiscales.indexOf(paso);
+
+            secciones.forEach(function (seccion) {
+                seccion.hidden = seccion.dataset.paso !== paso;
+            });
+            formFacturar.querySelector('[data-indicador]').textContent = 'Paso ' + (indice + 1) + ' de ' + total + ' · ' + secciones[indice].dataset.titulo;
+
+            if (agregarHistoria) {
+                history.pushState({ paso: paso }, '', '#' + paso);
+            } else {
+                history.replaceState({ paso: paso }, '', '#' + paso);
+            }
+
+            if (paso === 'revisar') {
+                orden.forEach(function (nombre) {
+                    formFacturar.querySelector('[data-resumen="' + nombre + '"]').textContent = textoDeOpcion(formFacturar, nombre, elegidas[nombre]);
+                });
+            }
+
+            window.scrollTo(0, 0);
+        }
+
+        function elegir(nombre, valor) {
+            elegidas[nombre] = valor;
+            marcarOpcion(formFacturar, nombre, valor);
+        }
+
+        formFacturar.addEventListener('click', function (evento) {
+            const opcion = evento.target.closest('[data-opcion]');
+
+            if (!opcion) {
+                return;
+            }
+
+            const nombre = opcion.closest('[data-opciones]').dataset.opciones;
+
+            evento.preventDefault();
+            elegir(nombre, opcion.dataset.opcion);
+            mostrar(pasosFiscales[pasosFiscales.indexOf(nombre) + 1], true);
+        });
+
+        formFacturar.addEventListener('keydown', function (evento) {
+            if (evento.key === 'Enter' && evento.target.tagName === 'INPUT') {
+                evento.preventDefault();
+            }
+        });
+
+        formFacturar.addEventListener('submit', function (evento) {
+            if (!orden.every(function (nombre) {
+                return elegidas[nombre] !== '';
+            })) {
+                evento.preventDefault();
+            }
+        });
+
+        // El primer paso reemplaza la entrada del historial: "atrás" desde él
+        // regresa al detalle de la cotización.
+        window.addEventListener('popstate', function (evento) {
+            const paso = (evento.state && evento.state.paso) || location.hash.slice(1);
+
+            mostrar(pasosFiscales.indexOf(paso) >= 0 ? paso : pasosFiscales[0], false);
+        });
+
+        activarFiltroOpciones(formFacturar);
+
+        // Tras un error, lo elegido regresa y se abre la revisión.
+        const anterior = leerJson(formFacturar.dataset.anterior);
+
+        if (anterior) {
+            ['uso_cfdi', 'forma_pago', 'metodo_pago'].forEach(function (campo, i) {
+                if (anterior[campo]) {
+                    elegir(orden[i], anterior[campo]);
+                }
+            });
+        }
+
+        mostrar(anterior ? 'revisar' : (location.hash.slice(1) || pasosFiscales[0]), false);
+    }
+
+    // -- Pago de una cotización: el tipo sale del monto --
+
+    const pago = document.querySelector('form[data-mostrador-pago]');
+
+    if (pago) {
+        pago.addEventListener('submit', function () {
+            const monto = pago.querySelector('[data-monto-pago]');
+
+            // Sin campo de monto ya hay anticipo: el tipo "saldo" viene escrito.
+            if (monto) {
+                pago.querySelector('[data-tipo-pago]').value = tipoDePago(monto.value, pago.dataset.saldo, false);
+            }
+        });
+    }
+
+    // -- Ficha del catálogo: compartir foto y texto --
+    // La foto se convierte a JPEG al entrar, no al tocar: el menú de compartir
+    // solo abre mientras dura el gesto, y una conversión de por medio lo agota.
+
+    const compartirFicha = document.querySelector('[data-compartir-ficha]');
+
+    if (compartirFicha) {
+        iniciarFichaCatalogo(compartirFicha);
+    }
+
+    function iniciarFichaCatalogo(boton) {
+        const imagen = document.querySelector('[data-ficha-imagen]');
+        const aviso = document.querySelector('[data-ficha-aviso]');
+        const respaldo = document.querySelector('[data-ficha-copiar]');
+        const texto = boton.dataset.texto;
+        let archivo = null;
+
+        function textoDelBoton() {
+            return Array.from(boton.childNodes).reverse().find(function (nodo) {
+                return nodo.nodeType === Node.TEXT_NODE && nodo.textContent.trim() !== '';
+            });
+        }
+
+        function preparando(activo) {
+            const nodo = textoDelBoton();
+
+            if (activo) {
+                boton.dataset.textoOriginal = nodo ? nodo.textContent : '';
+            }
+
+            if (nodo) {
+                nodo.textContent = activo ? 'Preparando...' : boton.dataset.textoOriginal;
+            }
+
+            boton.disabled = activo;
+            boton.setAttribute('aria-busy', activo ? 'true' : 'false');
+        }
+
+        function copiar() {
+            window.copiarTexto(texto).then(function (copiado) {
+                if (copiado) {
+                    aviso.textContent = 'Copiado';
+                    return;
+                }
+
+                const campo = respaldo.querySelector('input');
+
+                respaldo.hidden = false;
+                campo.value = texto;
+                campo.focus();
+                campo.select();
+            });
+        }
+
+        function puedeCompartir(datos) {
+            try {
+                return typeof navigator.share === 'function' && (!datos.files || (typeof navigator.canShare === 'function' && navigator.canShare(datos)));
+            } catch (error) {
+                return false;
+            }
+        }
+
+        if (imagen && raiz.ImagenCompartible) {
+            const cargada = imagen.complete ? Promise.resolve() : new Promise(function (resolver) {
+                imagen.addEventListener('load', resolver, { once: true });
+                imagen.addEventListener('error', resolver, { once: true });
+            });
+
+            preparando(true);
+            cargada
+                .then(function () {
+                    return imagen.naturalWidth > 0 ? raiz.ImagenCompartible.comoJpeg(imagen, boton.dataset.archivo) : null;
+                })
+                .then(function (jpeg) {
+                    archivo = jpeg;
+                }, function () {
+                    archivo = null;
+                })
+                .then(function () {
+                    preparando(false);
+                });
+        }
+
+        boton.addEventListener('click', function () {
+            const conFoto = archivo ? { files: [archivo], text: texto } : null;
+            const datos = conFoto && puedeCompartir(conFoto) ? conFoto : { text: texto };
+
+            aviso.textContent = '';
+
+            if (!puedeCompartir(datos)) {
+                copiar();
+                return;
+            }
+
+            navigator.share(datos).catch(function (error) {
+                // Cerrar el menú de compartir no es un error.
+                if (error && error.name === 'AbortError') {
+                    return;
+                }
+
+                copiar();
+            });
+        });
+    }
+
     const formulario = document.querySelector('form[data-mostrador-captura]');
 
     if (!formulario || !raiz.TotalesDocumento) {
@@ -226,7 +741,6 @@
         return seccion.dataset.paso;
     });
     const campoCliente = formulario.querySelector('[data-campo-cliente]');
-    const ESPERA_MS = 300;
 
     const estado = {
         lineas: [],
@@ -235,14 +749,6 @@
         paso: pasos[0],
         enviando: false,
     };
-
-    function leerJson(texto) {
-        try {
-            return texto ? JSON.parse(texto) : null;
-        } catch (error) {
-            return null;
-        }
-    }
 
     function pesos(valor) {
         return formato.format(Number(valor) || 0);
@@ -324,7 +830,7 @@
         mostrarPaso(pasos.indexOf(paso) >= 0 ? paso : pasos[0], false);
     });
 
-    // -- Listas de tarjetas (HTML de Blade) --
+    // -- Listas de clientes y artículos --
 
     const listas = {};
 
@@ -335,120 +841,13 @@
             return;
         }
 
-        const url = nombre === 'clientes' ? formulario.dataset.tarjetasClientes : formulario.dataset.tarjetasArticulos;
-        const buscador = formulario.querySelector('[data-buscar-lista="' + nombre + '"]');
-        const lista = { contenedor: contenedor, url: url, pedida: 0, observador: null };
-        let temporizador = null;
-
-        listas[nombre] = lista;
-
-        lista.observador = 'IntersectionObserver' in window ? new IntersectionObserver(function (entradas) {
-            entradas.forEach(function (entrada) {
-                if (entrada.isIntersecting) {
-                    cargarSiguiente(lista, entrada.target);
-                }
-            });
-        }, { rootMargin: '200px' }) : null;
-
-        if (buscador) {
-            buscador.addEventListener('input', function () {
-                clearTimeout(temporizador);
-                temporizador = setTimeout(function () {
-                    cargar(lista, buscador.value.trim(), true);
-                }, ESPERA_MS);
-            });
-        }
-
-        cargar(lista, buscador ? buscador.value.trim() : '', true);
-    }
-
-    function cargar(lista, termino, reiniciar) {
-        const pedida = ++lista.pedida;
-        const url = lista.url + (termino ? '?q=' + encodeURIComponent(termino) : '');
-
-        traer(lista, url, pedida, reiniciar ? null : lista.contenedor.querySelector('[data-siguiente]'));
-    }
-
-    function cargarSiguiente(lista, marcador) {
-        if (marcador.dataset.cargando) {
-            return;
-        }
-
-        marcador.dataset.cargando = '1';
-        traer(lista, marcador.dataset.siguiente, lista.pedida, marcador);
-    }
-
-    // Sin marcador reinicia la lista; con él, agrega la página en su lugar. Se
-    // pide como AJAX (Accept JSON de app.js) para que una sesión caída responda
-    // 401 en lugar de la página del login; el cuerpo es el HTML de Blade.
-    function traer(lista, url, pedida, marcador) {
-        axios.get(url, { responseType: 'text' })
-            .then(function (respuesta) {
-                if (pedida !== lista.pedida) {
-                    return;
-                }
-
-                if (marcador) {
-                    marcador.insertAdjacentHTML('beforebegin', respuesta.data);
-                    marcador.remove();
-                } else {
-                    lista.contenedor.innerHTML = respuesta.data;
-                }
-
-                prepararLista(lista);
-            })
-            .catch(function (error) {
-                const codigo = error.response && error.response.status;
-
-                if (codigo === 401 || codigo === 419) {
-                    window.location.reload();
-                    return;
-                }
-
-                if (pedida !== lista.pedida) {
-                    return;
-                }
-
-                mostrarErrorLista(lista, url, marcador);
-            });
-    }
-
-    function mostrarErrorLista(lista, url, marcador) {
-        const aviso = document.createElement('p');
-        const boton = document.createElement('button');
-
-        aviso.className = 'mostrador-vacio';
-        aviso.textContent = navigator.onLine === false ? 'Sin conexión. ' : 'No se pudo cargar la lista. ';
-        boton.type = 'button';
-        boton.className = 'boton boton-secundario';
-        boton.textContent = 'Reintentar';
-        boton.addEventListener('click', function () {
-            aviso.remove();
-            traer(lista, url, lista.pedida, marcador ? marcador : null);
+        listas[nombre] = crearLista({
+            contenedor: contenedor,
+            url: nombre === 'clientes' ? formulario.dataset.tarjetasClientes : formulario.dataset.tarjetasArticulos,
+            buscador: formulario.querySelector('[data-buscar-lista="' + nombre + '"]'),
+            alPreparar: marcarCantidades,
         });
-        aviso.appendChild(boton);
-
-        if (marcador) {
-            delete marcador.dataset.cargando;
-            marcador.before(aviso);
-        } else {
-            lista.contenedor.innerHTML = '';
-            lista.contenedor.appendChild(aviso);
-        }
-    }
-
-    function prepararLista(lista) {
-        const marcador = lista.contenedor.querySelector('[data-siguiente]');
-
-        if (marcador) {
-            if (lista.observador) {
-                lista.observador.observe(marcador);
-            } else {
-                cargarSiguiente(lista, marcador);
-            }
-        }
-
-        marcarCantidades();
+        cargar(listas[nombre], listas[nombre].termino);
     }
 
     // -- Cliente --
@@ -521,47 +920,14 @@
 
     function elegirOpcion(nombre, valor) {
         estado.opciones[nombre] = valor;
-
-        const campo = formulario.querySelector('[data-campo-opcion="' + nombre + '"]');
-
-        if (campo) {
-            campo.value = valor;
-        }
-
-        formulario.querySelectorAll('[data-opciones="' + nombre + '"] [data-opcion]').forEach(function (ficha) {
-            const elegida = ficha.dataset.opcion === valor;
-
-            ficha.classList.toggle('mostrador-opcion-elegida', elegida);
-            ficha.setAttribute('aria-current', elegida ? 'true' : 'false');
-        });
-
+        marcarOpcion(formulario, nombre, valor);
         guardar();
     }
 
-    function sinAcentos(texto) {
-        return texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-    }
-
-    formulario.querySelectorAll('[data-filtrar-opciones]').forEach(function (buscador) {
-        const contenedor = formulario.querySelector('[data-opciones="' + buscador.dataset.filtrarOpciones + '"]');
-
-        buscador.addEventListener('input', function () {
-            const termino = sinAcentos(buscador.value.trim());
-            let visibles = 0;
-
-            contenedor.querySelectorAll('[data-opcion]').forEach(function (ficha) {
-                ficha.hidden = termino !== '' && sinAcentos(ficha.dataset.texto).indexOf(termino) === -1;
-                visibles += ficha.hidden ? 0 : 1;
-            });
-
-            contenedor.querySelector('[data-opciones-vacio]').hidden = visibles > 0;
-        });
-    });
+    activarFiltroOpciones(formulario);
 
     function textoOpcion(nombre) {
-        const ficha = formulario.querySelector('[data-opciones="' + nombre + '"] [data-opcion="' + estado.opciones[nombre] + '"]');
-
-        return ficha ? ficha.dataset.texto : '';
+        return textoDeOpcion(formulario, nombre, estado.opciones[nombre]);
     }
 
     function pintarRevision() {

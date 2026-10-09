@@ -6,6 +6,7 @@ use App\Enums\EstadoCotizacion;
 use App\Enums\TipoMovimiento;
 use App\Exceptions\OperacionTesoreriaRechazada;
 use App\Http\Controllers\Concerns\RegresaABandeja;
+use App\Http\Controllers\Concerns\RegresaAMostrador;
 use App\Http\Requests\CotizacionPagoRequest;
 use App\Models\Cotizacion;
 use App\Models\CotizacionPago;
@@ -21,6 +22,7 @@ use Illuminate\Validation\ValidationException;
 class CotizacionPagoController extends Controller
 {
     use RegresaABandeja;
+    use RegresaAMostrador;
 
     public function __construct(
         private readonly RegistradorMovimientos $registrador,
@@ -99,20 +101,29 @@ class CotizacionPagoController extends Controller
 
         $mensaje = $pago->tipo->etiqueta().' de $'.number_format((float) $pago->monto, 2).' registrado.';
         $enlaces = [];
+        $mostrador = $this->vieneDelMostrador($request);
 
         if ($venta !== null) {
             $conOrden = $venta->ordenTrabajo !== null;
             $mensaje .= " Se creó la venta {$venta->folio_formateado}".($conOrden ? ' y su orden de trabajo.' : '.');
-            $enlaces['Ver venta'] = route('pedidos.show', $venta);
 
-            if ($conOrden) {
-                $enlaces['Ver orden de trabajo'] = route('pedidos.orden-trabajo.show', $venta);
+            // Desde el mostrador (034) no: llevan a pantallas del escritorio.
+            if (! $mostrador) {
+                $enlaces['Ver venta'] = route('pedidos.show', $venta);
+
+                if ($conOrden) {
+                    $enlaces['Ver orden de trabajo'] = route('pedidos.orden-trabajo.show', $venta);
+                }
             }
         } elseif ($destino?->razonSinVenta() !== null) {
             $mensaje .= ' '.$destino->razonSinVenta();
         }
 
-        return redirect()->to($this->destinoCotizacion($request, $cotizacion))
+        $destinoRedireccion = $mostrador
+            ? route('mostrador.cotizaciones.ver', $cotizacion)
+            : $this->destinoCotizacion($request, $cotizacion);
+
+        return redirect()->to($destinoRedireccion)
             ->with('exito', $mensaje)
             ->with('exito_enlaces', $enlaces);
     }

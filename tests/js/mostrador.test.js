@@ -107,3 +107,25 @@ for (const caso of casos.filter((c) => !c.descuento_global_tipo)) {
         assert.deepEqual(Carrito.totales(caso.lineas, TotalesDocumento), caso.esperado);
     });
 }
+
+// ---- Consulta (034) ----
+
+test('el tipo de pago sale del monto: el saldo completo es pago total y menos es anticipo', function () {
+    assert.equal(Carrito.tipoDePago('1160.00', '1160.00', false), 'pago_total');
+    assert.equal(Carrito.tipoDePago('500', '1160.00', false), 'anticipo');
+    assert.equal(Carrito.tipoDePago('1159.99', '1160.00', false), 'anticipo');
+});
+
+test('con un anticipo ya registrado solo queda el saldo', function () {
+    assert.equal(Carrito.tipoDePago('', '660.00', true), 'saldo');
+});
+
+test('montos iguales que difieren en la decimoquinta cifra cuentan como iguales', function () {
+    assert.equal(Carrito.tipoDePago(0.1 + 0.2, '0.30', false), 'pago_total');
+});
+
+test('la URL de la lista lleva el texto buscado y las páginas cargadas', function () {
+    assert.equal(Carrito.urlDeLista('https://app.test/mostrador/cotizaciones', 'acme', 3), '/mostrador/cotizaciones?q=acme&paginas=3');
+    assert.equal(Carrito.urlDeLista('https://app.test/mostrador/cotizaciones?q=viejo&paginas=4&page=2', '', 1), '/mostrador/cotizaciones');
+    assert.equal(Carrito.urlDeLista('https://app.test/mostrador/facturas?paginas=2', 'A 12', 1), '/mostrador/facturas?q=A+12');
+});

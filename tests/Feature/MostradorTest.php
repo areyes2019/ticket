@@ -270,18 +270,18 @@ describe('regreso con origen=mostrador', function () {
             'cliente_id' => $this->cliente->id,
             'lineas' => [lineaMostrador($this->articulo, 2)],
             'origen' => 'mostrador',
-        ])->assertRedirect(route('mostrador.cotizacion.listo', Cotizacion::sole()));
+        ])->assertRedirect(route('mostrador.cotizaciones.ver', Cotizacion::sole()));
 
         $cotizacion = Cotizacion::sole();
 
-        $this->actingAs($this->user)->get(route('mostrador.cotizacion.listo', $cotizacion))
+        $this->actingAs($this->user)->get(route('mostrador.cotizaciones.ver', $cotizacion))
             ->assertOk()
             ->assertSee($cotizacion->folio_formateado)
             ->assertSee(route('cotizaciones.marcar-enviada', $cotizacion))
             ->assertSee('cliente@ejemplo.mx');
 
         $this->actingAs($this->user)->post(route('cotizaciones.enviar', $cotizacion), ['destinatarios_texto' => 'cliente@ejemplo.mx', 'origen' => 'mostrador'])
-            ->assertRedirect(route('mostrador.cotizacion.listo', $cotizacion));
+            ->assertRedirect(route('mostrador.cotizaciones.ver', $cotizacion));
 
         expect($cotizacion->fresh()->estado)->toBe(EstadoCotizacion::Enviada);
     });
@@ -303,7 +303,7 @@ describe('regreso con origen=mostrador', function () {
                 'metodo_pago' => 'PUE',
                 'lineas' => [lineaMostrador($prueba->articulo)],
                 'origen' => 'mostrador',
-            ])->assertRedirect(route('mostrador.factura.listo', Factura::sole()));
+            ])->assertRedirect(route('mostrador.facturas.ver', Factura::sole()));
 
             return Factura::sole();
         }
@@ -315,7 +315,7 @@ describe('regreso con origen=mostrador', function () {
 
             expect($factura->estado)->toBe(EstadoFactura::Timbrada);
 
-            $this->actingAs($this->user)->get(route('mostrador.factura.listo', $factura))
+            $this->actingAs($this->user)->get(route('mostrador.facturas.ver', $factura))
                 ->assertOk()
                 ->assertSee($factura->folioFiscal())
                 ->assertSee(route('facturas.pdf', $factura))
@@ -330,12 +330,12 @@ describe('regreso con origen=mostrador', function () {
 
             $factura = timbrarDesdeMostrador($this);
 
-            $this->actingAs($this->user)->get(route('mostrador.factura.listo', $factura))
+            $this->actingAs($this->user)->get(route('mostrador.facturas.ver', $factura))
                 ->assertSee('Reintentar')
                 ->assertSee(route('facturas.timbrar', $factura));
 
             $this->actingAs($this->user)->post(route('facturas.timbrar', $factura), ['origen' => 'mostrador'])
-                ->assertRedirect(route('mostrador.factura.listo', $factura));
+                ->assertRedirect(route('mostrador.facturas.ver', $factura));
 
             expect($factura->fresh()->estado)->toBe(EstadoFactura::Timbrada);
         });
@@ -345,7 +345,7 @@ describe('regreso con origen=mostrador', function () {
 
             $factura = timbrarDesdeMostrador($this);
 
-            $this->actingAs($this->user)->get(route('mostrador.factura.listo', $factura))
+            $this->actingAs($this->user)->get(route('mostrador.facturas.ver', $factura))
                 ->assertSee('El RFC del receptor no está en la lista de RFC inscritos.')
                 ->assertSee('corrige los datos desde la computadora')
                 ->assertDontSee('Reintentar');
@@ -359,8 +359,8 @@ describe('resultados', function () {
     })->with([
         ['mostrador.venta.cobro', fn () => Pedido::factory()->conLinea()->create()],
         ['mostrador.venta.listo', fn () => Pedido::factory()->conLinea()->create()],
-        ['mostrador.cotizacion.listo', fn () => Cotizacion::factory()->conLinea()->create()],
-        ['mostrador.factura.listo', fn () => Factura::factory()->conLinea()->create()],
+        ['mostrador.cotizaciones.ver', fn () => Cotizacion::factory()->conLinea()->create()],
+        ['mostrador.facturas.ver', fn () => Factura::factory()->conLinea()->create()],
     ]);
 });
 

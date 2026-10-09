@@ -37,7 +37,7 @@ class EnvioFacturaController extends Controller
             return back()->withInput()->withErrors(['destinatarios' => 'No se pudo enviar el correo. Revisa la configuración del servidor de correo e intenta de nuevo.'], 'envio');
         }
 
-        return redirect()->route($this->vieneDelMostrador($request) ? 'mostrador.factura.listo' : 'facturas.show', $factura)
+        return redirect()->route($this->vieneDelMostrador($request) ? 'mostrador.facturas.ver' : 'facturas.show', $factura)
             ->with('exito', 'Factura enviada a '.implode(', ', $destinatarios).'.');
     }
 }

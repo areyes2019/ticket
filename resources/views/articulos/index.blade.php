@@ -63,5 +63,6 @@
 
 @push('scripts')
     <script src="{{ asset('js/busqueda-dinamica.js') }}?v={{ filemtime(public_path('js/busqueda-dinamica.js')) }}"></script>
+    <script src="{{ asset('js/imagen-compartible.js') }}?v={{ filemtime(public_path('js/imagen-compartible.js')) }}"></script>
     <script src="{{ asset('js/ficha-articulo.js') }}?v={{ filemtime(public_path('js/ficha-articulo.js')) }}"></script>
 @endpush

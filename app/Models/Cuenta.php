@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 
 /**
  * Lugar donde se guarda el dinero del negocio (caja, banco, PayPal…).
@@ -69,6 +70,18 @@ class Cuenta extends Model
     protected function activas(Builder $consulta): void
     {
         $consulta->where('activa', true);
+    }
+
+    /**
+     * La caja que el mostrador preselecciona al cobrar (033, 034): la cuenta
+     * de efectivo más antigua (menor id) entre las que se ofrecen; null si no
+     * hay ninguna de efectivo.
+     *
+     * @param  Collection<int, self>  $cuentas
+     */
+    public static function cajaEntre(Collection $cuentas): ?self
+    {
+        return $cuentas->where('tipo', TipoCuenta::Efectivo)->sortBy('id')->first();
     }
 
     /**

@@ -70,27 +70,10 @@
         return actual.nombre + ' — Modelo ' + actual.modelo + ' — ' + (cual === 'distribuidor' ? actual.precioDistribuidor : actual.precio);
     }
 
-    // WhatsApp trata los .webp como calcomanías: se comparte una copia en JPEG.
+    // WhatsApp trata los .webp como calcomanías: se comparte una copia en JPEG
+    // (imagen-compartible.js, la misma conversión que la ficha del mostrador).
     function imagenComoJpeg() {
-        return new Promise(function (resolver, rechazar) {
-            const lienzo = document.createElement('canvas');
-            lienzo.width = imagen.naturalWidth;
-            lienzo.height = imagen.naturalHeight;
-
-            const contexto = lienzo.getContext('2d');
-            // El JPEG no tiene transparencia: fondo blanco en lugar de negro.
-            contexto.fillStyle = 'white';
-            contexto.fillRect(0, 0, lienzo.width, lienzo.height);
-            contexto.drawImage(imagen, 0, 0);
-
-            lienzo.toBlob(function (blob) {
-                if (blob) {
-                    resolver(new File([blob], actual.modelo.replace(/[^\w.-]+/g, '_') + '.jpg', { type: 'image/jpeg' }));
-                } else {
-                    rechazar(new Error('No se pudo convertir la imagen.'));
-                }
-            }, 'image/jpeg', 0.9);
-        });
+        return window.ImagenCompartible.comoJpeg(imagen, actual.modelo);
     }
 
     function puedeCompartirArchivos() {

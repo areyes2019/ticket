@@ -13,8 +13,9 @@
     <link rel="stylesheet" href="{{ asset('css/app.css') }}?v={{ filemtime(public_path('css/app.css')) }}">
 </head>
 {{-- Aplicación de mostrador (033): sin menú de aplicaciones ni de usuario. El
-     nombre del sistema regresa a los tres accesos. --}}
-<body class="mostrador">
+     nombre del sistema regresa a los tres accesos. La barra de secciones (034)
+     sale solo en las pantallas que la piden con @section('barra'). --}}
+<body @class(['mostrador', 'mostrador-con-barra' => $__env->hasSection('barra')])>
     <header class="barra barra-mostrador">
         <a href="{{ route('mostrador.inicio') }}" class="marca" data-salir-captura>{{ config('app.name') }}</a>
         @hasSection('paso')
@@ -35,6 +36,10 @@
 
         @yield('content')
     </main>
+
+    @hasSection('barra')
+        @include('mostrador._barra')
+    @endif
 
     <script src="{{ asset('vendor/axios.min.js') }}"></script>
     <script src="{{ asset('js/app.js') }}?v={{ filemtime(public_path('js/app.js')) }}"></script>

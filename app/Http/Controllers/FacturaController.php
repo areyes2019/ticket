@@ -112,9 +112,11 @@ class FacturaController extends Controller
      */
     public function store(FacturaRequest $request): RedirectResponse
     {
+        // Desde el mostrador (034), la factura que ya existe se abre en su
+        // detalle del mostrador: el candado no deja ver la del escritorio.
         $resultado = $this->guardarNueva(
             $request,
-            yaFacturada: fn (Factura $vigente) => redirect()->route('facturas.show', $vigente)
+            yaFacturada: fn (Factura $vigente) => redirect()->route($this->vieneDelMostrador($request) ? 'mostrador.facturas.ver' : 'facturas.show', $vigente)
                 ->with('error', "Esta cotización ya se facturó en {$vigente->folioVisible()}."),
             noFacturable: fn (string $motivo) => back()->withInput()->with('error', $motivo),
         );
@@ -383,7 +385,7 @@ class FacturaController extends Controller
         $factura->refresh();
 
         $ruta = match (true) {
-            $mostrador => 'mostrador.factura.listo',
+            $mostrador => 'mostrador.facturas.ver',
             $resultado === ResultadoTimbrado::ErrorDatos && $factura->esEditable() => 'facturas.edit',
             default => 'facturas.show',
         };

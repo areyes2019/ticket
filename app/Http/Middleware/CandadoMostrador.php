@@ -9,7 +9,8 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * Modo mostrador (033): con la sesión marcada por /mostrador (la start_url de
  * la aplicación instalada), solo se alcanzan las pantallas del mostrador y las
- * rutas que sus tres capturas usan. Lo demás regresa a los tres accesos.
+ * rutas que usan sus tres capturas y su consulta (034: facturar y cobrar una
+ * cotización). Lo demás regresa a los tres accesos.
  */
 class CandadoMostrador
 {
@@ -37,6 +38,8 @@ class CandadoMostrador
         'cotizaciones.pdf',
         'cotizaciones.enviar',
         'cotizaciones.marcar-enviada',
+        'cotizaciones.timbrar',
+        'cotizaciones.pagos.store',
         'facturas.store',
         'facturas.timbrar',
         'facturas.pdf',

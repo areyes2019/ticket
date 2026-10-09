@@ -109,7 +109,7 @@ class ListadoCotizacionesRequest extends FormRequest
      */
     public function folio(): ?int
     {
-        return preg_match('/^(?:COT-?)?0*(\d{1,9})$/i', $this->texto(), $coincidencia) === 1 ? (int) $coincidencia[1] : null;
+        return Cotizacion::folioBuscado($this->texto());
     }
 
     /**

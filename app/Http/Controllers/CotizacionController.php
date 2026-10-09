@@ -101,7 +101,7 @@ class CotizacionController extends Controller
         // desde el mostrador (033), en su pantalla de envío.
         $destino = match ($request->input('origen')) {
             'dashboard' => route('dashboard', ['cotizacion' => $cotizacion->id]),
-            'mostrador' => route('mostrador.cotizacion.listo', $cotizacion),
+            'mostrador' => route('mostrador.cotizaciones.ver', $cotizacion),
             default => route('cotizaciones.show', $cotizacion),
         };
 

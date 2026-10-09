@@ -657,6 +657,15 @@ class Cotizacion extends Model
     }
 
     /**
+     * "12", "0012" o "COT-0012" → 12; otro texto no es un folio. La usan la
+     * bandeja y el buscador del mostrador (034).
+     */
+    public static function folioBuscado(string $texto): ?int
+    {
+        return preg_match('/^(?:COT-?)?0*(\d{1,9})$/i', trim($texto), $coincidencia) === 1 ? (int) $coincidencia[1] : null;
+    }
+
+    /**
      * Aplica los filtros del listado (combinados con Y). Los vacíos se ignoran.
      *
      * @param  Builder<self>  $consulta

@@ -1,5 +1,7 @@
 @extends('layouts.mostrador')
 
+@section('barra', 'inicio')
+
 @section('content')
     {{-- Tres accesos fijos, sin cifras ni pendientes (033). Toda la superficie es tocable. --}}
     <nav class="mostrador-accesos" aria-label="Accesos del mostrador">

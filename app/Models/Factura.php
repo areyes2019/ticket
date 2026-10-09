@@ -469,6 +469,72 @@ class Factura extends Model
     }
 
     /**
+     * Lectura de un folio escrito por el usuario: "12" o "FAC-0012" buscan el
+     * folio interno 12 y también el folio fiscal 12; "A12" busca el folio
+     * fiscal 12 de la serie A; otro texto no es un folio (null). La usan el
+     * listado y el buscador del mostrador (034).
+     *
+     * @return array{interno: int|null, serie: string|null, fiscal: int|null}|null
+     */
+    public static function folioBuscado(string $texto): ?array
+    {
+        $folio = trim($texto);
+
+        if (preg_match('/^FAC-?0*(\d{1,9})$/i', $folio, $coincidencia) === 1) {
+            return ['interno' => (int) $coincidencia[1], 'serie' => null, 'fiscal' => null];
+        }
+
+        if (preg_match('/^0*(\d{1,9})$/', $folio, $coincidencia) === 1) {
+            return ['interno' => (int) $coincidencia[1], 'serie' => null, 'fiscal' => (int) $coincidencia[1]];
+        }
+
+        if (preg_match('/^([A-Z]{1,25})-?0*(\d{1,9})$/i', $folio, $coincidencia) === 1) {
+            return ['interno' => null, 'serie' => mb_strtoupper($coincidencia[1]), 'fiscal' => (int) $coincidencia[2]];
+        }
+
+        return null;
+    }
+
+    /**
+     * Una sola caja de texto contra folio (interno o fiscal), razón social,
+     * nombre comercial o RFC del cliente y UUID, combinados con O, para el
+     * buscador del mostrador (034). filtrar() sigue siendo el del listado
+     * (columna por columna con Y). Vacía no filtra.
+     *
+     * @param  Builder<self>  $consulta
+     */
+    #[Scope]
+    protected function buscarTexto(Builder $consulta, string $texto): void
+    {
+        $termino = trim($texto);
+
+        if ($termino === '') {
+            return;
+        }
+
+        $rfc = strtoupper((string) preg_replace('/\s+/', '', $termino));
+        $folio = self::folioBuscado($termino);
+
+        $consulta->where(function (Builder $coincidencias) use ($termino, $rfc, $folio) {
+            $coincidencias->whereHas('cliente', fn (Builder $clientes) => $clientes->withTrashed()->where(
+                fn (Builder $datos) => $datos->where('razon_social', 'like', "%{$termino}%")
+                    ->orWhere('nombre_comercial', 'like', "%{$termino}%")
+                    ->orWhere('rfc', 'like', "%{$rfc}%")
+            ))->orWhere('uuid_fiscal', 'like', "%{$termino}%");
+
+            if ($folio !== null && $folio['interno'] !== null) {
+                $coincidencias->orWhere('folio', $folio['interno']);
+            }
+
+            if ($folio !== null && $folio['fiscal'] !== null) {
+                $coincidencias->orWhere(fn (Builder $fiscal) => $fiscal
+                    ->where('facturapi_folio', $folio['fiscal'])
+                    ->when($folio['serie'] !== null, fn (Builder $conSerie) => $conSerie->where('facturapi_serie', $folio['serie'])));
+            }
+        });
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>

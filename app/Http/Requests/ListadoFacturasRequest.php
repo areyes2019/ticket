@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\EstadoFactura;
+use App\Models\Factura;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -57,21 +58,7 @@ class ListadoFacturasRequest extends FormRequest
      */
     public function folio(): ?array
     {
-        $folio = $this->campos()['folio'];
-
-        if (preg_match('/^FAC-?0*(\d{1,9})$/i', $folio, $coincidencia) === 1) {
-            return ['interno' => (int) $coincidencia[1], 'serie' => null, 'fiscal' => null];
-        }
-
-        if (preg_match('/^0*(\d{1,9})$/', $folio, $coincidencia) === 1) {
-            return ['interno' => (int) $coincidencia[1], 'serie' => null, 'fiscal' => (int) $coincidencia[1]];
-        }
-
-        if (preg_match('/^([A-Z]{1,25})-?0*(\d{1,9})$/i', $folio, $coincidencia) === 1) {
-            return ['interno' => null, 'serie' => mb_strtoupper($coincidencia[1]), 'fiscal' => (int) $coincidencia[2]];
-        }
-
-        return null;
+        return Factura::folioBuscado($this->campos()['folio']);
     }
 
     /**

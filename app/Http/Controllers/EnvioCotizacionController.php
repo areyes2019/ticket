@@ -39,7 +39,7 @@ class EnvioCotizacionController extends Controller
         $cotizacion->marcarEnviada();
 
         $destino = $this->vieneDelMostrador($request)
-            ? route('mostrador.cotizacion.listo', $cotizacion)
+            ? route('mostrador.cotizaciones.ver', $cotizacion)
             : $this->destinoCotizacion($request, $cotizacion);
 
         return redirect()->to($destino)

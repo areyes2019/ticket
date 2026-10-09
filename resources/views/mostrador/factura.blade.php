@@ -1,28 +1,33 @@
 @extends('layouts.mostrador')
 
-@section('title', 'Factura · Mostrador')
+@section('title', 'Factura '.$factura->folioVisible().' · Mostrador')
+@section('barra', 'facturas')
 
 @section('content')
     {{--
-        Resultado de la factura del mostrador (033), leído de la factura:
+        Detalle de la factura en el mostrador (034). Es también donde termina el
+        timbrado hecho aquí (033), así que el resultado se lee de la factura:
         timbrada (WhatsApp con el PDF; el XML va por correo), pendiente por el
-        PAC (se reintenta aquí) o rechazada por datos (se corrige en la
-        computadora: los mismos datos volverían a fallar).
+        PAC (se reintenta aquí), rechazada por datos (se corrige en la
+        computadora) o cancelada (sin envíos). Nada se cancela ni se edita.
     --}}
-    <div class="mostrador-resultado" data-mostrador-limpiar>
-        <p class="mostrador-indicador"><strong>Factura</strong><span>Listo</span></p>
+    <div class="mostrador-detalle" data-mostrador-limpiar>
+        <x-boton :href="route('mostrador.facturas')" variante="suave" icono="chevron-left" data-volver-lista>Facturas</x-boton>
 
         <x-alerta tipo="error" hidden data-compartir-error></x-alerta>
 
-        <div class="mostrador-revision">
-            <p class="mostrador-revision-nombre">{{ $factura->folioVisible() }}</p>
-            <p>{{ $factura->cliente->razon_social }}</p>
-            <p class="mostrador-rfc">{{ $factura->cliente->rfc }}</p>
-            <p class="mostrador-revision-total">Total ${{ number_format((float) $factura->total, 2) }}</p>
-            @if ($timbrada && $factura->uuid_fiscal)
-                <p class="mostrador-rfc">UUID {{ $factura->uuid_fiscal }}</p>
-            @endif
-        </div>
+        @include('mostrador._documento', ['documento' => $factura, 'folio' => $factura->folioVisible()])
+
+        @if ($timbrada && $factura->uuid_fiscal)
+            <p class="mostrador-rfc mostrador-uuid">UUID {{ $factura->uuid_fiscal }}</p>
+        @endif
+
+        @if ($factura->cotizacion_id && $factura->cotizacion)
+            <p class="mostrador-ficha-dato">
+                <x-icono nombre="file-earmark-text" />De la cotización
+                <a href="{{ route('mostrador.cotizaciones.ver', $factura->cotizacion) }}">{{ $factura->cotizacion->folio_formateado }}</a>
+            </p>
+        @endif
 
         @if ($timbrada)
             <div class="mostrador-acciones-resultado">
@@ -33,9 +38,12 @@
                     data-precargar="al-cargar"
                     data-texto="Factura {{ $factura->folioFiscal() }} de {{ config('app.name') }} por ${{ number_format((float) $factura->total, 2) }}">Enviar por WhatsApp</x-boton>
                 <x-boton href="#dialogo-envio" variante="secundario" icono="envelope" bloque data-abrir-dialogo>Enviar por correo</x-boton>
-                <x-boton :href="route('mostrador.factura')" variante="secundario" icono="plus-lg" bloque>Nueva factura</x-boton>
-                <x-boton :href="route('mostrador.inicio')" variante="secundario" icono="house" bloque>Inicio</x-boton>
+                <p class="mostrador-motivo">Por WhatsApp va el PDF; el XML se manda por correo.</p>
             </div>
+        @elseif ($cancelada)
+            <x-alerta tipo="advertencia">
+                Factura cancelada{{ $factura->motivo_cancelacion ? ': '.$factura->motivo_cancelacion->descripcion() : '' }}. No se envía.
+            </x-alerta>
         @else
             {{-- Recién timbrada, el motivo ya llegó en el aviso del layout. --}}
             @if ($factura->error_timbrado && ! session('error'))
@@ -47,12 +55,11 @@
                     <form method="POST" action="{{ route('facturas.timbrar', $factura) }}">
                         @csrf
                         <input type="hidden" name="origen" value="mostrador">
-                        <x-boton icono="arrow-repeat" bloque data-enviar-una-vez>Reintentar</x-boton>
+                        <x-boton icono="arrow-repeat" bloque data-enviar-una-vez>Reintentar timbrado</x-boton>
                     </form>
                 @else
                     <x-alerta tipo="advertencia">La factura quedó guardada; corrige los datos desde la computadora.</x-alerta>
                 @endif
-                <x-boton :href="route('mostrador.inicio')" variante="secundario" icono="house" bloque>Inicio</x-boton>
             </div>
         @endif
     </div>

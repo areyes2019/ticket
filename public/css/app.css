@@ -3610,3 +3610,208 @@ a.bandeja-abrir {
     flex-direction: column;
     gap: var(--espacio-4);
 }
+
+/*
+ * Consulta del mostrador (034): la barra de secciones al pie, las listas de
+ * documentos, los detalles y la ficha del catálogo.
+ */
+.mostrador {
+    --mostrador-alto-secciones: 3.75rem;
+}
+
+/* Barra de secciones: fija al pie, tres columnas iguales, toda tocable */
+.mostrador-secciones {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 10;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+    background: var(--color-superficie);
+    border-top: 1px solid var(--color-borde);
+}
+
+.mostrador-seccion {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--espacio-1);
+    min-height: var(--mostrador-alto-secciones);
+    padding: var(--espacio-2);
+    color: var(--color-texto-suave);
+    font-size: var(--texto-pequeno);
+    text-decoration: none;
+}
+
+.mostrador-seccion .icono {
+    font-size: 1.4rem;
+}
+
+.mostrador-seccion[aria-current="page"] {
+    color: var(--color-primario);
+    font-weight: 600;
+    box-shadow: inset 0 3px 0 var(--color-primario);
+}
+
+/* El contenido deja libre el alto de la barra; los pies fijos quedan encima de ella */
+.mostrador-con-barra .contenido-mostrador {
+    padding-bottom: calc(var(--mostrador-alto-secciones) + var(--espacio-4) + env(safe-area-inset-bottom, 0));
+}
+
+.mostrador-con-barra .mostrador-pie {
+    bottom: calc(var(--mostrador-alto-secciones) + env(safe-area-inset-bottom, 0));
+}
+
+.mostrador-con-barra .mostrador-accesos {
+    min-height: calc(100vh - var(--mostrador-alto-barra) - var(--mostrador-alto-secciones) - 8rem);
+    min-height: calc(100dvh - var(--mostrador-alto-barra) - var(--mostrador-alto-secciones) - 8rem);
+}
+
+/* Listas de documentos */
+.mostrador-consulta {
+    display: flex;
+    flex-direction: column;
+    gap: var(--espacio-3);
+}
+
+.mostrador-consulta .campo {
+    margin: 0;
+}
+
+.mostrador-documento-encabezado {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--espacio-2);
+    margin: 0;
+}
+
+.mostrador-documento-total {
+    font-size: var(--texto-subtitulo);
+    color: var(--color-primario-oscuro);
+}
+
+.mostrador-documento-cliente {
+    font-size: var(--texto-subtitulo);
+}
+
+.mostrador-documento-pie {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--espacio-2);
+}
+
+.mostrador-ficha-documento .etiqueta {
+    align-self: auto;
+}
+
+/* Detalles: cotización, factura y ficha del catálogo */
+.mostrador-detalle {
+    display: flex;
+    flex-direction: column;
+    gap: var(--espacio-3);
+}
+
+.mostrador-detalle > .boton-suave,
+.mostrador-resultado > .boton-suave {
+    align-self: flex-start;
+    min-height: var(--mostrador-toque);
+}
+
+.mostrador-detalle .mostrador-revision {
+    margin-bottom: 0;
+}
+
+.mostrador-totales {
+    display: flex;
+    flex-direction: column;
+    gap: var(--espacio-1);
+    margin: 0;
+    padding: var(--espacio-3) var(--espacio-4);
+    background: var(--color-superficie);
+    border: 1px solid var(--color-borde);
+}
+
+.mostrador-totales div {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--espacio-3);
+}
+
+.mostrador-totales dd {
+    margin: 0;
+}
+
+.mostrador-totales-total {
+    font-size: var(--texto-subtitulo);
+    font-weight: 700;
+}
+
+.mostrador-totales-saldo {
+    font-weight: 700;
+    color: var(--color-primario-oscuro);
+}
+
+.mostrador-motivo {
+    margin: 0;
+    color: var(--color-texto-suave);
+    font-size: var(--texto-pequeno);
+}
+
+.mostrador-uuid {
+    margin: 0;
+    font-size: var(--texto-pequeno);
+    overflow-wrap: anywhere;
+}
+
+.mostrador-pago {
+    display: flex;
+    flex-direction: column;
+    gap: var(--espacio-4);
+}
+
+/* Ficha del catálogo: se le voltea al cliente */
+.mostrador-articulo-foto {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    aspect-ratio: 1;
+    background: var(--color-superficie-suave);
+    border: 1px solid var(--color-borde);
+}
+
+.mostrador-articulo-foto img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.mostrador-articulo-foto .icono {
+    margin-right: var(--icono-separacion);
+}
+
+.mostrador-articulo-datos {
+    overflow-wrap: anywhere;
+}
+
+.mostrador-articulo-datos p {
+    margin: 0;
+}
+
+.mostrador-articulo-nombre {
+    margin: 0 0 var(--espacio-1);
+    font-size: var(--texto-titulo);
+}
+
+.mostrador-articulo-precio {
+    margin-top: var(--espacio-2);
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--color-primario-oscuro);
+}
