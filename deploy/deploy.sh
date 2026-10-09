@@ -5,13 +5,16 @@
 #   bash deploy/deploy.sh               detecta solo si hay migraciones
 #   bash deploy/deploy.sh --sin-migrar  no toca la base aunque haya migraciones
 #   bash deploy/deploy.sh --verificar   solo comprueba el sitio publicado
+#   bash deploy/deploy.sh --env-listo   ya se agregaron al .env del servidor las
+#                                       variables nuevas de .env.example
 #
 # Se corre desde la máquina de desarrollo con Git Bash. Lo que hace:
 #
 #   1. Exige árbol limpio y main igual a origin/main.
 #   2. Lee del servidor el commit desplegado (.desplegado) y calcula el diff.
 #   3. Se detiene si cambió .env.example: el .env del servidor no tiene las
-#      variables nuevas y hay que agregarlas a mano antes.
+#      variables nuevas y hay que agregarlas a mano antes. Ya agregadas, se
+#      vuelve a correr con --env-listo.
 #   4. Sube main empaquetado con git archive (el servidor no tiene acceso a
 #      GitHub) y lo sincroniza con rsync --delete sobre la instalación.
 #   5. composer install --no-scripts + package:discover (Hostinger no tiene
@@ -39,10 +42,12 @@ RAMA="main"
 
 MIGRAR="auto"
 SOLO_VERIFICAR=0
+ENV_LISTO=0
 for arg in "$@"; do
     case "$arg" in
         --sin-migrar) MIGRAR="no" ;;
         --verificar)  SOLO_VERIFICAR=1 ;;
+        --env-listo)  ENV_LISTO=1 ;;
         *) echo "argumento desconocido: $arg" >&2; exit 2 ;;
     esac
 done
@@ -110,9 +115,13 @@ fi
 if [ -n "$DESPLEGADO" ] && echo "$CAMBIOS" | grep -qx '.env.example'; then
     echo
     git --no-pager diff "$DESPLEGADO" "$LOCAL" -- .env.example
-    die "cambió .env.example. Agrega primero las variables nuevas al .env del servidor:
+    if [ "$ENV_LISTO" = "1" ]; then
+        warn "cambió .env.example; --env-listo: el .env del servidor ya tiene las variables nuevas"
+    else
+        die "cambió .env.example. Agrega primero las variables nuevas al .env del servidor:
        ssh $SSH_ALIAS -t \"nano '$REMOTE_APP/.env'\"
-       y vuelve a correr este script."
+       y vuelve a correr este script con --env-listo."
+    fi
 fi
 
 HAY_MIGRACIONES=0
