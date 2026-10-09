@@ -15,8 +15,6 @@
 <li @class(['bandeja-fila', 'bandeja-fila-activa' => $activa]) data-cotizacion="{{ $cotizacion->id }}">
     <a href="{{ route('cotizaciones.show', $cotizacion) }}" class="bandeja-abrir"
        data-vista-previa="{{ route('cotizaciones.vista-previa', $cotizacion) }}" @if ($activa) aria-current="true" @endif>
-        <x-bandeja.avatar :nombre="$cotizacion->cliente->razon_social" />
-
         <span class="bandeja-fila-texto">
             <span class="bandeja-fila-linea">
                 <span class="bandeja-fila-remitente">{{ $cotizacion->cliente->razon_social }}</span>

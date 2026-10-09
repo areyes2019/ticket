@@ -15,8 +15,6 @@
 <li @class(['bandeja-fila', 'bandeja-fila-activa' => $activa]) data-factura="{{ $factura->id }}">
     <a href="{{ route('facturas.show', $factura) }}" class="bandeja-abrir"
        data-vista-previa="{{ route('facturas.vista-previa', $factura) }}" @if ($activa) aria-current="true" @endif>
-        <x-bandeja.avatar :nombre="$factura->cliente->razon_social" />
-
         <span class="bandeja-fila-texto">
             <span class="bandeja-fila-linea">
                 <span class="bandeja-fila-remitente">{{ $factura->cliente->razon_social }}</span>
