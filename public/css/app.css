@@ -434,10 +434,20 @@ a > .icono,
     background: var(--color-primario);
 }
 
-/* "Crear pedido" de la barra: le gana al color de los enlaces del menú. */
+/* "Crear pedido" y "Catálogo" de la barra: le ganan al color de los enlaces del menú. */
 .menu a.barra-crear-pedido,
-.menu a.barra-crear-pedido:hover {
+.menu a.barra-crear-pedido:hover,
+.menu a.barra-catalogo,
+.menu a.barra-catalogo:hover {
     color: var(--color-texto-invertido);
+}
+
+/* "Instalar aplicación" es para el celular y la tableta; en escritorio no sale
+   aunque el navegador ofrezca instalar. */
+@media (min-width: 1024px) {
+    .barra-instalar-app {
+        display: none !important;
+    }
 }
 
 .boton-suave {

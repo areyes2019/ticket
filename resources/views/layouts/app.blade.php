@@ -24,11 +24,14 @@
             @auth
                 @if (request()->routeIs('dashboard'))
                     {{-- Lo muestra pwa.js solo cuando el navegador ofrece instalar (033). --}}
-                    <x-boton tipo="button" variante="secundario" icono="phone" hidden data-instalar-app>Instalar aplicación</x-boton>
+                    <x-boton tipo="button" variante="secundario" icono="phone" class="barra-instalar-app" hidden data-instalar-app>Instalar aplicación</x-boton>
                 @endif
                 {{-- Acceso rápido para levantar un pedido desde cualquier pantalla. --}}
                 @unless (request()->routeIs('pedidos.create'))
                     <x-boton :href="route('pedidos.create')" icono="plus-lg" class="barra-crear-pedido">Crear pedido</x-boton>
+                @endunless
+                @unless (request()->routeIs('articulos.index'))
+                    <x-boton :href="route('articulos.index')" variante="secundario" icono="box-seam" class="barra-catalogo">Catálogo</x-boton>
                 @endunless
                 @can('ver-historial-accesos')
                     <a href="{{ route('historial-accesos.index') }}"><x-icono nombre="clock-history" />Historial de accesos</a>
