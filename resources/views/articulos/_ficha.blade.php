@@ -11,10 +11,16 @@
 
             <form method="dialog" class="acciones ficha-pie">
                 <x-boton href="#" variante="secundario" icono="pencil" data-ficha-editar>Editar</x-boton>
+                {{-- Envía el formulario de abajo (no se anidan formularios); ficha-articulo.js le pone la dirección. --}}
+                <x-boton variante="secundario" icono="copy" form="ficha-clonar" data-enviar-una-vez>Clonar</x-boton>
                 <x-boton variante="secundario" icono="x-lg">Cerrar</x-boton>
                 {{-- Uno por precio: lo compartido lleva solo el precio de su botón. --}}
                 <x-boton tipo="button" icono="share" data-ficha-compartir="precio">Compartir precio</x-boton>
                 <x-boton tipo="button" variante="secundario" icono="share" data-ficha-compartir="distribuidor">Compartir precio distribuidor</x-boton>
+            </form>
+
+            <form id="ficha-clonar" method="POST" action="#" hidden data-ficha-clonar>
+                @csrf
             </form>
 
             {{-- Respaldo cuando el navegador no permite compartir ni copiar (sitio sin HTTPS). --}}

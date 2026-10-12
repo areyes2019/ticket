@@ -142,6 +142,47 @@ class Articulo extends Model
     }
 
     /**
+     * Crea y devuelve una copia con los campos asignables y el nombre con
+     * " (copia)" (035). Costo y precios los recalcula booted(); la imagen,
+     * las existencias y el historial no se copian. Usar dentro de una
+     * transacción.
+     */
+    public function clonar(): self
+    {
+        return $this->user->articulos()->create([
+            ...$this->only($this->getFillable()),
+            'nombre' => $this->nombreDeCopia(),
+        ]);
+    }
+
+    /**
+     * El primer nombre libre entre "X (copia)", "X (copia 2)"… con la misma
+     * unicidad que ArticuloRequest (por proveedor, sin los eliminados). Si no
+     * cabe en 255 se recorta el nombre, nunca el sufijo.
+     */
+    private function nombreDeCopia(): string
+    {
+        // Sin escapar: un % o _ del nombre solo trae nombres de más, y abajo
+        // se compara exacto.
+        $prefijo = mb_substr($this->nombre, 0, 200);
+        $ocupados = self::query()
+            ->where('proveedor_id', $this->proveedor_id)
+            ->where('nombre', 'like', "{$prefijo}%")
+            ->pluck('nombre')
+            ->map(fn (string $nombre) => mb_strtolower($nombre))
+            ->flip();
+
+        for ($numero = 1; ; $numero++) {
+            $sufijo = $numero === 1 ? ' (copia)' : " (copia {$numero})";
+            $nombre = mb_substr($this->nombre, 0, 255 - mb_strlen($sufijo)).$sufijo;
+
+            if (! $ocupados->has(mb_strtolower($nombre))) {
+                return $nombre;
+            }
+        }
+    }
+
+    /**
      * Las líneas de un formulario de documento con los dos precios vigentes
      * de su artículo (precio_directo y precio_distribuidor), para que
      * documento-lineas.js cambie el precio al cambiar de cliente (028). Solo

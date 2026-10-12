@@ -125,6 +125,7 @@ Route::middleware(['auth', AsegurarUsuarioActivo::class, CandadoMostrador::class
     Route::get('articulos/imagenes', [ImagenesArticulosController::class, 'create'])->name('articulos.imagenes');
     Route::post('articulos/imagenes', [ImagenesArticulosController::class, 'store'])->name('articulos.imagenes.store');
     Route::get('articulos/{articulo}/imagen', [ImagenesArticulosController::class, 'show'])->withTrashed()->name('articulos.imagen');
+    Route::post('articulos/{articulo}/clonar', [ArticuloController::class, 'clonar'])->name('articulos.clonar');
 
     Route::resource('articulos', ArticuloController::class)
         ->except('show')

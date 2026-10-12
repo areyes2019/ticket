@@ -154,6 +154,19 @@ class ArticuloController extends Controller
     }
 
     /**
+     * Crea la copia y abre su edición para ajustarla (035).
+     */
+    public function clonar(Articulo $articulo): RedirectResponse
+    {
+        Gate::authorize('clonar', $articulo);
+
+        $clon = DB::transaction(fn () => $articulo->clonar());
+
+        return redirect()->route('articulos.edit', $clon)
+            ->with('exito', "Artículo clonado de «{$articulo->nombre}». Ajusta lo que necesites.");
+    }
+
+    /**
      * Borrado lógico.
      *
      * Regla de negocio pendiente: no se debe eliminar un artículo usado en

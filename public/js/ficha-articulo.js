@@ -3,7 +3,7 @@
 // Los enlaces del nombre llevan data-ficha y los datos en data-nombre,
 // data-modelo, data-precio, data-precio-distribuidor, data-etiqueta-precio
 // ("Precio con IVA" o "Precio", según el objeto de impuesto) y data-imagen
-// (URL o vacío). Hay un botón de compartir por precio
+// (URL o vacío); data-clonar es la dirección del formulario "Clonar". Hay un botón de compartir por precio
 // (data-ficha-compartir="precio" o "distribuidor"): lo compartido lleva solo
 // el precio de su botón. Se usa
 // delegación porque busqueda-dinamica.js reemplaza las filas. Sin JavaScript,
@@ -25,6 +25,7 @@
     const precioDistribuidor = ficha.querySelector('[data-ficha-precio-distribuidor]');
     const etiquetaDistribuidor = ficha.querySelector('[data-ficha-etiqueta-distribuidor]');
     const editar = ficha.querySelector('[data-ficha-editar]');
+    const clonar = ficha.querySelector('[data-ficha-clonar]');
     const aviso = ficha.querySelector('[data-ficha-aviso]');
     const respaldo = ficha.querySelector('[data-ficha-copiar]');
     const campoTexto = respaldo.querySelector('input');
@@ -50,6 +51,7 @@
         // "Precio con IVA" → "Precio distribuidor con IVA"; "Precio" → "Precio distribuidor".
         etiquetaDistribuidor.textContent = etiqueta.replace(/^Precio/, 'Precio distribuidor');
         editar.href = enlace.href;
+        clonar.action = enlace.dataset.clonar;
         aviso.textContent = '';
         respaldo.hidden = true;
 

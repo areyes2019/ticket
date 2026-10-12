@@ -32,6 +32,14 @@ class ArticuloPolicy
         return $this->esDueno($user, $articulo);
     }
 
+    /**
+     * Solo el dueño puede clonar el artículo; a los demás se les responde 404.
+     */
+    public function clonar(User $user, Articulo $articulo): Response
+    {
+        return $this->esDueno($user, $articulo);
+    }
+
     private function esDueno(User $user, Articulo $articulo): Response
     {
         return $articulo->user_id === $user->id
