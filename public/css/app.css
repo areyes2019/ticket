@@ -434,6 +434,12 @@ a > .icono,
     background: var(--color-primario);
 }
 
+/* "Crear pedido" de la barra: le gana al color de los enlaces del menú. */
+.menu a.barra-crear-pedido,
+.menu a.barra-crear-pedido:hover {
+    color: var(--color-texto-invertido);
+}
+
 .boton-suave {
     color: var(--color-texto);
     background: var(--color-neutro);
