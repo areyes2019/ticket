@@ -60,7 +60,7 @@ it('importa un archivo válido en el catálogo elegido', function () {
 it('rechaza la fila con una utilidad inválida', function () {
     importar($this->usuario, $this->catalogo, csv(ENCABEZADO_CSV."Sello redondo,R-45,44121604,H87,02,100,-5\n"))
         ->assertSee('1 fila rechazada.')
-        ->assertSee('La utilidad debe estar entre 0 y 999.99%.');
+        ->assertSee('La utilidad debe estar entre 0 y 9,999.99%.');
 
     expect(Articulo::count())->toBe(0);
 });
@@ -298,8 +298,8 @@ describe('utilidad distribuidor (028)', function () {
     });
 
     it('rechaza la fila con una utilidad distribuidor fuera de rango', function () {
-        importar($this->usuario, $this->catalogo, csv(ENCABEZADO_CSV_COMPLETO."Sello redondo,R-45,44121604,H87,02,100,,1000\n"))
+        importar($this->usuario, $this->catalogo, csv(ENCABEZADO_CSV_COMPLETO."Sello redondo,R-45,44121604,H87,02,100,,10000\n"))
             ->assertSee('1 fila rechazada.')
-            ->assertSee('La utilidad distribuidor debe estar entre 0 y 999.99%.');
+            ->assertSee('La utilidad distribuidor debe estar entre 0 y 9,999.99%.');
     });
 });

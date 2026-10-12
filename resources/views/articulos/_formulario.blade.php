@@ -33,9 +33,9 @@
                 :ayuda="$descripcionUnidad ?? 'Escribe la clave o el nombre de la unidad, por ejemplo H87 o pieza.'"
                 data-autocompletar="{{ route('catalogos-sat.claves-unidad') }}" />
             <x-campo nombre="objeto_imp" etiqueta="Objeto de impuesto" tipo="select" :opciones="$objetosImpuesto" :valor="$articulo?->objeto_imp?->value" vacia="Selecciona un objeto de impuesto" required />
-            <x-campo nombre="precio_proveedor" etiqueta="Precio de lista del proveedor (sin IVA)" tipo="number" step="0.01" min="0.01" max="9000000" inputmode="decimal"
+            <x-campo nombre="precio_proveedor" etiqueta="Precio de lista del proveedor (sin IVA)" tipo="number" step="0.01" min="0.01" max="900000" inputmode="decimal"
                 :valor="$articulo?->precio_proveedor" required ayuda="Antes del descuento del catálogo." />
-            <x-campo nombre="utilidad_porcentaje" etiqueta="Utilidad (%)" tipo="number" step="0.01" min="0" max="999.99" inputmode="decimal"
+            <x-campo nombre="utilidad_porcentaje" etiqueta="Utilidad (%)" tipo="number" step="0.01" min="0" max="9999.99" inputmode="decimal"
                 :valor="$articulo?->utilidad_porcentaje" :placeholder="$placeholderUtilidad" ayuda="Déjalo vacío para usar la del catálogo."
                 data-aviso-utilidad="utilidad_porcentaje-aviso" data-umbral="{{ App\Models\Articulo::UMBRAL_UTILIDAD_ALTA }}" />
             @include('articulos._aviso-utilidad', ['campo' => 'utilidad_porcentaje', 'valor' => $articulo?->utilidad_porcentaje])
@@ -45,7 +45,7 @@
 
         {{-- Segundo precio, para los clientes distribuidores: mismo costo, su propia utilidad. --}}
         <x-card titulo="Precio distribuidor">
-            <x-campo nombre="utilidad_distribuidor_porcentaje" etiqueta="Utilidad distribuidor (%)" tipo="number" step="0.01" min="0" max="999.99" inputmode="decimal"
+            <x-campo nombre="utilidad_distribuidor_porcentaje" etiqueta="Utilidad distribuidor (%)" tipo="number" step="0.01" min="0" max="9999.99" inputmode="decimal"
                 :valor="$articulo?->utilidad_distribuidor_porcentaje" :placeholder="$placeholderUtilidadDistribuidor" ayuda="Déjalo vacío para usar la del catálogo."
                 data-aviso-utilidad="utilidad_distribuidor_porcentaje-aviso" data-umbral="{{ App\Models\Articulo::UMBRAL_UTILIDAD_ALTA }}" />
             @include('articulos._aviso-utilidad', ['campo' => 'utilidad_distribuidor_porcentaje', 'valor' => $articulo?->utilidad_distribuidor_porcentaje])

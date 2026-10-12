@@ -271,7 +271,7 @@ describe('utilidad', function () {
         $this->actingAs($this->usuario)
             ->post('/catalogos', ['proveedor_id' => $this->proveedor->id, 'nombre' => 'General', 'utilidad_porcentaje' => $utilidad])
             ->assertSessionHasErrors('utilidad_porcentaje');
-    })->with(['-1', '1000', '10.555', 'abc']);
+    })->with(['-1', '10000', '10.555', 'abc']);
 
     it('muestra la utilidad en el listado y el aviso de utilidad alta en el formulario', function () {
         $catalogo = Catalogo::factory()->for($this->proveedor)->conDescuento(10)->conUtilidad(122.5)->create(['nombre' => 'Otoño']);

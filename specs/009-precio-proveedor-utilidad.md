@@ -8,6 +8,10 @@ flotante, fixture compartido entre las dos copias de la fórmula). La parte del 
 protocolo entre navegador y servidor se rehicieron para Laravel + Blade + JavaScript nativo. Extiende
 [007-gestion-articulos.md](007-gestion-articulos.md) y [008-catalogos.md](008-catalogos.md).
 
+> **Desde [036](036-utilidad-cuatro-digitos.md)** (implementada el 2026-10-12): las utilidades admiten
+> hasta 9,999.99% (`decimal(7,2)`) y el tope de `precio_proveedor` baja a 900,000. Donde esta spec
+> dice 999.99% y 9,000,000, vale lo de 036.
+
 ## Historia de usuario
 
 Como usuario del sistema de facturación, quiero registrar el precio que me cobra el proveedor y el

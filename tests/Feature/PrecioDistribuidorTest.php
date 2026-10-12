@@ -115,10 +115,11 @@ describe('cálculo', function () {
         $valida ? $respuesta->assertSessionHasNoErrors() : $respuesta->assertSessionHasErrors('utilidad_distribuidor_porcentaje');
     })->with([
         'negativa' => ['-1', false],
-        'mayor a 999.99' => ['1000', false],
+        'mayor a 9,999.99' => ['10000', false],
         'tres decimales' => ['10.555', false],
         'cero' => ['0', true],
         'tres dígitos' => ['450', true],
+        'cuatro dígitos' => ['1624.14', true],
     ]);
 
     it('muestra la cadena distribuidor en el formulario con el placeholder heredado', function () {
@@ -179,8 +180,8 @@ describe('recálculo del catálogo', function () {
 
     it('valida y guarda la utilidad distribuidor del catálogo; vacía vale 0', function () {
         $this->actingAs($this->catalogo->user)
-            ->put("/catalogos/{$this->catalogo->id}", ['nombre' => 'X', 'descuento' => '0', 'utilidad_porcentaje' => '50', 'utilidad_distribuidor_porcentaje' => '1000'])
-            ->assertSessionHasErrors(['utilidad_distribuidor_porcentaje' => 'La utilidad distribuidor debe estar entre 0 y 999.99%.']);
+            ->put("/catalogos/{$this->catalogo->id}", ['nombre' => 'X', 'descuento' => '0', 'utilidad_porcentaje' => '50', 'utilidad_distribuidor_porcentaje' => '10000'])
+            ->assertSessionHasErrors(['utilidad_distribuidor_porcentaje' => 'La utilidad distribuidor debe estar entre 0 y 9,999.99%.']);
 
         $this->put("/catalogos/{$this->catalogo->id}", ['nombre' => 'X', 'descuento' => '0', 'utilidad_porcentaje' => '50', 'utilidad_distribuidor_porcentaje' => '', 'confirmar' => '1'])
             ->assertSessionHasNoErrors();

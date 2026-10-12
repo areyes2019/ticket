@@ -58,8 +58,8 @@ class CatalogoRequest extends FormRequest
                     ->ignore($catalogo),
             ],
             'descuento' => ['required', 'numeric', 'between:0,100', 'decimal:0,2'],
-            'utilidad_porcentaje' => ['required', 'numeric', 'between:0,999.99', 'decimal:0,2'],
-            'utilidad_distribuidor_porcentaje' => ['required', 'numeric', 'between:0,999.99', 'decimal:0,2'],
+            'utilidad_porcentaje' => ['required', 'numeric', 'between:0,9999.99', 'decimal:0,2'],
+            'utilidad_distribuidor_porcentaje' => ['required', 'numeric', 'between:0,9999.99', 'decimal:0,2'],
             'requiere_produccion' => ['required', 'boolean'],
         ];
 
@@ -84,9 +84,9 @@ class CatalogoRequest extends FormRequest
             'nombre.unique' => 'Nombre duplicado: este proveedor ya tiene un catálogo con ese nombre.',
             'descuento.between' => 'El descuento debe estar entre 0 y 100.',
             'descuento.decimal' => 'El descuento admite como máximo 2 decimales.',
-            'utilidad_porcentaje.between' => 'La utilidad debe estar entre 0 y 999.99%.',
+            'utilidad_porcentaje.between' => 'La utilidad debe estar entre 0 y 9,999.99%.',
             'utilidad_porcentaje.decimal' => 'La utilidad admite como máximo 2 decimales.',
-            'utilidad_distribuidor_porcentaje.between' => 'La utilidad distribuidor debe estar entre 0 y 999.99%.',
+            'utilidad_distribuidor_porcentaje.between' => 'La utilidad distribuidor debe estar entre 0 y 9,999.99%.',
             'utilidad_distribuidor_porcentaje.decimal' => 'La utilidad distribuidor admite como máximo 2 decimales.',
         ];
     }

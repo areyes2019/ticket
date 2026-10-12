@@ -27,11 +27,11 @@
         <x-campo nombre="nombre" etiqueta="Nombre" :valor="$catalogo->nombre ?? null" maxlength="255" required />
         <x-campo nombre="descuento" etiqueta="Descuento (%)" tipo="number" step="0.01" min="0" max="100" inputmode="decimal"
             :valor="$catalogo->descuento ?? 0" ayuda="Descuento que te da el proveedor sobre su precio de lista. Déjalo en 0 si no tiene descuento." />
-        <x-campo nombre="utilidad_porcentaje" etiqueta="Utilidad (%)" tipo="number" step="0.01" min="0" max="999.99" inputmode="decimal"
+        <x-campo nombre="utilidad_porcentaje" etiqueta="Utilidad (%)" tipo="number" step="0.01" min="0" max="9999.99" inputmode="decimal"
             :valor="$catalogo->utilidad_porcentaje ?? 0" ayuda="Markup sobre el costo que heredan los artículos sin utilidad propia."
             data-aviso-utilidad="utilidad_porcentaje-aviso" data-umbral="{{ App\Models\Articulo::UMBRAL_UTILIDAD_ALTA }}" />
         @include('articulos._aviso-utilidad', ['campo' => 'utilidad_porcentaje', 'valor' => $catalogo->utilidad_porcentaje ?? 0])
-        <x-campo nombre="utilidad_distribuidor_porcentaje" etiqueta="Utilidad distribuidor (%)" tipo="number" step="0.01" min="0" max="999.99" inputmode="decimal"
+        <x-campo nombre="utilidad_distribuidor_porcentaje" etiqueta="Utilidad distribuidor (%)" tipo="number" step="0.01" min="0" max="9999.99" inputmode="decimal"
             :valor="$catalogo->utilidad_distribuidor_porcentaje ?? 0" ayuda="Markup sobre el costo para el precio distribuidor; lo heredan los artículos sin utilidad distribuidor propia."
             data-aviso-utilidad="utilidad_distribuidor_porcentaje-aviso" data-umbral="{{ App\Models\Articulo::UMBRAL_UTILIDAD_ALTA }}" />
         @include('articulos._aviso-utilidad', ['campo' => 'utilidad_distribuidor_porcentaje', 'valor' => $catalogo->utilidad_distribuidor_porcentaje ?? 0])

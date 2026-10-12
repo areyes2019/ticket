@@ -122,16 +122,26 @@ describe('alta', function () {
         $this->actingAs($catalogo->user)
             ->post('/articulos', datosArticulo($catalogo, ['precio_proveedor' => $precio]))
             ->assertSessionHasErrors('precio_proveedor');
-    })->with(['0', '-5', '10.555', 'abc', '9000000.01']);
+    })->with(['0', '-5', '10.555', 'abc', '900000.01']);
 
     it('acepta el tope del precio del proveedor con la utilidad máxima', function () {
         $catalogo = Catalogo::factory()->create();
 
         $this->actingAs($catalogo->user)
-            ->post('/articulos', datosArticulo($catalogo, ['precio_proveedor' => '9000000', 'utilidad_porcentaje' => '999.99']))
+            ->post('/articulos', datosArticulo($catalogo, ['precio_proveedor' => '900000', 'utilidad_porcentaje' => '9999.99']))
             ->assertSessionHasNoErrors();
 
-        expect(Articulo::sole()->precio_unitario_sin_iva)->toBe('98999100.00');
+        expect(Articulo::sole()->precio_unitario_sin_iva)->toBe('90899911.21');
+    });
+
+    it('acepta utilidades de cuatro dígitos (moldura de $10 vendida en $200)', function () {
+        $catalogo = Catalogo::factory()->create(['descuento' => 0]);
+
+        $this->actingAs($catalogo->user)
+            ->post('/articulos', datosArticulo($catalogo, ['precio_proveedor' => '10', 'utilidad_porcentaje' => '1624.14']))
+            ->assertSessionHasNoErrors();
+
+        expect(Articulo::sole())->utilidad_porcentaje->toBe('1624.14')->costo_con_descuento->toBe('10.00');
     });
 
     it('rechaza una utilidad inválida', function (string $utilidad) {
@@ -140,7 +150,7 @@ describe('alta', function () {
         $this->actingAs($catalogo->user)
             ->post('/articulos', datosArticulo($catalogo, ['utilidad_porcentaje' => $utilidad]))
             ->assertSessionHasErrors('utilidad_porcentaje');
-    })->with(['-1', '1000', '10.555', 'abc']);
+    })->with(['-1', '10000', '10.555', 'abc']);
 
     it('acepta 0% y utilidades de tres dígitos', function (string $utilidad, string $venta) {
         $catalogo = Catalogo::factory()->create();
