@@ -813,8 +813,9 @@ h1.tarjeta-titulo {
     font-size: var(--texto-mini);
 }
 
+/* Tres botones chicos: editar, clonar y eliminar (artículos). */
 .tabla-fija .col-acciones-chicas {
-    width: calc(2 * var(--lado-boton-fila-chico) + var(--espacio-1) + 2 * var(--espacio-3));
+    width: calc(3 * var(--lado-boton-fila-chico) + 2 * var(--espacio-1) + 2 * var(--espacio-3));
 }
 
 /* Constancia de Situación Fiscal (clientes) */
