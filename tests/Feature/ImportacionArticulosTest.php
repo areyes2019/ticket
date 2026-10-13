@@ -217,9 +217,10 @@ describe('exportación', function () {
             ->assertHeader('Content-Type', 'text/csv; charset=UTF-8')
             ->assertDownload('articulos-'.now()->format('Y-m-d').'.csv');
 
-        expect($respuesta->streamedContent())->toBe("\xEF\xBB\xBF".ENCABEZADO_CSV_COMPLETO
-            ."\"Sello redondo de Ø X 45 mm\",R-45,44121604,H87,02,100.50,35.00,\n"
-            ."Almohadilla,A-1,44121600,H87,01,35.00,,\n");
+        // 037: precio_fijo al final, vacío en los artículos por utilidad.
+        expect($respuesta->streamedContent())->toBe("\xEF\xBB\xBF".rtrim(ENCABEZADO_CSV_COMPLETO).",precio_fijo\n"
+            ."\"Sello redondo de Ø X 45 mm\",R-45,44121604,H87,02,100.50,35.00,,\n"
+            ."Almohadilla,A-1,44121600,H87,01,35.00,,,\n");
     });
 
     it('respeta los filtros y el orden del listado, sin paginar', function () {
@@ -260,7 +261,7 @@ describe('exportación', function () {
         $contenido = $this->actingAs($this->usuario)->get('/articulos/exportar')->streamedContent();
         $otro = Catalogo::factory()->for(Proveedor::factory()->for($this->usuario))->create();
 
-        expect($contenido)->toContain("02,100.50,35.00,12.50\n");
+        expect($contenido)->toContain("02,100.50,35.00,12.50,\n");
 
         importar($this->usuario, $otro, csv($contenido))->assertSee('2 artículos importados.');
 

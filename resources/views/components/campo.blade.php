@@ -26,7 +26,12 @@
     </label>
 @else
     <div @class(['campo', 'campo-error' => $conError])>
-        <label for="{{ $id }}">{{ $etiqueta }}</label>
+        @if ($tipo === 'radio')
+            {{-- Un grupo de radios no tiene un control al cual apuntar: el título lo nombra con aria-labelledby. --}}
+            <span id="{{ $id }}-etiqueta" class="campo-titulo">{{ $etiqueta }}</span>
+        @else
+            <label for="{{ $id }}">{{ $etiqueta }}</label>
+        @endif
 
         @if ($tipo === 'password')
             <div class="contrasena">
@@ -42,6 +47,15 @@
                     <option value="{{ $valorOpcion }}" @selected((string) old($nombre, $valor) === (string) $valorOpcion)>{{ $textoOpcion }}</option>
                 @endforeach
             </select>
+        @elseif ($tipo === 'radio')
+            <div class="opciones-radio" role="radiogroup" aria-labelledby="{{ $id }}-etiqueta">
+                @foreach ($opciones as $valorOpcion => $textoOpcion)
+                    <label>
+                        <input id="{{ $id }}-{{ $valorOpcion }}" type="radio" name="{{ $nombre }}" value="{{ $valorOpcion }}" @checked((string) old($nombre, $valor) === (string) $valorOpcion) {{ $attributes }}>
+                        {{ $textoOpcion }}
+                    </label>
+                @endforeach
+            </div>
         @elseif ($tipo === 'textarea')
             <textarea id="{{ $id }}" name="{{ $nombre }}" {{ $attributes }}>{{ old($nombre, $valor) }}</textarea>
         @else

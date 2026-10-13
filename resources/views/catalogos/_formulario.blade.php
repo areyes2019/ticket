@@ -46,7 +46,12 @@
             <x-alerta tipo="advertencia">
                 <p>
                     Se recalculará el precio de venta o el precio distribuidor de <strong>{{ session('confirmar_recalculo') }}</strong>
-                    {{ session('confirmar_recalculo') === 1 ? 'artículo' : 'artículos' }}.
+                    {{ session('confirmar_recalculo') === 1 ? 'artículo' : 'artículos' }}{{ session('conservan_precio_fijo') > 0 ? ',' : '.' }}
+                    {{-- 037: los de precio fijo alcanzados conservan su precio de venta. --}}
+                    @if (session('conservan_precio_fijo') > 0)
+                        y <strong>{{ session('conservan_precio_fijo') }}</strong>
+                        {{ session('conservan_precio_fijo') === 1 ? 'artículo con precio fijo conservará su precio.' : 'artículos con precio fijo conservarán su precio.' }}
+                    @endif
                 </p>
                 <div class="acciones">
                     <x-boton icono="check-lg" name="confirmar" value="1">Confirmar y guardar</x-boton>

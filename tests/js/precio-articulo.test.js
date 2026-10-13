@@ -13,13 +13,22 @@ for (const caso of casos) {
         const factor = PrecioArticulo.factorIva(caso.objeto_imp, TASA_IVA);
         const costo = PrecioArticulo.costoConDescuento(parseFloat(caso.precio_proveedor), parseFloat(caso.descuento));
         const crudo = PrecioArticulo.precioVentaSinIva(costo, parseFloat(caso.utilidad_porcentaje));
-        const venta = PrecioArticulo.redondearAPesoEntero(crudo, factor);
+        // 037: con precio fijo, el precio de venta sale de ese número y no del markup.
+        const venta = caso.precio_fijo !== undefined
+            ? PrecioArticulo.precioFijoSinIva(parseFloat(caso.precio_fijo), factor)
+            : PrecioArticulo.redondearAPesoEntero(crudo, factor);
 
         assert.equal(costo.toFixed(2), caso.costo);
         assert.equal(crudo.toFixed(2), caso.precio_venta_crudo);
         assert.equal(venta.toFixed(2), caso.precio_venta);
         assert.equal(PrecioArticulo.precioConIva(venta, factor === 1 ? 0 : TASA_IVA).toFixed(2), caso.precio_con_iva);
         assert.equal(PrecioArticulo.utilidad(venta, costo).toFixed(2), caso.utilidad);
+
+        if (caso.utilidad_porcentaje_equivalente !== undefined) {
+            const equivalente = PrecioArticulo.utilidadPorcentajeEquivalente(venta, costo);
+
+            assert.equal(equivalente === null ? null : equivalente.toFixed(2), caso.utilidad_porcentaje_equivalente);
+        }
 
         // 028: el precio distribuidor parte del mismo costo con su propia utilidad.
         if (caso.utilidad_distribuidor_porcentaje !== undefined) {
@@ -51,6 +60,25 @@ for (const factor of [1.16, 1]) {
 
             if (!Number.isInteger(conIva) || Math.round(final * 100) < centavos || ajuste >= 2) {
                 fallos.push(crudo);
+            }
+        }
+
+        assert.deepEqual(fallos, []);
+    });
+}
+
+// 037: barrido de precios fijos de $0.01 a $2,000.00, igual que en PHP.
+for (const factor of [1.16, 1]) {
+    test('barrido de precio fijo con factor ' + factor + ': nunca baja ni sube más de un centavo', function () {
+        const fallos = [];
+
+        for (let centavos = 1; centavos <= 200000; centavos++) {
+            const sinIva = PrecioArticulo.precioFijoSinIva(centavos / 100, factor);
+            const conIva = Math.round(PrecioArticulo.redondeo2(sinIva * factor) * 100);
+            const anterior = Math.round(PrecioArticulo.redondeo2((sinIva - 0.01) * factor) * 100);
+
+            if (conIva < centavos || conIva > centavos + 1 || anterior >= centavos) {
+                fallos.push(centavos / 100);
             }
         }
 

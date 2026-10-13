@@ -67,16 +67,19 @@ class CatalogoController extends Controller
      * mueve el precio de venta o el precio distribuidor de algún artículo,
      * primero se pide confirmación: se vuelve al formulario con lo capturado y
      * el conteo, sin guardar. Al confirmar, el modelo recalcula los artículos.
+     * Los de precio fijo alcanzados se cuentan aparte: su precio no cambia.
      */
     public function update(CatalogoRequest $request, Catalogo $catalogo): RedirectResponse
     {
         $datos = $request->validated();
         $afectados = $catalogo->articulosAfectados($datos['descuento'], $datos['utilidad_porcentaje'], $datos['utilidad_distribuidor_porcentaje']);
+        $fijos = $catalogo->articulosConPrecioFijoAlcanzados($datos['descuento'], $datos['utilidad_porcentaje']);
 
         if ($afectados > 0 && ! $request->boolean('confirmar')) {
             return redirect()->route('catalogos.edit', $catalogo)
                 ->withInput()
-                ->with('confirmar_recalculo', $afectados);
+                ->with('confirmar_recalculo', $afectados)
+                ->with('conservan_precio_fijo', $fijos);
         }
 
         $catalogo->update($datos);
@@ -85,6 +88,11 @@ class CatalogoController extends Controller
 
         if ($afectados > 0) {
             $mensaje .= $afectados === 1 ? ' Se recalculó el precio de 1 artículo.' : " Se recalculó el precio de {$afectados} artículos.";
+        }
+
+        // 037: sin confirmación (solo había precios fijos) también se avisa.
+        if ($fijos > 0) {
+            $mensaje .= $fijos === 1 ? ' 1 artículo con precio fijo conservó su precio.' : " {$fijos} artículos con precio fijo conservaron su precio.";
         }
 
         return redirect()->route('catalogos.index')->with('exito', $mensaje);

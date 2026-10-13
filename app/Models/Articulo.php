@@ -23,7 +23,9 @@ use Illuminate\Support\Str;
  *
  * costo_con_descuento, precio_unitario_sin_iva y precio_distribuidor_sin_iva
  * también los escribe solo el modelo, a partir del precio de lista y las dos
- * utilidades (ver recalcularPrecio()).
+ * utilidades (ver recalcularPrecio()). Con precio_fijo (037) el precio de
+ * venta sale de ese número y no de la utilidad; precio_fijo_desde la escribe
+ * solo el modelo.
  *
  * imagen_ruta la escribe solo ProcesadorImagenArticulo, al guardar el archivo.
  */
@@ -36,6 +38,7 @@ use Illuminate\Support\Str;
     'objeto_imp',
     'precio_proveedor',
     'utilidad_porcentaje',
+    'precio_fijo',
     'utilidad_distribuidor_porcentaje',
 ])]
 class Articulo extends Model
@@ -72,13 +75,18 @@ class Articulo extends Model
     /**
      * Columnas del CSV, idénticas en importación y exportación.
      */
-    public const COLUMNAS_CSV = ['nombre', 'modelo', 'clave_prod_serv', 'clave_unidad', 'objeto_imp', 'precio_proveedor', 'utilidad_porcentaje', 'utilidad_distribuidor_porcentaje'];
+    public const COLUMNAS_CSV = ['nombre', 'modelo', 'clave_prod_serv', 'clave_unidad', 'objeto_imp', 'precio_proveedor', 'utilidad_porcentaje', 'utilidad_distribuidor_porcentaje', 'precio_fijo'];
 
     /**
      * Columnas del CSV que la importación no exige: llegaron después y un
      * archivo sin ellas sigue siendo importable (la celda faltante hereda).
      */
-    public const COLUMNAS_CSV_OPCIONALES = ['utilidad_distribuidor_porcentaje'];
+    public const COLUMNAS_CSV_OPCIONALES = ['utilidad_distribuidor_porcentaje', 'precio_fijo'];
+
+    /**
+     * Precio fijo más alto que se puede capturar (037).
+     */
+    public const PRECIO_FIJO_MAXIMO = 10000000;
 
     /**
      * Carpeta de las imágenes dentro del disco privado (local).
@@ -94,7 +102,12 @@ class Articulo extends Model
     protected static function booted(): void
     {
         static::saving(function (Articulo $articulo) {
-            if (! $articulo->isDirty(['catalogo_id', 'precio_proveedor', 'utilidad_porcentaje', 'utilidad_distribuidor_porcentaje', 'objeto_imp'])) {
+            // La fecha se mueve solo cuando cambia el precio fijo (037).
+            if ($articulo->isDirty('precio_fijo')) {
+                $articulo->precio_fijo_desde = $articulo->precio_fijo === null ? null : today();
+            }
+
+            if (! $articulo->isDirty(['catalogo_id', 'precio_proveedor', 'utilidad_porcentaje', 'precio_fijo', 'utilidad_distribuidor_porcentaje', 'objeto_imp'])) {
                 return;
             }
 
@@ -126,7 +139,8 @@ class Articulo extends Model
      * utilidades de catálogo dados, sin tocar el artículo; lo usa también el
      * conteo de impacto. Los dos precios parten del mismo costo, cada uno con
      * su utilidad, y van ajustados para que el que lee el cliente sea un peso
-     * entero.
+     * entero. Con precio fijo, el precio de venta es ese número sin IVA, sin
+     * importar el costo ni las utilidades (037).
      *
      * @return array{0: float, 1: float, 2: float}
      */
@@ -136,7 +150,9 @@ class Articulo extends Model
 
         return [
             $costo,
-            CalculadoraPrecioArticulo::precioVentaFinal($costo, $this->utilidad_porcentaje ?? $utilidadCatalogo, $this->objeto_imp),
+            $this->precio_fijo !== null
+                ? CalculadoraPrecioArticulo::precioFijoSinIva($this->precio_fijo, CalculadoraPrecioArticulo::factorIva($this->objeto_imp))
+                : CalculadoraPrecioArticulo::precioVentaFinal($costo, $this->utilidad_porcentaje ?? $utilidadCatalogo, $this->objeto_imp),
             CalculadoraPrecioArticulo::precioVentaFinal($costo, $this->utilidad_distribuidor_porcentaje ?? $utilidadDistribuidorCatalogo, $this->objeto_imp),
         ];
     }
@@ -385,6 +401,37 @@ class Articulo extends Model
     }
 
     /**
+     * @return Attribute<bool, never>
+     */
+    protected function tienePrecioFijo(): Attribute
+    {
+        return Attribute::get(fn (): bool => $this->precio_fijo !== null);
+    }
+
+    /**
+     * Un precio fijo que ya no cubre el costo (037). Un precio por utilidad
+     * nunca queda abajo: la utilidad mínima es 0%.
+     *
+     * @return Attribute<bool, never>
+     */
+    protected function porDebajoDelCosto(): Attribute
+    {
+        return Attribute::get(fn (): bool => $this->tiene_precio_fijo
+            && round((float) $this->precio_unitario_sin_iva, 2) < round((float) $this->costo_con_descuento, 2));
+    }
+
+    /**
+     * Porcentaje al que equivale el precio de venta sobre el costo; null sin
+     * costo. No se guarda.
+     *
+     * @return Attribute<float|null, never>
+     */
+    protected function utilidadPorcentajeEquivalente(): Attribute
+    {
+        return Attribute::get(fn (): ?float => CalculadoraPrecioArticulo::utilidadPorcentajeEquivalente($this->precio_unitario_sin_iva, $this->costo_con_descuento));
+    }
+
+    /**
      * Utilidad en pesos por pieza, sin IVA. No se guarda.
      *
      * @return Attribute<float, never>
@@ -427,6 +474,8 @@ class Articulo extends Model
             'objeto_imp' => ObjetoImpuesto::class,
             'precio_proveedor' => 'decimal:2',
             'utilidad_porcentaje' => 'decimal:2',
+            'precio_fijo' => 'decimal:2',
+            'precio_fijo_desde' => 'date',
             'utilidad_distribuidor_porcentaje' => 'decimal:2',
             'costo_con_descuento' => 'decimal:2',
             'precio_unitario_sin_iva' => 'decimal:2',

@@ -11,7 +11,8 @@ class ExportacionArticulosController extends Controller
     /**
      * CSV con los artículos que coinciden con los filtros del listado, en su
      * mismo orden y sin paginar. Mismas columnas que espera la importación: los
-     * valores calculados no viajan, y cada utilidad sale vacía si se hereda.
+     * valores calculados no viajan, cada utilidad sale vacía si se hereda y el
+     * precio fijo, si el precio es por utilidad.
      */
     public function __invoke(ListadoArticulosRequest $request): StreamedResponse
     {
@@ -36,6 +37,7 @@ class ExportacionArticulosController extends Controller
                     $articulo->precio_proveedor,
                     $articulo->utilidad_porcentaje ?? '',
                     $articulo->utilidad_distribuidor_porcentaje ?? '',
+                    $articulo->precio_fijo ?? '',
                 ], ',', '"', '');
             }
 

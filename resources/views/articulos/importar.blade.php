@@ -53,8 +53,10 @@
             <p>
                 <code>precio_proveedor</code> es el precio de lista sin IVA, antes del descuento del catálogo. Deja
                 <code>utilidad_porcentaje</code> y <code>utilidad_distribuidor_porcentaje</code> vacíos para usar las utilidades del
-                catálogo; los precios de venta los calcula el sistema. La columna <code>utilidad_distribuidor_porcentaje</code> es
-                opcional: un archivo sin ella también se importa.
+                catálogo; los precios de venta los calcula el sistema. <code>precio_fijo</code> es el precio que paga el cliente
+                (con IVA si es objeto 02): lleno, el artículo queda con ese precio fijo; vacío, el precio sale de la utilidad. Las
+                columnas <code>utilidad_distribuidor_porcentaje</code> y <code>precio_fijo</code> son opcionales: un archivo sin
+                ellas también se importa.
                 Todas las filas se registran en el catálogo que elijas (y en su proveedor). Se aceptan archivos guardados desde
                 Excel como "CSV UTF-8" o "CSV (delimitado por comas)". Si necesitas una plantilla, exporta tu
                 listado de artículos.

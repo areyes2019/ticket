@@ -45,6 +45,7 @@ class ImportadorArticulosCsv
                     'catalogo_id' => $catalogo->id,
                     'utilidad_porcentaje' => $datos['utilidad_porcentaje'] === '' ? null : $datos['utilidad_porcentaje'],
                     'utilidad_distribuidor_porcentaje' => $datos['utilidad_distribuidor_porcentaje'] === '' ? null : $datos['utilidad_distribuidor_porcentaje'],
+                    'precio_fijo' => $datos['precio_fijo'] === '' ? null : $datos['precio_fijo'],
                 ],
                 ArticuloRequest::reglas($usuario->id, $catalogo->id),
                 $this->mensajes($datos),
@@ -127,7 +128,8 @@ class ImportadorArticulosCsv
 
         // Excel y Google Sheets leen "02" como número y lo guardan como "2".
         // Una utilidad vacía (o la distribuidor ausente) hereda la del catálogo
-        // destino (se vuelve null al validar).
+        // destino, y un precio fijo vacío o ausente deja el precio por utilidad
+        // (se vuelven null al validar).
         if (preg_match('/^\d$/', $datos['objeto_imp'])) {
             $datos['objeto_imp'] = '0'.$datos['objeto_imp'];
         }

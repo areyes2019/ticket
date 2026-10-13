@@ -102,6 +102,44 @@ final class CalculadoraPrecioArticulo
         }
     }
 
+    /**
+     * Precio sin IVA de un precio fijo capturado como lo lee el cliente (037):
+     * el centavo más chico cuyo precio con IVA no queda por debajo de lo
+     * capturado. Con 1.16 hay precios con IVA que ningún centavo alcanza
+     * exacto ($7.00 → $7.01); sin IVA (factor 1) es el mismo número.
+     */
+    public static function precioFijoSinIva(float|string $precioFijo, float $factorIva): float
+    {
+        $objetivo = round(round((float) $precioFijo * 100, 6));
+        $centavos = floor(round($objetivo / $factorIva, 6));
+
+        foreach ([$centavos, $centavos + 1] as $candidato) {
+            if (round(self::redondeo2($candidato / 100 * $factorIva) * 100) >= $objetivo) {
+                return $candidato / 100;
+            }
+        }
+
+        return ($centavos + 2) / 100;
+    }
+
+    /**
+     * Porcentaje de markup al que equivale un precio de venta sobre el costo
+     * (037). Informativo: puede ser negativo o pasar de 9,999.99%. Sin costo
+     * no hay porcentaje. El signo va aparte para que la mitad negativa redondee
+     * igual que en JavaScript.
+     */
+    public static function utilidadPorcentajeEquivalente(float|string $precioVentaSinIva, float|string $costo): ?float
+    {
+        if ((float) $costo <= 0) {
+            return null;
+        }
+
+        $porcentaje = ((float) $precioVentaSinIva / (float) $costo - 1) * 100;
+        $redondeado = self::redondeo2(abs($porcentaje));
+
+        return $porcentaje < 0 && $redondeado > 0 ? -$redondeado : $redondeado;
+    }
+
     public static function utilidad(float|string $precioVentaSinIva, float|string $costo): float
     {
         return self::redondeo2((float) $precioVentaSinIva - (float) $costo);

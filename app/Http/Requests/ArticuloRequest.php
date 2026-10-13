@@ -27,12 +27,18 @@ class ArticuloRequest extends FormRequest
     }
 
     /**
-     * Normaliza la clave de unidad antes de validar.
+     * Normaliza la clave de unidad antes de validar. En el modo por utilidad
+     * (o sin modo, como antes de 037) el precio fijo se descarta aunque venga
+     * lleno: el campo oculto del formulario se sigue enviando.
      */
     protected function prepareForValidation(): void
     {
         if ($this->filled('clave_unidad')) {
             $this->merge(['clave_unidad' => $this->string('clave_unidad')->replaceMatches('/\s+/', '')->upper()->toString()]);
+        }
+
+        if ($this->input('modo_precio') !== 'fijo') {
+            $this->merge(['precio_fijo' => null]);
         }
     }
 
@@ -43,8 +49,13 @@ class ArticuloRequest extends FormRequest
      */
     public function rules(): array
     {
+        $reglas = self::reglas($this->user()->id, $this->input('catalogo_id'), $this->route('articulo'));
+
         return [
-            ...self::reglas($this->user()->id, $this->input('catalogo_id'), $this->route('articulo')),
+            ...$reglas,
+            // Solo existe en el formulario; en el CSV el modo lo da la celda precio_fijo.
+            'modo_precio' => ['nullable', 'in:utilidad,fijo'],
+            'precio_fijo' => ['required_if:modo_precio,fijo', ...$reglas['precio_fijo']],
             // La imagen solo existe en el formulario; la importación CSV no la lleva.
             'imagen' => ['bail', 'nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:'.ProcesadorImagenArticulo::TAMANO_MAXIMO_KB, new ImagenLegible],
             'quitar_imagen' => ['boolean'],
@@ -59,7 +70,7 @@ class ArticuloRequest extends FormRequest
      */
     public function datosArticulo(): array
     {
-        return $this->safe()->except(['imagen', 'quitar_imagen']);
+        return $this->safe()->except(['imagen', 'quitar_imagen', 'modo_precio']);
     }
 
     /**
@@ -97,6 +108,8 @@ class ArticuloRequest extends FormRequest
             'precio_proveedor' => ['required', 'numeric', 'gt:0', 'decimal:0,2', 'max:900000'],
             'utilidad_porcentaje' => ['nullable', 'numeric', 'between:0,9999.99', 'decimal:0,2'],
             'utilidad_distribuidor_porcentaje' => ['nullable', 'numeric', 'between:0,9999.99', 'decimal:0,2'],
+            // 037: el precio que lee el cliente, con IVA si es objeto 02.
+            'precio_fijo' => ['nullable', 'numeric', 'between:0.01,'.Articulo::PRECIO_FIJO_MAXIMO, 'decimal:0,2'],
         ];
     }
 
@@ -133,6 +146,10 @@ class ArticuloRequest extends FormRequest
             'utilidad_porcentaje.decimal' => 'La utilidad admite como máximo 2 decimales.',
             'utilidad_distribuidor_porcentaje.between' => 'La utilidad distribuidor debe estar entre 0 y 9,999.99%.',
             'utilidad_distribuidor_porcentaje.decimal' => 'La utilidad distribuidor admite como máximo 2 decimales.',
+            'precio_fijo.required_if' => 'Escribe el precio fijo.',
+            'precio_fijo.between' => 'El precio fijo debe estar entre $0.01 y $10,000,000.00.',
+            'precio_fijo.decimal' => 'El precio fijo admite como máximo 2 decimales.',
+            'modo_precio.in' => 'Elige cómo se calcula el precio de venta.',
         ];
     }
 
@@ -163,6 +180,8 @@ class ArticuloRequest extends FormRequest
             'precio_proveedor' => 'precio del proveedor',
             'utilidad_porcentaje' => 'utilidad',
             'utilidad_distribuidor_porcentaje' => 'utilidad distribuidor',
+            'precio_fijo' => 'precio fijo',
+            'modo_precio' => 'modo de precio',
             'imagen' => 'imagen',
         ];
     }

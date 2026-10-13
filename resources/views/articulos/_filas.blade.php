@@ -10,7 +10,10 @@
             </td>
             <td><span class="celda-truncada" title="{{ $articulo->modelo }}">{{ $articulo->modelo }}</span></td>
             <td class="numero">${{ number_format((float) $articulo->costo_con_descuento, 2) }}</td>
-            <td class="numero">${{ number_format($articulo->precio_unitario_con_iva, 2) }}</td>
+            {{-- 037: los de precio fijo llevan "Fijo", y en rojo si ya no cubren el costo. --}}
+            <td @class(['numero', 'precio-bajo-costo' => $articulo->por_debajo_del_costo]) @if ($articulo->por_debajo_del_costo) title="Por debajo del costo" @endif>
+                ${{ number_format($articulo->precio_unitario_con_iva, 2) }}@if ($articulo->tiene_precio_fijo)<span class="etiqueta etiqueta-fijo">Fijo</span>@endif
+            </td>
             <td class="numero">${{ number_format($articulo->precio_distribuidor_con_iva, 2) }}</td>
             <td>
                 {{-- Las dos llevan a la ficha de existencias; con "No", la ficha abre el alta. --}}

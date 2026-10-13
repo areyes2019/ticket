@@ -146,6 +146,20 @@ class Catalogo extends Model
     }
 
     /**
+     * Cuántos artículos (no eliminados) con precio fijo alcanza un cambio del
+     * descuento o de la utilidad directo: conservan su precio de venta (037).
+     * La utilidad distribuidor no cuenta, porque no toca el precio directo.
+     */
+    public function articulosConPrecioFijoAlcanzados(float|string $descuento, float|string $utilidadPorcentaje): int
+    {
+        $distinto = fn (float|string $nuevo, float|string $actual) => round((float) $nuevo, 2) !== round((float) $actual, 2);
+
+        return $this->articulosPorRecalcular($distinto($descuento, $this->descuento), $distinto($utilidadPorcentaje, $this->utilidad_porcentaje), false)
+            ?->whereNotNull('precio_fijo')
+            ->count() ?? 0;
+    }
+
+    /**
      * Artículos que mueve un cambio: todos si cambia el descuento; si cambia
      * una utilidad, los que heredan esa (o cualquiera de las dos, si cambian
      * ambas); null si no cambia nada.

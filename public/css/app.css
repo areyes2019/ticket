@@ -512,10 +512,31 @@ h1.tarjeta-titulo {
     margin-bottom: var(--espacio-4);
 }
 
-.campo label {
+.campo label,
+.campo-titulo {
     display: block;
     margin-bottom: var(--espacio-1);
     font-weight: 500;
+}
+
+/* Grupo de radios de <x-campo tipo="radio"> */
+.opciones-radio {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--espacio-2) var(--espacio-4);
+}
+
+.campo .opciones-radio label {
+    display: flex;
+    align-items: center;
+    gap: var(--espacio-2);
+    margin: 0;
+    font-weight: 400;
+}
+
+.campo .opciones-radio input {
+    width: auto;
+    padding: 0;
 }
 
 .campo input,
@@ -919,6 +940,18 @@ h1.tarjeta-titulo {
 .aviso-utilidad {
     margin: calc(-1 * var(--espacio-2)) 0 var(--espacio-4);
     color: var(--color-advertencia);
+}
+
+/* 037: precio fijo que ya no cubre el costo, en el listado */
+.precio-bajo-costo {
+    color: var(--color-error);
+    font-weight: 600;
+}
+
+.tabla .etiqueta-fijo {
+    margin-left: var(--espacio-1);
+    color: var(--color-info);
+    background: var(--color-info-fondo);
 }
 
 /* Cadena de cálculo del precio (precio-articulo.js) */

@@ -1,5 +1,6 @@
 // Cadena de precios de un artículo en el navegador: resumen en vivo del
-// formulario y aviso de porcentaje de utilidad alto.
+// formulario, aviso de porcentaje de utilidad alto y el modo de precio fijo
+// (037).
 //
 // Las funciones puras son espejo exacto de CalculadoraPrecioArticulo (PHP);
 // las dos recorren tests/Fixtures/precios-articulos.json. Todo es informativo:
@@ -52,6 +53,32 @@
         return objetoImp === '02' ? 1 + tasaIva : 1;
     }
 
+    // Espejo de CalculadoraPrecioArticulo::precioFijoSinIva().
+    function precioFijoSinIva(precioFijo, factorIva) {
+        const objetivo = Math.round(sinRuido(precioFijo * 100));
+        const centavos = Math.floor(sinRuido(objetivo / factorIva));
+
+        for (const candidato of [centavos, centavos + 1]) {
+            if (Math.round(redondeo2(candidato / 100 * factorIva) * 100) >= objetivo) {
+                return candidato / 100;
+            }
+        }
+
+        return (centavos + 2) / 100;
+    }
+
+    // Espejo de CalculadoraPrecioArticulo::utilidadPorcentajeEquivalente(); null sin costo.
+    function utilidadPorcentajeEquivalente(precioVentaSinIva, costo) {
+        if (costo <= 0) {
+            return null;
+        }
+
+        const porcentaje = (precioVentaSinIva / costo - 1) * 100;
+        const redondeado = redondeo2(Math.abs(porcentaje));
+
+        return porcentaje < 0 && redondeado > 0 ? -redondeado : redondeado;
+    }
+
     function utilidad(precioVentaSinIva, costo) {
         return redondeo2(precioVentaSinIva - costo);
     }
@@ -75,6 +102,8 @@
         utilidad: utilidad,
         precioConIva: precioConIva,
         redondearAPesoEntero: redondearAPesoEntero,
+        precioFijoSinIva: precioFijoSinIva,
+        utilidadPorcentajeEquivalente: utilidadPorcentajeEquivalente,
         factorIva: factorIva,
         porcentajeAlto: porcentajeAlto,
     };
@@ -102,6 +131,11 @@
     // renglón que el resumen no trae se salta (el del distribuidor no repite
     // lista ni descuento). data-herencia dice qué utilidad del catálogo se
     // hereda con el campo vacío: "utilidad" o "utilidad_distribuidor".
+    //
+    // Con data-fijo (037), el radio data-modo en "fijo" cambia la utilidad por el
+    // precio escrito en ese campo: el renglón de utilidad muestra lo que deja ese
+    // precio y su porcentaje equivalente, y no hay redondeo. También maneja los
+    // avisos data-aviso-costo y data-aviso-centavo y la etiqueta del campo.
     document.querySelectorAll('dl[data-resumen-precio]').forEach(function (resumen) {
         const precio = document.getElementById(resumen.dataset.precio);
         const utilidadCampo = document.getElementById(resumen.dataset.utilidad);
@@ -109,6 +143,11 @@
         const objeto = document.getElementById(resumen.dataset.objeto);
         const tasaIva = parseFloat(resumen.dataset.tasaIva);
         const herencia = resumen.dataset.herencia || 'utilidad';
+        const fijoCampo = resumen.dataset.fijo ? document.getElementById(resumen.dataset.fijo) : null;
+        const radiosModo = resumen.dataset.modo ? document.querySelectorAll('input[name="' + resumen.dataset.modo + '"]') : [];
+        const avisoCosto = resumen.dataset.avisoCosto ? document.getElementById(resumen.dataset.avisoCosto) : null;
+        const avisoCentavo = resumen.dataset.avisoCentavo ? document.getElementById(resumen.dataset.avisoCentavo) : null;
+        const etiquetaFijo = fijoCampo ? document.querySelector('label[for="' + fijoCampo.id + '"]') : null;
         let catalogos;
 
         try {
@@ -145,8 +184,24 @@
             }
         }
 
+        function enModoFijo() {
+            return fijoCampo !== null && Array.prototype.some.call(radiosModo, function (radio) {
+                return radio.checked && radio.value === 'fijo';
+            });
+        }
+
+        function texto(destino, selector, valor) {
+            const nodo = destino.querySelector(selector);
+
+            if (nodo) {
+                nodo.textContent = valor;
+            }
+        }
+
         function actualizar() {
             const datos = catalogos[catalogo.value];
+            const fijo = enModoFijo();
+            const precioFijo = fijo ? parseFloat(fijoCampo.value) : NaN;
             const lista = parseFloat(precio.value);
 
             const heredada = datos ? Number(datos[herencia]) : NaN;
@@ -163,14 +218,28 @@
             ocultar('iva', factor === 1);
             ocultar('venta-con-iva', factor === 1);
 
+            if (etiquetaFijo) {
+                etiquetaFijo.textContent = factor === 1 ? 'Precio fijo' : 'Precio fijo con IVA';
+            }
+
+            if (avisoCosto) {
+                avisoCosto.hidden = true;
+            }
+
+            if (avisoCentavo) {
+                avisoCentavo.hidden = true;
+            }
+
             if (sufijo) {
                 sufijo.hidden = factor === 1;
             }
 
             mostrarPorcentaje('descuento', datos ? porcentajeTexto(datos.descuento) : '—');
-            mostrarPorcentaje('utilidad', Number.isFinite(porcentaje) ? porcentajeTexto(porcentaje) : '—');
+            mostrarPorcentaje('utilidad', !fijo && Number.isFinite(porcentaje) ? porcentajeTexto(porcentaje) : '—');
 
-            if (!datos || !Number.isFinite(lista) || lista <= 0 || !Number.isFinite(porcentaje)) {
+            const sinPrecio = fijo ? !(Number.isFinite(precioFijo) && precioFijo > 0) : !Number.isFinite(porcentaje);
+
+            if (!datos || !Number.isFinite(lista) || lista <= 0 || sinPrecio) {
                 ['lista', 'descuento', 'costo', 'utilidad', 'venta', 'iva', 'venta-con-iva', 'redondeo', 'final'].forEach(function (nombre) {
                     mostrar(nombre, '—');
                 });
@@ -180,15 +249,33 @@
             }
 
             const costo = costoConDescuento(lista, datos.descuento);
-            const venta = precioVentaSinIva(costo, porcentaje);
+            const venta = fijo ? precioFijoSinIva(precioFijo, factor) : precioVentaSinIva(costo, porcentaje);
             const conIva = precioConIva(venta, factor === 1 ? 0 : tasaIva);
-            const final = redondeo2(redondearAPesoEntero(venta, factor) * factor);
+            const final = fijo ? conIva : redondeo2(redondearAPesoEntero(venta, factor) * factor);
             const redondeo = redondeo2(final - conIva);
+            const ganancia = utilidad(venta, costo);
+
+            if (fijo) {
+                const equivalente = utilidadPorcentajeEquivalente(venta, costo);
+
+                mostrarPorcentaje('utilidad', equivalente === null ? '—' : porcentajeTexto(equivalente));
+
+                if (avisoCosto && venta < costo) {
+                    texto(avisoCosto, '[data-monto]', formato.format(redondeo2(costo - venta)));
+                    avisoCosto.hidden = false;
+                }
+
+                if (avisoCentavo && final !== redondeo2(precioFijo)) {
+                    texto(avisoCentavo, '[data-capturado]', formato.format(precioFijo));
+                    texto(avisoCentavo, '[data-final]', formato.format(final));
+                    avisoCentavo.hidden = false;
+                }
+            }
 
             mostrar('lista', formato.format(lista));
             mostrar('descuento', '−' + formato.format(redondeo2(lista - costo)));
             mostrar('costo', formato.format(costo));
-            mostrar('utilidad', '+' + formato.format(utilidad(venta, costo)));
+            mostrar('utilidad', (ganancia < 0 ? '−' : '+') + formato.format(Math.abs(ganancia)));
             mostrar('venta', formato.format(venta));
             mostrar('iva', '+' + formato.format(redondeo2(conIva - venta)));
             mostrar('venta-con-iva', formato.format(conIva));
@@ -199,6 +286,14 @@
 
         precio.addEventListener('input', actualizar);
         utilidadCampo.addEventListener('input', actualizar);
+
+        if (fijoCampo) {
+            fijoCampo.addEventListener('input', actualizar);
+        }
+
+        radiosModo.forEach(function (radio) {
+            radio.addEventListener('change', actualizar);
+        });
         catalogo.addEventListener('change', actualizar);
 
         if (objeto) {
@@ -207,6 +302,29 @@
 
         actualizar();
     });
+
+    // Modo del precio de venta (037): muestra solo el bloque [data-bloque-modo] del
+    // radio elegido. Los campos ocultos se siguen enviando.
+    const radiosModoPrecio = document.querySelectorAll('input[name="modo_precio"]');
+
+    if (radiosModoPrecio.length > 0) {
+        const bloques = document.querySelectorAll('[data-bloque-modo]');
+
+        const aplicarModo = function () {
+            const elegido = Array.prototype.find.call(radiosModoPrecio, function (radio) {
+                return radio.checked;
+            });
+
+            bloques.forEach(function (bloque) {
+                bloque.hidden = !elegido || bloque.dataset.bloqueModo !== elegido.value;
+            });
+        };
+
+        radiosModoPrecio.forEach(function (radio) {
+            radio.addEventListener('change', aplicarModo);
+        });
+        aplicarModo();
+    }
 
     // Aviso no bloqueante: <input data-aviso-utilidad="id-del-aviso" data-umbral="400">.
     document.querySelectorAll('input[data-aviso-utilidad]').forEach(function (campo) {

@@ -222,6 +222,10 @@ class ArticuloController extends Controller
      * La cadena distribuidor parte del mismo costo con su propia utilidad, así
      * que no repite los renglones de precio de lista y descuento.
      *
+     * Con precio fijo (037) el precio de venta es el guardado y la utilidad
+     * es la que deja (en pesos y su porcentaje equivalente, que puede ser
+     * negativo); no hay redondeo.
+     *
      * @return list<array{clave: string, etiqueta: string, valor: string, porcentaje?: string, total?: bool, oculto?: bool, sufijoIva?: bool}>
      */
     private function resumenPrecio(?Articulo $articulo, bool $distribuidor = false): array
@@ -231,7 +235,19 @@ class ArticuloController extends Controller
         $lista = (float) $articulo?->precio_proveedor;
         $utilidad = $distribuidor ? $articulo?->utilidad_distribuidor_porcentaje_efectivo : $articulo?->utilidad_porcentaje_efectivo;
         $tasaIva = CalculadoraPrecioArticulo::tasaIva($articulo ? $articulo->objeto_imp : ObjetoImpuesto::SiObjeto);
-        $venta = $articulo ? CalculadoraPrecioArticulo::precioVentaSinIva($costo, $utilidad) : 0.0;
+        $fijo = ! $distribuidor && $articulo?->tiene_precio_fijo;
+        $venta = match (true) {
+            $fijo => (float) $articulo->precio_unitario_sin_iva,
+            $articulo !== null => CalculadoraPrecioArticulo::precioVentaSinIva($costo, $utilidad),
+            default => 0.0,
+        };
+        $ganancia = CalculadoraPrecioArticulo::utilidad($venta, $costo);
+        $equivalente = $fijo ? $articulo->utilidad_porcentaje_equivalente : null;
+        $porcentaje = match (true) {
+            ! $articulo, $fijo && $equivalente === null => '—',
+            $fijo => Catalogo::porcentajeTexto($equivalente),
+            default => Catalogo::porcentajeTexto($utilidad),
+        };
         $conIva = CalculadoraPrecioArticulo::precioConIva($venta, $tasaIva);
         $final = (float) ($distribuidor ? $articulo?->precio_distribuidor_con_iva : $articulo?->precio_unitario_con_iva);
         $redondeo = CalculadoraPrecioArticulo::redondeo2($final - $conIva);
@@ -244,8 +260,8 @@ class ArticuloController extends Controller
                     'valor' => $pesos(CalculadoraPrecioArticulo::redondeo2($lista - $costo), '−')],
             ]),
             ['clave' => 'costo', 'etiqueta' => 'Costo', 'valor' => $pesos($costo), 'total' => true],
-            ['clave' => 'utilidad', 'etiqueta' => $distribuidor ? 'Utilidad distribuidor' : 'Utilidad', 'porcentaje' => $articulo ? Catalogo::porcentajeTexto($utilidad) : '—',
-                'valor' => $pesos(CalculadoraPrecioArticulo::utilidad($venta, $costo), '+')],
+            ['clave' => 'utilidad', 'etiqueta' => $distribuidor ? 'Utilidad distribuidor' : 'Utilidad', 'porcentaje' => $porcentaje,
+                'valor' => $ganancia < 0 ? $pesos(-$ganancia, '−') : $pesos($ganancia, '+')],
             ['clave' => 'venta', 'etiqueta' => "{$precio} sin IVA", 'valor' => $pesos($venta)],
             ['clave' => 'iva', 'etiqueta' => 'IVA ('.Articulo::TASA_IVA * 100 .'%)',
                 'valor' => $pesos(CalculadoraPrecioArticulo::redondeo2($conIva - $venta), '+'), 'oculto' => $tasaIva === 0.0],
@@ -268,6 +284,7 @@ class ArticuloController extends Controller
 
         return [
             'articulo' => $articulo,
+            'modoPrecio' => old('modo_precio', $articulo?->tiene_precio_fijo ? 'fijo' : 'utilidad'),
             'catalogos' => $catalogos->pluck('etiqueta', 'id')->all(),
             'preciosCatalogo' => $catalogos->mapWithKeys(fn (Catalogo $catalogo) => [$catalogo->id => [
                 'descuento' => (float) $catalogo->descuento,
