@@ -156,6 +156,17 @@ class Factura extends Model
     }
 
     /**
+     * El reembolso que pidió su cancelación, la dejó vigente o la tenía al
+     * reembolsarse la venta (038).
+     *
+     * @return HasOne<Reembolso, $this>
+     */
+    public function reembolso(): HasOne
+    {
+        return $this->hasOne(Reembolso::class);
+    }
+
+    /**
      * @return BelongsTo<Factura, $this>
      */
     public function sustituta(): BelongsTo

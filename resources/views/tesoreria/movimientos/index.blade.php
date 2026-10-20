@@ -74,7 +74,9 @@
                         <td @class(['numero', 'monto-positivo' => $movimiento->sumaAlSaldo(), 'monto-negativo' => ! $movimiento->sumaAlSaldo()])>{{ $conSigno($movimiento->monto) }}</td>
                         <td class="numero">
                             @if ($origen !== null && $origen['muestra_utilidad'])
-                                @if ($origen['utilidad'] === null)
+                                @if ($origen['reembolsada'])
+                                    <span class="texto-discreto" title="La venta se reembolsó; su utilidad ya no cuenta." data-utilidad-reembolsada>Reembolsada</span>
+                                @elseif ($origen['utilidad'] === null)
                                     <span class="texto-discreto" title="La cotización no tiene costo capturado en sus líneas.">— No disponible</span>
                                 @else
                                     <span @class(['monto-positivo' => (float) $origen['utilidad'] >= 0, 'monto-negativo' => (float) $origen['utilidad'] < 0])>{{ ((float) $origen['utilidad'] < 0 ? '−' : '').$pesos($origen['utilidad']) }}</span>

@@ -3140,6 +3140,26 @@ a.bandeja-abrir {
     background: var(--color-neutro);
 }
 
+/* Reembolso (038): venta, cotización y orden de trabajo en estado final */
+.etiqueta-pedido-reembolsado,
+.etiqueta-reembolsada,
+.etiqueta-orden-cancelada {
+    color: var(--color-error);
+    background: var(--color-error-fondo);
+}
+
+.reembolso-factura {
+    margin: var(--espacio-3) 0;
+    padding: var(--espacio-3);
+    border: 1px solid var(--color-borde);
+    border-radius: var(--radio);
+}
+
+.reembolso-factura legend {
+    padding: 0 var(--espacio-1);
+    font-weight: 600;
+}
+
 /* El cliente intentó autofacturarse y no pudo */
 .senal-autofactura {
     margin-left: var(--espacio-1);

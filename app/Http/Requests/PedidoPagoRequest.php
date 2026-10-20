@@ -79,6 +79,10 @@ class PedidoPagoRequest extends FormRequest
             return "Los pagos se registran en la cotización {$pedido->cotizacion->folio_formateado}.";
         }
 
+        if ($pedido->estaReembolsado()) {
+            return 'La venta se reembolsó: ya no recibe pagos.';
+        }
+
         if (! $pedido->puedeRegistrarPago()) {
             return 'El pedido ya está pagado por completo.';
         }

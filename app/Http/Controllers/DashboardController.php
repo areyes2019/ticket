@@ -46,11 +46,12 @@ class DashboardController extends Controller
             ->limit(self::RECIENTES)
             ->get();
 
-        // Todas menos las entregadas, que salen de la lista (022, corrección
-        // 1); ?ot= todavía las abre. La venta y sus líneas, para el folio, el
-        // cliente y "Falta color" sin una consulta por fila.
+        // Todas menos las entregadas (022, corrección 1) y las canceladas por
+        // un reembolso (038), que salen de la lista; ?ot= todavía las abre. La
+        // venta y sus líneas, para el folio, el cliente y "Falta color" sin una
+        // consulta por fila.
         $ordenesTrabajo = $user->ordenesTrabajo()
-            ->where('estado', '!=', EstadoOrdenTrabajo::Entregado->value)
+            ->whereNotIn('estado', [EstadoOrdenTrabajo::Entregado->value, EstadoOrdenTrabajo::Cancelada->value])
             ->with(['pedido.lineas.articulo.catalogo', 'lineas'])
             ->orderByDesc('created_at')
             ->orderByDesc('id')

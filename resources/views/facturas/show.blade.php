@@ -116,6 +116,9 @@
             @if ($factura->duplicadaDe)
                 <div><dt>Duplicada de</dt><dd><a href="{{ route('facturas.show', $factura->duplicadaDe) }}">{{ $factura->duplicadaDe->folioVisible() }}</a></dd></div>
             @endif
+            @if ($factura->reembolso && $factura->reembolso->factura_decision === App\Enums\DecisionFacturaReembolso::Cancelar && $factura->estado === App\Enums\EstadoFactura::Cancelada)
+                <div data-cancelada-por-reembolso><dt>Cancelación</dt><dd>Cancelada por el reembolso de la <a href="{{ $factura->reembolso->urlDocumento() }}">{{ $factura->reembolso->etiquetaDocumento() }}</a></dd></div>
+            @endif
             @if ($factura->motivo_cancelacion)
                 <div><dt>Motivo de cancelación</dt><dd>{{ $factura->motivo_cancelacion->value }} – {{ $factura->motivo_cancelacion->descripcion() }}</dd></div>
                 @if ($factura->sustituta)
@@ -238,6 +241,9 @@
         <dialog id="dialogo-cancelar" class="ficha dialogo" aria-labelledby="dialogo-cancelar-titulo" @if ($errors->cancelacion->any()) data-abrir-al-cargar @endif>
             <form method="POST" action="{{ route('facturas.cancelar', $factura) }}" data-formulario-cancelacion>
                 @csrf
+                @if (is_string(request('regresar_a', old('regresar_a'))))
+                    <input type="hidden" name="regresar_a" value="{{ request('regresar_a', old('regresar_a')) }}">
+                @endif
                 <h2 id="dialogo-cancelar-titulo">Cancelar factura {{ $factura->folioVisible() }}</h2>
                 <p>La cancelación se solicita al SAT por medio de facturapi.io. Puede requerir la aceptación del receptor.</p>
                 <x-campo nombre="motivo_cancelacion" etiqueta="Motivo" tipo="select" :opciones="$motivosCancelacion" vacia="Selecciona el motivo" required data-motivo-cancelacion />

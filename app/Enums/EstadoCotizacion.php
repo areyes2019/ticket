@@ -9,6 +9,7 @@ enum EstadoCotizacion: string
     case Aceptada = 'aceptada';
     case Pagada = 'pagada';
     case ProductoEntregado = 'producto_entregado';
+    case Reembolsada = 'reembolsada';
 
     public function etiqueta(): string
     {
@@ -18,6 +19,7 @@ enum EstadoCotizacion: string
             self::Aceptada => 'Aceptada',
             self::Pagada => 'Pagada',
             self::ProductoEntregado => 'Entregada',
+            self::Reembolsada => 'Reembolsada',
         };
     }
 

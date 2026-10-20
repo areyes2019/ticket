@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\EstadoOrdenTrabajo;
 use App\Enums\EstadoPedido;
 use App\Models\Pedido;
 use App\Models\User;
@@ -29,6 +30,7 @@ class PedidoPolicy
         return match (true) {
             $pedido->esEditable() => Response::allow(),
             $pedido->cobraEnCotizacion() => Response::deny("Los artículos se corrigen en la cotización {$pedido->cotizacion->folio_formateado}."),
+            $pedido->estaReembolsado() => Response::deny('Una venta reembolsada ya no se edita.'),
             $pedido->estado === EstadoPedido::Pagado => Response::deny('Un pedido pagado ya no se edita: el ticket ya salió con esas líneas.'),
             default => Response::deny('Un pedido entregado ya no se edita.'),
         };
@@ -55,6 +57,15 @@ class PedidoPolicy
      * acción la revisa su controlador.
      */
     public function operar(User $user, Pedido $pedido): Response
+    {
+        return $this->esDueno($user, $pedido);
+    }
+
+    /**
+     * Reembolso (038): las reglas de negocio las revisa el Reembolsador, con
+     * la venta bloqueada.
+     */
+    public function reembolsar(User $user, Pedido $pedido): Response
     {
         return $this->esDueno($user, $pedido);
     }
@@ -99,7 +110,9 @@ class PedidoPolicy
 
         return $pedido->ordenTrabajo->esEditable()
             ? Response::allow()
-            : Response::deny('La venta ya se entregó: la orden queda solo para consulta.');
+            : Response::deny($pedido->ordenTrabajo->estado === EstadoOrdenTrabajo::Cancelada
+                ? 'La venta se reembolsó: la orden queda solo para consulta.'
+                : 'La venta ya se entregó: la orden queda solo para consulta.');
     }
 
     private function esDueno(User $user, Pedido $pedido): Response

@@ -80,6 +80,10 @@ class PedidoPagoController extends Controller
                 return back()->with('error', "Los pagos se registran en la cotización {$bloqueado->cotizacion->folio_formateado}.");
             }
 
+            if ($bloqueado->estaReembolsado()) {
+                return back()->with('error', 'Los pagos de una venta reembolsada no se eliminan: el reembolso ya los devolvió.');
+            }
+
             if (! $bloqueado->puedeEliminarPago()) {
                 return back()->with('error', 'El pedido ya tiene factura timbrada: sus pagos no se eliminan.');
             }

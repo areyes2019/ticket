@@ -119,7 +119,7 @@ class PedidoController extends Controller
     {
         Gate::authorize('view', $pedido);
 
-        $pedido->load(['lineas', 'pagos.cuenta', 'facturaVigente', 'cotizacion.facturaVigente', 'cotizacion.pagos.cuenta', 'cliente', 'ordenTrabajo']);
+        $pedido->load(['lineas', 'pagos.cuenta', 'facturaVigente', 'cotizacion.facturaVigente', 'cotizacion.pagos.cuenta', 'cliente', 'ordenTrabajo', 'reembolso.user', 'reembolso.movimientos.cuenta', 'reembolso.factura']);
 
         $motivoAutofactura = $pedido->motivoAutofacturaNoDisponible();
 

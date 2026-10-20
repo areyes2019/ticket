@@ -8,6 +8,7 @@ use App\Enums\EstadoFactura;
 use App\Enums\TipoDescuento;
 use App\Enums\TipoPago;
 use App\Models\Concerns\CalculaUtilidadVenta;
+use App\Models\Concerns\SeReembolsa;
 use App\Services\Documentos\CalculadoraTotalesDocumento;
 use Carbon\CarbonImmutable;
 use Database\Factories\CotizacionFactory;
@@ -59,9 +60,10 @@ use Illuminate\Support\Facades\Storage;
 class Cotizacion extends Model
 {
     use CalculaUtilidadVenta;
-
     /** @use HasFactory<CotizacionFactory> */
     use HasFactory;
+
+    use SeReembolsa;
 
     /**
      * Str::plural no conoce el español: inferiría "cotizacions".
@@ -510,6 +512,7 @@ class Cotizacion extends Model
             $venta = $this->estaAceptada() ? $this->venta : null;
 
             return match (true) {
+                $this->estaReembolsado() => 'La cotización se reembolsó: ya no recibe pagos.',
                 CalculadoraTotalesDocumento::centavos($this->saldoPendiente()) <= 0 => 'La cotización ya está pagada por completo.',
                 $venta !== null && $venta->estaEntregado() => "La venta {$venta->folio_formateado} ya se entregó.",
                 $venta !== null => "Los pagos se registran en su venta {$venta->folio_formateado}.",
@@ -534,6 +537,38 @@ class Cotizacion extends Model
     public function estaAceptada(): bool
     {
         return $this->estado === EstadoCotizacion::Aceptada;
+    }
+
+    public function estaReembolsado(): bool
+    {
+        return $this->estado === EstadoCotizacion::Reembolsada;
+    }
+
+    /**
+     * Solo la cotización sin venta se reembolsa desde aquí; la que tiene
+     * venta se reembolsa desde la venta y queda reembolsada con ella (038).
+     */
+    public function motivoNoReembolsable(): ?string
+    {
+        return match (true) {
+            $this->estaReembolsado() => 'Esta cotización ya se reembolsó.',
+            $this->venta !== null => "Para reembolsar, entra a la venta {$this->venta->folio_formateado}.",
+            ! $this->tienePagos() => 'La cotización no tiene pagos: no hay nada que reembolsar.',
+            default => null,
+        };
+    }
+
+    /**
+     * @return Collection<int, CotizacionPago>
+     */
+    public function pagosParaReembolso(): Collection
+    {
+        return collect($this->pagos->all());
+    }
+
+    public function facturaParaReembolso(): ?Factura
+    {
+        return $this->facturaVigente;
     }
 
     /**

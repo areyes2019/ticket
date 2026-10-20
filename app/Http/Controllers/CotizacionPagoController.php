@@ -149,6 +149,10 @@ class CotizacionPagoController extends Controller
                 return back()->with('error', 'Los pagos de una cotización entregada no se eliminan.');
             }
 
+            if ($bloqueada->estaReembolsado()) {
+                return back()->with('error', 'Los pagos de una cotización reembolsada no se eliminan: el reembolso ya los devolvió.');
+            }
+
             $venta = $this->ventaBloqueada($bloqueada);
             $motivoVenta = $venta === null ? null : $this->motivoNoEliminaPagoDeVenta($venta);
 

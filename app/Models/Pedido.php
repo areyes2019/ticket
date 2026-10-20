@@ -7,6 +7,7 @@ use App\Enums\EstadoOrdenTrabajo;
 use App\Enums\EstadoPedido;
 use App\Enums\TipoDescuento;
 use App\Models\Concerns\CalculaUtilidadVenta;
+use App\Models\Concerns\SeReembolsa;
 use App\Services\Documentos\CalculadoraTotalesDocumento;
 use Carbon\CarbonImmutable;
 use Database\Factories\PedidoFactory;
@@ -48,9 +49,10 @@ use Illuminate\Support\Str;
 class Pedido extends Model
 {
     use CalculaUtilidadVenta;
-
     /** @use HasFactory<PedidoFactory> */
     use HasFactory;
+
+    use SeReembolsa;
 
     protected $table = 'pedidos';
 
@@ -226,6 +228,7 @@ class Pedido extends Model
     {
         return match (true) {
             $this->ordenTrabajo !== null => 'Ya tiene orden de trabajo.',
+            $this->estaReembolsado() => 'La venta se reembolsó.',
             $this->estaEntregado() => 'La venta ya se entregó.',
             ! $this->tienePagos() => 'Registra un pago antes de crear la orden de trabajo.',
             default => null,
@@ -314,15 +317,16 @@ class Pedido extends Model
      */
     public function puedeRegistrarPago(): bool
     {
-        return ! $this->cobraEnCotizacion() && $this->tieneSaldo();
+        return ! $this->cobraEnCotizacion() && ! $this->estaReembolsado() && $this->tieneSaldo();
     }
 
     /**
-     * Un CFDI PUE ya dice que el pedido se pagó.
+     * Un CFDI PUE ya dice que el pedido se pagó. Los pagos de una venta
+     * reembolsada son su historia: el reembolso ya los devolvió.
      */
     public function puedeEliminarPago(): bool
     {
-        return ! $this->cobraEnCotizacion() && $this->facturaTimbrada() === null;
+        return ! $this->cobraEnCotizacion() && ! $this->estaReembolsado() && $this->facturaTimbrada() === null;
     }
 
     /**
@@ -331,12 +335,52 @@ class Pedido extends Model
      */
     public function puedeCompartirTicket(): bool
     {
-        return $this->tienePagos();
+        return $this->tienePagos() && ! $this->estaReembolsado();
     }
 
     public function estaEntregado(): bool
     {
         return $this->estado === EstadoPedido::Entregado;
+    }
+
+    public function estaReembolsado(): bool
+    {
+        return $this->estado === EstadoPedido::Reembolsado;
+    }
+
+    public function motivoNoReembolsable(): ?string
+    {
+        return match (true) {
+            $this->estaReembolsado() => 'Esta venta ya se reembolsó.',
+            $this->pagosParaReembolso()->isEmpty() => 'La venta no tiene pagos: no hay nada que reembolsar.',
+            default => null,
+        };
+    }
+
+    /**
+     * Los suyos y los de su cotización: en una venta que cobra en la
+     * cotización (029) solo existen los segundos; en una aceptada antes de
+     * 029 pueden existir los dos.
+     *
+     * @return Collection<int, PedidoPago|CotizacionPago>
+     */
+    public function pagosParaReembolso(): Collection
+    {
+        $pagos = collect($this->pagos->all());
+
+        if ($this->esDeCotizacion() && $this->cotizacion !== null) {
+            $pagos = $pagos->concat($this->cotizacion->pagos->all());
+        }
+
+        return $pagos->values();
+    }
+
+    /**
+     * Una sola factura entre la venta y su cotización (021).
+     */
+    public function facturaParaReembolso(): ?Factura
+    {
+        return $this->facturaVigente ?? $this->facturaDeLaCotizacion();
     }
 
     /**
@@ -363,12 +407,12 @@ class Pedido extends Model
 
     /**
      * Deriva pendiente/anticipo/pagado de la suma de pagos (no guarda). Nunca
-     * toca un pedido entregado. Al llegar a pagado nace el token de
+     * toca un pedido entregado ni uno reembolsado. Al llegar a pagado nace el token de
      * autofactura, y se conserva aunque después baje el saldo.
      */
     public function recalcularEstado(): void
     {
-        if ($this->estaEntregado()) {
+        if ($this->estaEntregado() || $this->estaReembolsado()) {
             return;
         }
 
@@ -396,6 +440,7 @@ class Pedido extends Model
     public function motivoNoEntrega(): ?string
     {
         return match (true) {
+            $this->estaReembolsado() => 'La venta se reembolsó.',
             $this->estaEntregado() => 'La venta ya se entregó.',
             $this->ordenTrabajo !== null && $this->ordenTrabajo->estado !== EstadoOrdenTrabajo::Terminado => 'La orden de trabajo todavía no está terminada.',
             default => null,
@@ -451,6 +496,10 @@ class Pedido extends Model
      */
     public function motivoAutofacturaNoDisponible(): ?string
     {
+        if ($this->estaReembolsado()) {
+            return 'Esta venta se reembolsó.';
+        }
+
         if ($this->facturaTimbrada() !== null || $this->facturaDeLaCotizacion() !== null) {
             return 'Esta venta ya se facturó.';
         }

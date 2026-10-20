@@ -116,6 +116,10 @@
                 </form>
             @endif
 
+            @if ($cotizacion->puedeReembolsarse())
+                <x-boton href="#dialogo-reembolso" variante="peligro" icono="arrow-counterclockwise" data-abrir-dialogo>Reembolsar</x-boton>
+            @endif
+
             <x-boton href="#dialogo-duplicar" variante="secundario" icono="copy" data-abrir-dialogo>Duplicar</x-boton>
 
             <x-boton :href="route('cotizaciones.pdf', $cotizacion)" variante="secundario" icono="file-earmark-pdf" target="_blank">Ver PDF</x-boton>
@@ -131,6 +135,14 @@
         </div>
 
         <div class="detalle-principal">
+            @if ($cotizacion->reembolso)
+                @include('reembolsos._resumen', ['reembolso' => $cotizacion->reembolso])
+            @elseif ($venta && $cotizacion->estaReembolsado())
+                <p class="ayuda" data-reembolsada-con-venta>Se reembolsó con su venta <a href="{{ route('pedidos.show', $venta) }}">{{ $venta->folio_formateado }}</a>.</p>
+            @elseif ($venta && $cotizacion->tienePagos())
+                <p class="ayuda" data-reembolso-en-venta>Para reembolsar, entra a la venta <a href="{{ route('pedidos.show', $venta) }}">{{ $venta->folio_formateado }}</a>.</p>
+            @endif
+
             <x-cotizaciones.hoja :cotizacion="$cotizacion" />
 
             <p class="ayuda">Último movimiento: {{ $cotizacion->updated_at->setTimezone($zona)->format('d/m/Y H:i') }}</p>
@@ -157,7 +169,7 @@
                                     <td>{{ $pago->cuenta->nombre }}</td>
                                     <td class="numero">{{ $pesos($pago->monto) }}</td>
                                     <td>
-                                        @if ($pago->is($ultimoPago) && $cotizacion->estado !== App\Enums\EstadoCotizacion::ProductoEntregado && ! $ventaEntregada)
+                                        @if ($pago->is($ultimoPago) && $cotizacion->estado !== App\Enums\EstadoCotizacion::ProductoEntregado && ! $cotizacion->estaReembolsado() && ! $ventaEntregada)
                                             <form method="POST" action="{{ route('cotizaciones.pagos.destroy', [$cotizacion, $pago]) }}">
                                                 @csrf
                                                 @method('DELETE')
@@ -202,6 +214,10 @@
     ])
 
     @include('cotizaciones._dialogos-pago')
+
+    @if ($cotizacion->puedeReembolsarse())
+        @include('reembolsos._dialogo', ['documento' => $cotizacion, 'accion' => route('cotizaciones.reembolso', $cotizacion)])
+    @endif
 @endsection
 
 @push('scripts')

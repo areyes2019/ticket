@@ -30,6 +30,10 @@
     @if ($puedePagar)
         <x-boton href="#dialogo-liquidar" variante="secundario" icono="cash-stack" :descripcion="$tieneAnticipo ? 'Registrar saldo' : 'Pago total'" :title="$tieneAnticipo ? 'Registrar saldo' : 'Pago total'" data-abrir-dialogo />
     @endif
+    @if ($cotizacion->puedeReembolsarse())
+        {{-- La ventana vive en el detalle: el enlace la abre con :target. --}}
+        <x-boton :href="route('cotizaciones.show', $cotizacion).'#dialogo-reembolso'" variante="secundario" icono="arrow-counterclockwise" descripcion="Reembolsar" title="Reembolsar" />
+    @endif
     <x-boton href="#dialogo-duplicar" variante="secundario" icono="copy" descripcion="Duplicar" title="Duplicar" data-abrir-dialogo />
     <x-boton :href="route('cotizaciones.pdf', $cotizacion)" variante="secundario" icono="file-earmark-pdf" descripcion="Ver PDF" title="Ver PDF" target="_blank" />
     <x-boton :href="route('cotizaciones.pdf', [$cotizacion, 'descargar' => 1])" variante="secundario" icono="download" descripcion="Descargar" title="Descargar" />

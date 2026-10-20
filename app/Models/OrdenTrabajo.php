@@ -112,11 +112,12 @@ class OrdenTrabajo extends Model
     }
 
     /**
-     * Hasta que la venta se entrega; después queda solo para consulta.
+     * Hasta que la venta se entrega; después queda solo para consulta. La
+     * cancelada (reembolso, 038) también.
      */
     public function esEditable(): bool
     {
-        return ! $this->pedido->estaEntregado();
+        return $this->estado !== EstadoOrdenTrabajo::Cancelada && ! $this->pedido->estaEntregado();
     }
 
     public function puedeAvanzar(): bool
@@ -130,6 +131,7 @@ class OrdenTrabajo extends Model
 
         return match (true) {
             $this->estado === EstadoOrdenTrabajo::Entregado => 'La orden ya se entregó.',
+            $this->estado === EstadoOrdenTrabajo::Cancelada => 'La orden se canceló: la venta se reembolsó.',
             $this->estado === EstadoOrdenTrabajo::Terminado => 'La orden ya está terminada: usa «Entregado».',
             ! $this->esEditable() => 'La venta ya se entregó.',
             $sinColor->isNotEmpty() => 'Falta el color de tinta de: '.$sinColor->pluck('descripcion')->join(', ').'.',

@@ -113,7 +113,7 @@ class CotizacionController extends Controller
     {
         Gate::authorize('view', $cotizacion);
 
-        $cotizacion->load(['cliente', 'lineas.articulo', 'pagos.cuenta', 'facturaVigente', 'duplicadaDe', 'venta.facturaVigente', 'venta.ordenTrabajo']);
+        $cotizacion->load(['cliente', 'lineas.articulo', 'pagos.cuenta', 'facturaVigente', 'duplicadaDe', 'venta.facturaVigente', 'venta.ordenTrabajo', 'reembolso.user', 'reembolso.movimientos.cuenta', 'reembolso.factura']);
 
         return view('cotizaciones.show', [
             ...self::datosAcciones($cotizacion),

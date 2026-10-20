@@ -120,14 +120,7 @@ class RegistradorInventario
      */
     public function revertirDocumento(Model $documento, MotivoMovimientoInventario $motivo): void
     {
-        $netos = MovimientoInventario::whereMorphedTo('documentable', $documento)
-            ->whereIn('tipo', [TipoMovimientoInventario::Salida, TipoMovimientoInventario::Entrada])
-            ->get()
-            ->groupBy('articulo_id')
-            ->map(fn ($movimientos) => $movimientos->sum(
-                fn (MovimientoInventario $movimiento) => $movimiento->tipo === TipoMovimientoInventario::Salida ? $movimiento->cantidad : -$movimiento->cantidad
-            ))
-            ->filter(fn (int $neto) => $neto > 0);
+        $netos = MovimientoInventario::netosSalidos($documento);
 
         $this->entradaPorDocumento(
             $documento,

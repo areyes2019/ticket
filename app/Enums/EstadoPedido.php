@@ -4,7 +4,8 @@ namespace App\Enums;
 
 /**
  * pendiente, anticipo y pagado se derivan solos de la suma de los pagos
- * (Pedido::recalcularEstado()); entregado solo lo escribe la entrega.
+ * (Pedido::recalcularEstado()); entregado solo lo escribe la entrega y
+ * reembolsado, el reembolso (038), que es final.
  */
 enum EstadoPedido: string
 {
@@ -12,6 +13,7 @@ enum EstadoPedido: string
     case Anticipo = 'anticipo';
     case Pagado = 'pagado';
     case Entregado = 'entregado';
+    case Reembolsado = 'reembolsado';
 
     public function etiqueta(): string
     {
@@ -20,6 +22,7 @@ enum EstadoPedido: string
             self::Anticipo => 'Anticipo',
             self::Pagado => 'Pagado',
             self::Entregado => 'Entregado',
+            self::Reembolsado => 'Reembolsado',
         };
     }
 

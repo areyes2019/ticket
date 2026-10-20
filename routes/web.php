@@ -40,6 +40,7 @@ use App\Http\Controllers\PedidoController;
 use App\Http\Controllers\PedidoEntregaController;
 use App\Http\Controllers\PedidoPagoController;
 use App\Http\Controllers\ProveedorController;
+use App\Http\Controllers\ReembolsoController;
 use App\Http\Controllers\SaldoController;
 use App\Http\Controllers\TransferenciaController;
 use App\Http\Middleware\AsegurarUsuarioActivo;
@@ -143,6 +144,7 @@ Route::middleware(['auth', AsegurarUsuarioActivo::class, CandadoMostrador::class
     Route::delete('cotizaciones/{cotizacion}/pagos/{pago}', [CotizacionPagoController::class, 'destroy'])
         ->scopeBindings()
         ->name('cotizaciones.pagos.destroy');
+    Route::post('cotizaciones/{cotizacion}/reembolso', [ReembolsoController::class, 'cotizacion'])->name('cotizaciones.reembolso');
 
     // parameters(): sin él, Str::singular daría {cotizacione}.
     Route::resource('cotizaciones', CotizacionController::class)
@@ -186,6 +188,7 @@ Route::middleware(['auth', AsegurarUsuarioActivo::class, CandadoMostrador::class
     Route::delete('pedidos/{pedido}/pagos/{pago}', [PedidoPagoController::class, 'destroy'])
         ->scopeBindings()
         ->name('pedidos.pagos.destroy');
+    Route::post('pedidos/{pedido}/reembolso', [ReembolsoController::class, 'pedido'])->name('pedidos.reembolso');
 
     // Orden de trabajo de la venta (022): una por venta, así que cuelga del pedido sin id propio.
     Route::get('pedidos/produccion', HojaProduccionController::class)->name('pedidos.produccion');

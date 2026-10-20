@@ -31,6 +31,25 @@ enum MotivoCancelacion: string
     }
 
     /**
+     * Los que ofrece el reembolso de una venta (038): sin el 01, que exige una
+     * factura sustituta y no aplica cuando se devuelve el dinero.
+     *
+     * @return list<self>
+     */
+    public static function paraReembolso(): array
+    {
+        return [self::ErroresSinRelacion, self::NoSeLlevoACabo, self::FacturaGlobal];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function opcionesParaReembolso(): array
+    {
+        return collect(self::paraReembolso())->mapWithKeys(fn (self $motivo) => [$motivo->value => $motivo->value.' – '.$motivo->descripcion()])->all();
+    }
+
+    /**
      * @return array<string, string>
      */
     public static function opciones(): array

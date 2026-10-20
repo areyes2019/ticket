@@ -8,6 +8,7 @@ use App\Models\Factura;
 use App\Models\OrdenCompra;
 use App\Models\Pedido;
 use App\Models\PedidoPago;
+use App\Models\Reembolso;
 use App\Models\User;
 use App\Services\Documentos\LogoDocumento;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -52,6 +53,7 @@ class AppServiceProvider extends ServiceProvider
             'cotizacion' => Cotizacion::class,
             'pedido' => Pedido::class,
             'pedido_pago' => PedidoPago::class,
+            'reembolso' => Reembolso::class,
         ]);
 
         // Portal público de autofacturación (019): lo puede llamar cualquiera.

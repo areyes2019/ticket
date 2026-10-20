@@ -5,7 +5,8 @@ namespace App\Enums;
 /**
  * Solo hacia adelante y sin regreso (022): en dibujo → en proceso → terminado
  * con "avanzar". Entregado no se alcanza avanzando: es la entrega de la venta
- * (022, corrección 1), y deshacerla regresa a terminado.
+ * (022, corrección 1), y deshacerla regresa a terminado. Cancelada la deja
+ * el reembolso de la venta (038) y es final.
  */
 enum EstadoOrdenTrabajo: string
 {
@@ -13,6 +14,7 @@ enum EstadoOrdenTrabajo: string
     case EnProceso = 'en_proceso';
     case Terminado = 'terminado';
     case Entregado = 'entregado';
+    case Cancelada = 'cancelada';
 
     public function etiqueta(): string
     {
@@ -21,6 +23,7 @@ enum EstadoOrdenTrabajo: string
             self::EnProceso => 'En proceso',
             self::Terminado => 'Terminado',
             self::Entregado => 'Entregado',
+            self::Cancelada => 'Cancelada',
         };
     }
 
@@ -34,14 +37,14 @@ enum EstadoOrdenTrabajo: string
 
     /**
      * El estado al que lleva "avanzar"; null en terminado (lo que sigue es
-     * entregar la venta) y en entregado.
+     * entregar la venta), en entregado y en cancelada.
      */
     public function siguiente(): ?self
     {
         return match ($this) {
             self::EnDibujo => self::EnProceso,
             self::EnProceso => self::Terminado,
-            self::Terminado, self::Entregado => null,
+            self::Terminado, self::Entregado, self::Cancelada => null,
         };
     }
 

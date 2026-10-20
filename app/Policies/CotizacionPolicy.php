@@ -78,6 +78,15 @@ class CotizacionPolicy
         };
     }
 
+    /**
+     * Reembolso de una cotización sin venta (038): las reglas de negocio las
+     * revisa el Reembolsador, con la cotización bloqueada.
+     */
+    public function reembolsar(User $user, Cotizacion $cotizacion): Response
+    {
+        return $this->esDueno($user, $cotizacion);
+    }
+
     private function esDueno(User $user, Cotizacion $cotizacion): Response
     {
         return $cotizacion->user_id === $user->id

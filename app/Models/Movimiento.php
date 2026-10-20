@@ -92,9 +92,10 @@ class Movimiento extends Model
      * manuales. Los módulos que se enganchen a Tesorería agregan su caso aquí.
      *
      * muestra_utilidad dice si la columna de utilidad aplica: un egreso no tiene
-     * utilidad de venta.
+     * utilidad de venta. reembolsada marca el ingreso de un documento que se
+     * reembolsó (038): su utilidad ya no cuenta.
      *
-     * @return array{etiqueta: string, url: string, utilidad: string|null, utilidad_parcial: bool, muestra_utilidad: bool}|null
+     * @return array{etiqueta: string, url: string, utilidad: string|null, utilidad_parcial: bool, muestra_utilidad: bool, reembolsada: bool}|null
      */
     public function documentoOrigen(): ?array
     {
@@ -110,6 +111,7 @@ class Movimiento extends Model
                 'utilidad' => $utilidad['utilidad'],
                 'utilidad_parcial' => $utilidad['parcial'],
                 'muestra_utilidad' => true,
+                'reembolsada' => $cotizacion->estaReembolsado(),
             ];
         }
 
@@ -123,6 +125,18 @@ class Movimiento extends Model
                 'utilidad' => $utilidad['utilidad'],
                 'utilidad_parcial' => $utilidad['parcial'],
                 'muestra_utilidad' => true,
+                'reembolsada' => $pedido->estaReembolsado(),
+            ];
+        }
+
+        if ($documento instanceof Reembolso) {
+            return [
+                'etiqueta' => $documento->reembolsable->folio_formateado,
+                'url' => $documento->urlDocumento(),
+                'utilidad' => null,
+                'utilidad_parcial' => false,
+                'muestra_utilidad' => false,
+                'reembolsada' => false,
             ];
         }
 
@@ -133,6 +147,7 @@ class Movimiento extends Model
                 'utilidad' => null,
                 'utilidad_parcial' => false,
                 'muestra_utilidad' => false,
+                'reembolsada' => false,
             ];
         }
 

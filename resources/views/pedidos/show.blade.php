@@ -87,6 +87,10 @@
 
             @include('pedidos._entregar', ['origen' => 'venta'])
 
+            @if ($pedido->puedeReembolsarse())
+                <x-boton href="#dialogo-reembolso" variante="peligro" icono="arrow-counterclockwise" data-abrir-dialogo>Reembolsar</x-boton>
+            @endif
+
             @can('update', $pedido)
                 <x-boton :href="route('pedidos.edit', $pedido)" variante="secundario" icono="pencil">Editar</x-boton>
             @endcan
@@ -101,6 +105,10 @@
         </div>
 
         <div class="detalle-principal">
+            @if ($pedido->reembolso)
+                @include('reembolsos._resumen', ['reembolso' => $pedido->reembolso])
+            @endif
+
             @if ($pedido->ordenTrabajo)
                 <p class="ayuda" data-orden-trabajo>Orden de trabajo: <span @class(['etiqueta', $pedido->ordenTrabajo->estado->claseEtiqueta()])>{{ $pedido->ordenTrabajo->estado->etiqueta() }}</span> <a href="{{ route('pedidos.orden-trabajo.show', $pedido) }}">Ver orden</a></p>
             @endif
@@ -109,7 +117,7 @@
                 <p class="ayuda" data-origen-cotizacion>Origen: cotización <a href="{{ route('cotizaciones.show', $pedido->cotizacion) }}">{{ $pedido->cotizacion->folio_formateado }}</a> aceptada.</p>
             @endif
 
-            @if ($cobraEnCotizacion)
+            @if ($cobraEnCotizacion && ! $pedido->estaReembolsado())
                 <x-alerta tipo="info" data-cobra-en-cotizacion>
                     Los pagos se registran en la cotización
                     <a href="{{ route('cotizaciones.show', $pedido->cotizacion) }}">{{ $pedido->cotizacion->folio_formateado }}</a>,
@@ -244,6 +252,10 @@
             </x-card>
         </div>
     </div>
+
+    @if ($pedido->puedeReembolsarse())
+        @include('reembolsos._dialogo', ['documento' => $pedido, 'accion' => route('pedidos.reembolso', $pedido)])
+    @endif
 
     @if ($pedido->puedeRegistrarPago())
         <dialog id="dialogo-pago" class="ficha dialogo" aria-labelledby="dialogo-pago-titulo" @if ($errors->pago->any()) data-abrir-al-cargar @endif>

@@ -244,7 +244,7 @@ class FacturaController extends Controller
 
         $sinConsulta = $factura->cancelacionEnCurso() && ! $cancelador->refrescar($factura);
 
-        $factura->load(['cliente', 'lineas', 'complementoPago', 'sustituta', 'cotizacion', 'pedido', 'duplicadaDe']);
+        $factura->load(['cliente', 'lineas', 'complementoPago', 'sustituta', 'cotizacion', 'pedido', 'duplicadaDe', 'reembolso.reembolsable']);
 
         return view('facturas.show', [
             'factura' => $factura,
@@ -328,9 +328,24 @@ class FacturaController extends Controller
             return back()->withInput()->withErrors(['motivo_cancelacion' => 'facturapi.io no canceló la factura: '.$error->getMessage()], 'cancelacion');
         }
 
-        return redirect()->route('facturas.show', $factura)->with('exito', $estado === EstadoCancelacion::Aceptada
+        $regreso = $this->regresoInterno($request->input('regresar_a')) ?? route('facturas.show', $factura);
+
+        return redirect($regreso)->with('exito', $estado === EstadoCancelacion::Aceptada
             ? 'Factura cancelada.'
             : 'Cancelación en proceso: el receptor o el SAT deben confirmarla. El estado se actualiza al volver a abrir la factura.');
+    }
+
+    /**
+     * "Volver a cancelar factura" desde una venta reembolsada (038) regresa a
+     * la venta. Solo rutas internas: nunca otro sitio.
+     */
+    private function regresoInterno(mixed $ruta): ?string
+    {
+        if (! is_string($ruta) || ! str_starts_with($ruta, '/') || str_starts_with($ruta, '//') || str_contains($ruta, '\\')) {
+            return null;
+        }
+
+        return url($ruta);
     }
 
     /**
