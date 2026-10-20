@@ -13,6 +13,9 @@
  *
  * 2. Avisa sin conexión. Las navegaciones van SIEMPRE a la red; si la red
  *    falla, responde el aviso sin-conexion.html guardado al instalarse.
+ *    La petición la hace el navegador con la precarga de navegación, en
+ *    paralelo con el arranque de este archivo: sin ella, cada pantalla
+ *    esperaba al service worker y llegó a tardar 20-30 s en abrir.
  *
  * Nunca guarda una respuesta del sistema: ni páginas, ni PDF, ni tickets, ni
  * tarjetas. Cada pantalla la pinta el servidor en cada visita, así que no hay
@@ -38,6 +41,10 @@ self.addEventListener('activate', (event) => {
         const nombres = await caches.keys();
         await Promise.all(nombres.filter((nombre) => nombre !== CACHE).map((nombre) => caches.delete(nombre)));
 
+        if (self.registration.navigationPreload) {
+            await self.registration.navigationPreload.enable();
+        }
+
         await self.clients.claim();
     })());
 });
@@ -55,5 +62,11 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    event.respondWith(fetch(peticion).catch(() => caches.match('/sin-conexion.html')));
+    event.respondWith((async () => {
+        try {
+            return (await event.preloadResponse) || await fetch(peticion);
+        } catch (error) {
+            return caches.match('/sin-conexion.html');
+        }
+    })());
 });
