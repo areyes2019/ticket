@@ -3,9 +3,10 @@
 // Los enlaces del nombre llevan data-ficha y los datos en data-nombre,
 // data-modelo, data-precio, data-precio-distribuidor, data-etiqueta-precio
 // ("Precio con IVA" o "Precio", según el objeto de impuesto) y data-imagen
-// (URL o vacío); data-clonar es la dirección del formulario "Clonar". Hay un botón de compartir por precio
-// (data-ficha-compartir="precio" o "distribuidor"): lo compartido lleva solo
-// el precio de su botón. Se usa
+// (URL o vacío); data-clonar es la dirección del formulario "Clonar". "Copiar"
+// (data-ficha-copiar-imagen) copia con html2canvas el recuadro de la foto con el
+// precio al público y el nombre; data-ficha-compartir="distribuidor" comparte
+// el precio distribuidor como texto. Se usa
 // delegación porque busqueda-dinamica.js reemplaza las filas. Sin JavaScript,
 // el enlace lleva a la edición del artículo.
 (function () {
@@ -29,6 +30,10 @@
     const aviso = ficha.querySelector('[data-ficha-aviso]');
     const respaldo = ficha.querySelector('[data-ficha-copiar]');
     const campoTexto = respaldo.querySelector('input');
+    const captura = ficha.querySelector('[data-ficha-captura]');
+    const capturaPrecio = ficha.querySelector('[data-ficha-captura-precio]');
+    const capturaNombre = ficha.querySelector('[data-ficha-captura-nombre]');
+    const botonCopiar = ficha.querySelector('[data-ficha-copiar-imagen]');
     let actual = null;
 
     function abrir(enlace) {
@@ -46,6 +51,8 @@
         // "Producción (por su catálogo)" o "Suministro (por su catálogo)" (029).
         tipo.textContent = enlace.dataset.tipo || '';
         precio.textContent = actual.precio;
+        capturaPrecio.textContent = actual.precio;
+        capturaNombre.textContent = actual.nombre;
         etiquetaPrecio.textContent = etiqueta;
         precioDistribuidor.textContent = actual.precioDistribuidor;
         // "Precio con IVA" → "Precio distribuidor con IVA"; "Precio" → "Precio distribuidor".
@@ -129,6 +136,73 @@
                 copiar(cual);
             });
     }
+
+    // El recuadro (foto, precio al público y nombre) como PNG sobre blanco puro.
+    function capturaEnPng() {
+        const listo = imagen.hidden || (imagen.complete && imagen.naturalWidth > 0)
+            ? Promise.resolve()
+            : new Promise(function (resolver) {
+                imagen.addEventListener('load', resolver, { once: true });
+                imagen.addEventListener('error', resolver, { once: true });
+            });
+
+        return listo
+            .then(function () {
+                return window.html2canvas(captura, { backgroundColor: '#ffffff', scale: 2, useCORS: true, logging: false });
+            })
+            .then(function (lienzo) {
+                return new Promise(function (resolver, rechazar) {
+                    lienzo.toBlob(function (blob) {
+                        blob ? resolver(blob) : rechazar(new Error('Sin imagen'));
+                    }, 'image/png');
+                });
+            });
+    }
+
+    function descargar(blob) {
+        const url = URL.createObjectURL(blob);
+        const enlace = document.createElement('a');
+        enlace.href = url;
+        enlace.download = (actual.modelo || 'articulo').replace(/[\\/:*?"<>|]+/g, '-') + '.png';
+        document.body.appendChild(enlace);
+        enlace.click();
+        enlace.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    }
+
+    // Copia el recuadro como imagen; si el navegador no deja escribir imágenes
+    // en el portapapeles (sitio sin HTTPS, Firefox antiguo), la descarga.
+    function copiarImagen() {
+        if (typeof window.html2canvas !== 'function') {
+            aviso.textContent = 'No se pudo copiar la imagen.';
+            return;
+        }
+
+        botonCopiar.disabled = true;
+        aviso.textContent = 'Copiando…';
+
+        const png = capturaEnPng();
+        const alDescargar = function (blob) {
+            descargar(blob);
+            aviso.textContent = 'Tu navegador no deja copiar imágenes; se descargó.';
+        };
+        let copiado;
+
+        if (window.isSecureContext && navigator.clipboard && typeof navigator.clipboard.write === 'function' && typeof window.ClipboardItem === 'function') {
+            // Safari exige crear el ClipboardItem dentro del clic, con la imagen como promesa.
+            copiado = navigator.clipboard.write([new ClipboardItem({ 'image/png': png })])
+                .then(function () { aviso.textContent = 'Copiado. Pégalo en el chat.'; })
+                .catch(function () { return png.then(alDescargar); });
+        } else {
+            copiado = png.then(alDescargar);
+        }
+
+        copiado
+            .catch(function () { aviso.textContent = 'No se pudo copiar la imagen.'; })
+            .finally(function () { botonCopiar.disabled = false; });
+    }
+
+    botonCopiar.addEventListener('click', copiarImagen);
 
     document.addEventListener('click', function (evento) {
         const enlace = evento.target.closest('a[data-ficha]');

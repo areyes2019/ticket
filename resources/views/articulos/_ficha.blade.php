@@ -3,10 +3,15 @@
     <div class="ficha-cuerpo">
         {{-- Los botones van bajo la foto. --}}
         <div class="ficha-columna">
-            {{-- El marcador ocupa el mismo espacio que la foto, para que la ficha no cambie de tamaño. --}}
-            <div class="ficha-foto">
-                <img alt="" data-ficha-imagen hidden>
-                <p class="ficha-sin-imagen" data-ficha-sin-imagen><x-icono nombre="image" />Sin imagen</p>
+            {{-- Lo que copia el botón "Copiar" como imagen (html2canvas): foto, precio al público y nombre, sobre blanco. --}}
+            <div class="ficha-captura" data-ficha-captura>
+                {{-- El marcador ocupa el mismo espacio que la foto, para que la ficha no cambie de tamaño. --}}
+                <div class="ficha-foto">
+                    <img alt="" data-ficha-imagen hidden>
+                    <p class="ficha-sin-imagen" data-ficha-sin-imagen><x-icono nombre="image" />Sin imagen</p>
+                </div>
+                <p class="ficha-captura-precio" data-ficha-captura-precio></p>
+                <p class="ficha-captura-nombre" data-ficha-captura-nombre></p>
             </div>
 
             <form method="dialog" class="acciones ficha-pie">
@@ -14,8 +19,8 @@
                 {{-- Envía el formulario de abajo (no se anidan formularios); ficha-articulo.js le pone la dirección. --}}
                 <x-boton variante="secundario" icono="copy" form="ficha-clonar" data-enviar-una-vez>Clonar</x-boton>
                 <x-boton variante="secundario" icono="x-lg">Cerrar</x-boton>
-                {{-- Uno por precio: lo compartido lleva solo el precio de su botón. --}}
-                <x-boton tipo="button" icono="share" data-ficha-compartir="precio">Compartir precio</x-boton>
+                {{-- Copia el recuadro de arriba como imagen; el distribuidor se comparte como texto. --}}
+                <x-boton tipo="button" icono="clipboard" data-ficha-copiar-imagen>Copiar</x-boton>
                 <x-boton tipo="button" variante="secundario" icono="share" data-ficha-compartir="distribuidor">Compartir precio distribuidor</x-boton>
             </form>
 

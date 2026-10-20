@@ -1182,6 +1182,33 @@ h1.tarjeta-titulo {
     border: 1px solid var(--color-borde);
 }
 
+/* Recuadro que se copia como imagen: siempre blanco puro, también en tema oscuro. */
+.ficha-captura {
+    padding-bottom: var(--espacio-3);
+    text-align: center;
+    background: #fff;
+}
+
+.ficha-captura .ficha-foto {
+    background: #fff;
+    border: 0;
+}
+
+.ficha-captura-precio {
+    margin: var(--espacio-3) 0 0;
+    color: #dc2626;
+    font-size: 2.5rem;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.ficha-captura-nombre {
+    margin: var(--espacio-2) var(--espacio-3) 0;
+    color: #000;
+    font-size: 1.1rem;
+    overflow-wrap: anywhere;
+}
+
 .ficha-foto img {
     max-width: 100%;
     max-height: 100%;
