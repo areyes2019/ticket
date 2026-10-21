@@ -442,6 +442,43 @@ a > .icono,
     color: var(--color-texto-invertido);
 }
 
+/* Contador de ventas del día (039): icono con burbuja, estilo notificación. En
+   0 la burbuja va apagada; con ventas, en el color de la insignia. */
+.ventas-hoy {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    margin-right: var(--espacio-2);
+    font-size: 1.25rem;
+    line-height: 1;
+    color: var(--color-menu);
+    cursor: default;
+}
+
+.ventas-hoy > .icono {
+    margin-right: 0;
+}
+
+.ventas-hoy-numero {
+    position: absolute;
+    top: -0.45rem;
+    right: -0.75rem;
+    min-width: 1.15rem;
+    padding: 0.1rem 0.25rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    color: var(--color-texto-invertido);
+    background: var(--color-insignia);
+    box-shadow: 0 0 0 2px var(--color-marca);
+}
+
+.ventas-hoy-cero .ventas-hoy-numero {
+    color: var(--color-texto);
+    background: var(--color-neutro-oscuro);
+}
+
 /* "Instalar aplicación" es para el celular y la tableta; en escritorio no sale
    aunque el navegador ofrezca instalar. */
 @media (min-width: 1024px) {

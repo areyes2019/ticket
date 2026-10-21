@@ -22,6 +22,7 @@
 
         <nav class="menu">
             @auth
+                <x-ventas-hoy />
                 @if (request()->routeIs('dashboard'))
                     {{-- Lo muestra pwa.js solo cuando el navegador ofrece instalar (033). --}}
                     <x-boton tipo="button" variante="secundario" icono="phone" class="barra-instalar-app" hidden data-instalar-app>Instalar aplicación</x-boton>
