@@ -3,9 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Enums\EstadoOrdenTrabajo;
-use App\Models\Cotizacion;
-use App\Models\Factura;
-use App\Models\OrdenTrabajo;
 use App\Support\Demo\BandejaCorreoDemo;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -13,38 +10,19 @@ use Illuminate\View\View;
 class DashboardController extends Controller
 {
     /**
-     * Cuántos documentos recientes muestra cada lista del inicio.
+     * Cuántas órdenes recientes muestra la lista del inicio.
      */
     public const RECIENTES = 25;
 
     /**
-     * Inicio: cotizaciones y facturas recientes (en acordeón) y órdenes de
-     * trabajo recientes, con la vista previa del documento pedido en la URL
-     * (?cotizacion=, ?factura= u ?ot=) o, si no hay, de la primera cotización,
-     * y la ventana para crear una cotización ahí mismo.
+     * Inicio: órdenes de trabajo recientes, con la vista previa de la orden
+     * pedida en la URL (?ot=) o, si no hay, de la más reciente.
      * Además, la bandeja de correo de demostración (013),
      * que se abre desde el menú de aplicaciones.
      */
     public function __invoke(Request $request, BandejaCorreoDemo $bandeja): View
     {
         $user = $request->user();
-
-        $cotizaciones = $user->cotizaciones()
-            ->with('cliente')
-            ->withCount('pagos')
-            ->withSum('pagos', 'monto')
-            ->withExists('facturaVigente')
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
-            ->limit(self::RECIENTES)
-            ->get();
-
-        $facturas = $user->facturas()
-            ->with('cliente')
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
-            ->limit(self::RECIENTES)
-            ->get();
 
         // Todas menos las entregadas (022, corrección 1) y las canceladas por
         // un reembolso (038), que salen de la lista; ?ot= todavía las abre. La
@@ -58,37 +36,14 @@ class DashboardController extends Controller
             ->limit(self::RECIENTES)
             ->get();
 
-        // Un id ajeno o inexistente se ignora, como en la bandeja de cotizaciones.
-        $abierta = match (true) {
-            $request->filled('factura') => $user->facturas()->find($request->integer('factura')),
-            $request->filled('cotizacion') => $user->cotizaciones()->find($request->integer('cotizacion')),
-            $request->filled('ot') => $user->ordenesTrabajo()->find($request->integer('ot')),
-            default => null,
-        } ?? $cotizaciones->first() ?? $facturas->first() ?? $ordenesTrabajo->first();
-
-        $datosVisor = match (true) {
-            $abierta instanceof Cotizacion => [
-                ...CotizacionController::datosAcciones($abierta),
-                'cotizacion' => $abierta->load(['cliente', 'lineas', 'pagos', 'facturaVigente', 'venta.facturaVigente']),
-            ],
-            $abierta instanceof Factura => ['factura' => $abierta->load(['cliente', 'lineas'])],
-            $abierta instanceof OrdenTrabajo => OrdenTrabajoController::datosVistaPrevia($abierta->pedido),
-            default => [],
-        };
+        // Un id ajeno o inexistente se ignora.
+        $abierta = ($request->filled('ot') ? $user->ordenesTrabajo()->find($request->integer('ot')) : null)
+            ?? $ordenesTrabajo->first();
 
         return view('dashboard', [
-            'cotizaciones' => $cotizaciones,
-            'facturas' => $facturas,
             'ordenesTrabajo' => $ordenesTrabajo,
             'abierta' => $abierta,
-            // La sección Facturas del acordeón empieza cerrada, salvo que la
-            // abierta sea una factura.
-            'facturasAbiertas' => $abierta instanceof Factura,
-            'datosVisor' => $datosVisor,
-            // La ventana "Nueva cotización"; tras un error de validación vuelve
-            // abierta con lo capturado.
-            'nuevaCotizacion' => CotizacionController::datosFormulario($request),
-            'abrirNuevaCotizacion' => $request->old('origen') === 'dashboard',
+            'datosVisor' => $abierta ? OrdenTrabajoController::datosVistaPrevia($abierta->pedido) : [],
             'carpetas' => $bandeja->carpetas(),
             'etiquetas' => $bandeja->etiquetas(),
             'correos' => $bandeja->correos(),

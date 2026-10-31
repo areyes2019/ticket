@@ -97,10 +97,8 @@ class CotizacionController extends Controller
             return $cotizacion;
         });
 
-        // Desde la ventana del dashboard, la nueva queda abierta en su visor;
-        // desde el mostrador (033), en su pantalla de envío.
+        // Desde el mostrador (033), la nueva queda en su pantalla de envío.
         $destino = match ($request->input('origen')) {
-            'dashboard' => route('dashboard', ['cotizacion' => $cotizacion->id]),
             'mostrador' => route('mostrador.cotizaciones.ver', $cotizacion),
             default => route('cotizaciones.show', $cotizacion),
         };

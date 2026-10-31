@@ -251,12 +251,6 @@ describe('pantallas de la cotización', function () {
             ->assertSee(e(json_encode(['cliente_id' => $this->cliente->id, 'nombre' => 'FERRETERIA LOPEZ', 'porcentaje' => '15'])), false);
     });
 
-    it('la ventana del dashboard también trae el aviso', function () {
-        $this->actingAs($this->user)->get('/dashboard')
-            ->assertOk()
-            ->assertSee('data-aviso-descuento-cliente', false);
-    });
-
     it('factura y orden de compra no precargan descuento', function () {
         $this->actingAs($this->user)->get('/facturas/crear')->assertOk()->assertDontSee('data-aviso-descuento-cliente', false);
         $this->actingAs($this->user)->get('/ordenes-compra/crear')->assertOk()->assertDontSee('data-aviso-descuento-cliente', false);

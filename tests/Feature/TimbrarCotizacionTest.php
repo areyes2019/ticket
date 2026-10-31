@@ -200,11 +200,11 @@ describe('botón y ventana', function () {
         }
     });
 
-    it('el dashboard y la bandeja cargan el script y los avisos del timbrado', function (string $ruta) {
-        $this->actingAs($this->user)->get($ruta)
+    it('la bandeja carga el script y los avisos del timbrado', function () {
+        $this->actingAs($this->user)->get('/cotizaciones')
             ->assertSee(asset('js/timbrar-cotizacion.js'), false)
             ->assertSee('data-timbrado-aviso-exito', false);
-    })->with(['/dashboard', '/cotizaciones']);
+    });
 
     it('el detalle de la cotización sigue llevando al formulario de factura', function () {
         $this->actingAs($this->user)->get(route('cotizaciones.show', $this->cotizacion))

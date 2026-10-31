@@ -2576,11 +2576,10 @@ a.bandeja-abrir {
     }
 }
 
-/* Inicio del dashboard: "Documentos" (cotizaciones y facturas en acordeón),
-   órdenes de trabajo y un solo visor. Tableta: las dos columnas, una sobre
-   otra, junto al visor. Celular: apiladas y el visor a pantalla completa. */
+/* Inicio del dashboard: órdenes de trabajo y su visor. Celular: la lista y
+   el visor a pantalla completa. */
 .bandeja-dashboard {
-    grid-template-columns: var(--ancho-bandeja-lista) var(--ancho-bandeja-lista) minmax(0, 1fr);
+    grid-template-columns: var(--ancho-bandeja-lista) minmax(0, 1fr);
 }
 
 .bandeja-lista-titulo {
@@ -2602,22 +2601,6 @@ a.bandeja-abrir {
     padding-top: var(--espacio-2);
 }
 
-@media (max-width: 1023px) {
-    .bandeja-dashboard {
-        grid-template-columns: var(--ancho-bandeja-lista) minmax(0, 1fr);
-        grid-template-rows: repeat(2, minmax(0, 1fr));
-    }
-
-    .bandeja-dashboard .bandeja-visor {
-        grid-column: 2;
-        grid-row: 1 / span 2;
-    }
-
-    .bandeja-lista-ordenes {
-        border-top: 1px solid var(--color-borde);
-    }
-}
-
 @media (max-width: 767px) {
     .bandeja-dashboard {
         grid-template-columns: minmax(0, 1fr);
@@ -2625,62 +2608,6 @@ a.bandeja-abrir {
 
     .bandeja-dashboard .bandeja-visor {
         grid-column: 1;
-    }
-}
-
-/* Acordeón "Documentos": cada sección es un <details>. La columna hace scroll
-   si las dos están abiertas y no caben; entonces cada lista tiene además su
-   propio scroll, para que una no empuje a la otra fuera de la pantalla. */
-.bandeja-lista-documentos {
-    overflow-y: auto;
-}
-
-.bandeja-seccion {
-    border-bottom: 1px solid var(--color-borde);
-}
-
-.bandeja-seccion > summary {
-    padding-bottom: var(--espacio-3);
-    list-style: none;
-    cursor: pointer;
-    user-select: none;
-}
-
-.bandeja-seccion[open] > summary {
-    padding-bottom: 0;
-}
-
-.bandeja-seccion > summary::-webkit-details-marker {
-    display: none;
-}
-
-.bandeja-seccion > summary:hover {
-    background: var(--color-superficie-suave);
-}
-
-.bandeja-seccion-flecha {
-    font-size: 0.75em;
-    color: var(--color-texto-suave);
-    transition: transform 0.2s ease;
-}
-
-.bandeja-seccion[open] .bandeja-seccion-flecha {
-    transform: rotate(90deg);
-}
-
-.bandeja-seccion-cuenta {
-    font-size: var(--texto-pequeno);
-    font-weight: 400;
-    color: var(--color-texto-suave);
-}
-
-.bandeja-lista-documentos:has(.bandeja-seccion[open] ~ .bandeja-seccion[open]) .bandeja-filas {
-    max-height: 40vh;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .bandeja-seccion-flecha {
-        transition: none;
     }
 }
 

@@ -311,10 +311,6 @@ describe('documentos', function () {
             ->assertSee('alerta alerta-info" hidden', false);
     });
 
-    it('la ventana del dashboard también activa el precio distribuidor', function () {
-        $this->actingAs($this->user)->get('/dashboard')->assertSee('data-aviso-distribuidor', false);
-    });
-
     it('la factura desde cero activa el precio distribuidor', function () {
         $this->actingAs($this->user)->get('/facturas/crear')
             ->assertOk()
