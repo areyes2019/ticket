@@ -1,6 +1,5 @@
-// Bandeja de documentos: cotizaciones (spec 014), órdenes de compra (017) y el
-// dashboard, con cotizaciones, facturas y órdenes de trabajo en varias listas
-// y un solo visor (020).
+// Bandeja de documentos: cotizaciones (spec 014), facturas, órdenes de compra
+// (017) y las órdenes de trabajo del dashboard (020).
 //
 // Filtrar, buscar y paginar lo hace busqueda-dinamica.js. Este script muestra
 // en el visor el documento elegido sin recargar: pide su vista previa en HTML

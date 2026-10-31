@@ -454,44 +454,77 @@ describe('listado', function () {
             ->assertDontSee($ajena->cliente->razon_social);
     });
 
-    it('filtra por folio interno, folio fiscal, UUID y estado', function (array $filtro, bool $coincide) {
+    it('busca por folio interno, folio fiscal y UUID, y filtra por estado', function (array $filtro, bool $coincide) {
         $factura = Factura::factory()->for($this->cliente)->timbrada()->conLinea()->create([
             'user_id' => $this->user->id,
             'facturapi_folio' => 57,
             'uuid_fiscal' => 'ABCDEF12-0000-0000-0000-000000000000',
         ]);
 
-        $respuesta = $this->actingAs($this->user)->get('/facturas?'.http_build_query($filtro))->assertOk();
+        $respuesta = $this->actingAs($this->user)->get('/facturas/buscar?'.http_build_query($filtro), cabecerasAjax())->assertOk();
 
-        $coincide ? $respuesta->assertSee($factura->folio_formateado) : $respuesta->assertDontSee($factura->folio_formateado);
+        $coincide ? $respuesta->assertSee('data-factura="'.$factura->id.'"', false) : $respuesta->assertDontSee('data-factura="'.$factura->id.'"', false);
     })->with([
-        [['folio' => 'FAC-0001'], true],
-        [['folio' => '1'], true],
-        [['folio' => 'A57'], true],
-        [['folio' => 'B57'], false],
-        [['uuid' => 'abcdef12'], true],
-        [['uuid' => '99999'], false],
+        [['q' => 'FAC-0001'], true],
+        [['q' => '1'], true],
+        [['q' => 'A57'], true],
+        [['q' => 'B57'], false],
+        [['q' => 'abcdef12'], true],
+        [['q' => '99999'], false],
         [['estado' => 'timbrada'], true],
         [['estado' => 'pendiente'], false],
     ]);
 
+    it('es una bandeja con carpetas, etiquetas y la primera factura en el visor', function () {
+        $anterior = Factura::factory()->for($this->cliente)->conLinea()->create(['user_id' => $this->user->id]);
+        $reciente = Factura::factory()->for($this->cliente)->timbrada()->conLinea()->create(['user_id' => $this->user->id]);
+
+        $this->actingAs($this->user)->get('/facturas')
+            ->assertOk()
+            ->assertSee('data-bandeja-documentos data-parametro="factura"', false)
+            ->assertSeeInOrder(['Hoy', 'Esta semana', 'Este mes', 'Todas', 'Etiquetas', 'Borrador', 'Pendiente de timbrar', 'Timbrada', 'Cancelada'])
+            ->assertSee('Nueva factura')
+            ->assertSee(route('facturas.vista-previa', $anterior), false)
+            ->assertSee('data-vista-previa-de="'.$reciente->id.'" data-documento="factura"', false);
+
+        $this->actingAs($this->user)->get('/facturas?factura='.$anterior->id)
+            ->assertSee('data-vista-previa-de="'.$anterior->id.'" data-documento="factura"', false);
+
+        $ajena = Factura::factory()->conLinea()->create();
+
+        $this->actingAs($this->user)->get('/facturas?factura='.$ajena->id)
+            ->assertSee('data-vista-previa-de="'.$reciente->id.'" data-documento="factura"', false);
+    });
+
+    it('la carpeta "Este mes" deja fuera las facturas anteriores; "Todas" las muestra', function () {
+        $vieja = Factura::factory()->for($this->cliente)->conLinea()->create(['user_id' => $this->user->id, 'created_at' => now()->subMonths(2)]);
+
+        $this->actingAs($this->user)->get('/facturas')
+            ->assertDontSee('data-factura="'.$vieja->id.'"', false)
+            ->assertSee('Sin facturas');
+
+        $this->actingAs($this->user)->get('/facturas?periodo=todas')
+            ->assertSee('data-factura="'.$vieja->id.'"', false);
+    });
+
     it('devuelve el fragmento para la búsqueda dinámica', function () {
         Factura::factory()->for($this->cliente)->conLinea()->create(['user_id' => $this->user->id]);
 
-        $this->actingAs($this->user)->get('/facturas/buscar?cliente='.urlencode($this->cliente->razon_social), cabecerasAjax())
+        $this->actingAs($this->user)->get('/facturas/buscar?q='.urlencode($this->cliente->razon_social), cabecerasAjax())
             ->assertOk()
             ->assertSee('facturas-filas', false)
+            ->assertSee('bandeja-carpetas', false)
             ->assertDontSee('<html', false);
     });
 
-    it('pinta el botón de compartir solo en facturas con documento fiscal', function () {
-        Factura::factory()->for($this->cliente)->conLinea()->create(['user_id' => $this->user->id]);
+    it('ofrece compartir el PDF solo en facturas con documento fiscal', function () {
+        $borrador = Factura::factory()->for($this->cliente)->conLinea()->create(['user_id' => $this->user->id]);
 
-        $this->actingAs($this->user)->get('/facturas')->assertDontSee('data-compartir-pdf', false);
+        $this->actingAs($this->user)->get(route('facturas.vista-previa', $borrador))->assertDontSee('data-compartir-pdf', false);
 
-        Factura::factory()->for($this->cliente)->timbrada()->conLinea()->create(['user_id' => $this->user->id]);
+        $timbrada = Factura::factory()->for($this->cliente)->timbrada()->conLinea()->create(['user_id' => $this->user->id]);
 
-        $this->actingAs($this->user)->get('/facturas')
+        $this->actingAs($this->user)->get(route('facturas.vista-previa', $timbrada))
             ->assertSee('data-compartir-pdf', false)
             ->assertSee('data-precargar="al-apuntar"', false);
     });

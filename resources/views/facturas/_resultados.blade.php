@@ -1,6 +1,4 @@
-{{-- Respuesta de la búsqueda dinámica: el <table> solo sirve para que el navegador interprete el <tbody>. --}}
-<table>
-    @include('facturas._filas')
-</table>
-
+{{-- Respuesta de la búsqueda dinámica: cada pieza reemplaza a la de la página con el mismo id. --}}
+@include('facturas._carpetas')
+@include('facturas._filas')
 @include('facturas._paginacion')

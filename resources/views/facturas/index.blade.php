@@ -1,59 +1,42 @@
 @extends('layouts.app')
 
 @section('title', 'Facturas · '.config('app.name'))
-@section('contenido-clase', 'contenido-ancho')
+@section('contenido-clase', 'contenido-bandeja')
 
 @section('content')
-    <div class="encabezado">
-        <h1>Facturas</h1>
-        <div class="acciones">
-            {{-- Sin JavaScript lleva a la página de cotizaciones por facturar; con él abre la ventana. --}}
-            <x-boton :href="route('facturas.cotizaciones')" variante="secundario" icono="file-earmark-arrow-down" data-abrir-elegir-cotizacion>Desde cotización</x-boton>
-            <x-boton :href="route('facturas.create')" icono="plus-lg">Nueva factura</x-boton>
-        </div>
-    </div>
+    <h1 class="solo-lectores">Facturas</h1>
 
     @include('documentos._mensajes')
 
-    {{-- Los filtros de columna se asocian con form="filtros-facturas". --}}
-    <form id="filtros-facturas" method="GET" action="{{ route('facturas.index') }}" class="buscador" data-busqueda-dinamica="{{ route('facturas.buscar') }}">
-        {{-- La búsqueda es dinámica; el botón solo existe como respaldo cuando no hay JavaScript. --}}
-        <noscript><x-boton icono="search">Buscar</x-boton></noscript>
-        <x-boton :href="route('facturas.index')" variante="secundario" icono="x-lg">Limpiar</x-boton>
+    <x-alerta tipo="error" hidden data-compartir-error></x-alerta>
+    <x-alerta tipo="error" hidden data-busqueda-error>No se pudo realizar la búsqueda. Intenta de nuevo.</x-alerta>
+    <x-alerta tipo="error" hidden data-vista-previa-error>No se pudo abrir la factura. Intenta de nuevo.</x-alerta>
+
+    {{-- Carpeta y etiqueta viajan ocultas: los enlaces de la izquierda las
+         cambian (data-busqueda-sincronizar). El buscador se asocia con form="…". --}}
+    <form id="filtros-facturas" method="GET" action="{{ route('facturas.index') }}" data-busqueda-dinamica="{{ route('facturas.buscar') }}" hidden>
+        <input type="hidden" name="periodo" value="{{ $parametros['periodo'] ?? '' }}" data-busqueda-sincronizar>
+        <input type="hidden" name="estado" value="{{ $estado }}" data-busqueda-sincronizar>
     </form>
 
-    <x-alerta tipo="error" hidden data-busqueda-error>No se pudo realizar la búsqueda. Intenta de nuevo.</x-alerta>
-    <x-alerta tipo="error" hidden data-compartir-error></x-alerta>
+    <div class="bandeja" data-bandeja-documentos data-parametro="factura" data-sin-seleccion="Selecciona una factura">
+        @include('facturas._carpetas')
 
-    <x-card class="tabla-contenedor">
-        <table class="tabla" data-busqueda-tabla>
-            <thead>
-                <tr>
-                    <th>Folio</th>
-                    <th>Cliente</th>
-                    <th>RFC</th>
-                    <th>UUID</th>
-                    <th>Estado</th>
-                    <th class="numero">Total</th>
-                    <th>Fecha</th>
-                    <th>Acciones</th>
-                </tr>
-                <tr class="tabla-filtros">
-                    <th><x-campo nombre="folio" etiqueta="Filtrar por folio" tipo="search" :valor="$campos['folio']" form="filtros-facturas" autocomplete="off" /></th>
-                    <th><x-campo nombre="cliente" etiqueta="Filtrar por cliente" tipo="search" :valor="$campos['cliente']" form="filtros-facturas" autocomplete="off" /></th>
-                    <th><x-campo nombre="rfc" etiqueta="Filtrar por RFC" tipo="search" :valor="$campos['rfc']" form="filtros-facturas" autocomplete="off" /></th>
-                    <th><x-campo nombre="uuid" etiqueta="Filtrar por UUID" tipo="search" :valor="$campos['uuid']" form="filtros-facturas" autocomplete="off" /></th>
-                    <th><x-campo nombre="estado" etiqueta="Filtrar por estado" tipo="select" :opciones="App\Enums\EstadoFactura::opciones()" :valor="$campos['estado']" vacia="Todos" form="filtros-facturas" /></th>
-                    <th></th>
-                    <th></th>
-                    <th></th>
-                </tr>
-            </thead>
+        <section class="bandeja-lista" aria-label="Lista de facturas" data-busqueda-tabla>
+            <x-bandeja.encabezado-lista texto="Buscar por folio, cliente, RFC o UUID" nombre="q" :valor="$texto" formulario="filtros-facturas" />
+
             @include('facturas._filas')
-        </table>
-    </x-card>
+            @include('facturas._paginacion')
+        </section>
 
-    @include('facturas._paginacion')
+        <section class="bandeja-visor bandeja-visor-documento" aria-label="Factura abierta" data-visor-documento>
+            @if ($abierta)
+                @include('facturas._vista-previa', ['factura' => $abierta])
+            @else
+                <p class="bandeja-sin-seleccion"><x-icono nombre="receipt" />Selecciona una factura</p>
+            @endif
+        </section>
+    </div>
 
     <dialog id="dialogo-cotizaciones" class="ficha dialogo" aria-labelledby="dialogo-cotizaciones-titulo"
         data-elegir-cotizacion="{{ route('facturas.cotizaciones') }}">
@@ -71,6 +54,7 @@
 
 @push('scripts')
     <script src="{{ asset('js/busqueda-dinamica.js') }}?v={{ filemtime(public_path('js/busqueda-dinamica.js')) }}"></script>
+    <script src="{{ asset('js/bandeja-documentos.js') }}?v={{ filemtime(public_path('js/bandeja-documentos.js')) }}"></script>
     <script src="{{ asset('js/compartir-pdf.js') }}?v={{ filemtime(public_path('js/compartir-pdf.js')) }}"></script>
     <script src="{{ asset('js/elegir-cotizacion.js') }}?v={{ filemtime(public_path('js/elegir-cotizacion.js')) }}"></script>
 @endpush

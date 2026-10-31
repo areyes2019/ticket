@@ -1,4 +1,4 @@
-// Ventana "Desde cotización" del listado de facturas (spec 015).
+// Ventana "Desde cotización" de la bandeja de facturas (spec 015).
 //
 // El botón es un enlace a la página facturas.cotizaciones (respaldo sin
 // JavaScript). Aquí abre la ventana, pide la lista de cotizaciones por
@@ -6,9 +6,8 @@
 // buscador. Elegir una es un enlace normal al formulario de factura lleno.
 (function () {
     const dialogo = document.querySelector('[data-elegir-cotizacion]');
-    const boton = document.querySelector('[data-abrir-elegir-cotizacion]');
 
-    if (!dialogo || !boton || typeof dialogo.showModal !== 'function') {
+    if (!dialogo || typeof dialogo.showModal !== 'function') {
         return;
     }
 
@@ -61,8 +60,10 @@
             });
     }
 
-    boton.addEventListener('click', function (evento) {
-        if (evento.ctrlKey || evento.metaKey || evento.shiftKey) {
+    // Delegado: el botón está en las carpetas de la bandeja, que la búsqueda
+    // dinámica vuelve a pintar.
+    document.addEventListener('click', function (evento) {
+        if (!evento.target.closest('[data-abrir-elegir-cotizacion]') || evento.ctrlKey || evento.metaKey || evento.shiftKey) {
             return;
         }
 

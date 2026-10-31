@@ -433,49 +433,23 @@ class Factura extends Model
     }
 
     /**
-     * Aplica los filtros del listado (combinados con Y). Los vacíos se ignoran.
+     * Aplica los filtros de la bandeja (combinados con Y): el texto del
+     * buscador (buscarTexto), el estado y el periodo. Los vacíos se ignoran.
      *
      * @param  Builder<self>  $consulta
-     * @param  array{cliente?: string, rfc?: string, folio?: array{interno: int|null, serie: string|null, fiscal: int|null}|null, uuid?: string, estado?: string}  $filtros
+     * @param  array{texto?: string, estado?: string, desde?: CarbonImmutable|null, hasta?: CarbonImmutable|null}  $filtros
      */
     #[Scope]
     protected function filtrar(Builder $consulta, array $filtros): void
     {
-        $cliente = trim($filtros['cliente'] ?? '');
-        $rfc = trim($filtros['rfc'] ?? '');
-        $uuid = trim($filtros['uuid'] ?? '');
-        $folio = $filtros['folio'] ?? null;
-
-        if ($cliente !== '') {
-            $consulta->whereHas('cliente', fn (Builder $clientes) => $clientes->withTrashed()->where(
-                fn (Builder $nombres) => $nombres->where('razon_social', 'like', "%{$cliente}%")->orWhere('nombre_comercial', 'like', "%{$cliente}%")
-            ));
-        }
-
-        if ($rfc !== '') {
-            $consulta->whereHas('cliente', fn (Builder $clientes) => $clientes->withTrashed()->where('rfc', 'like', "%{$rfc}%"));
-        }
-
-        if ($folio !== null) {
-            $consulta->where(function (Builder $folios) use ($folio) {
-                if ($folio['interno'] !== null) {
-                    $folios->orWhere('folio', $folio['interno']);
-                }
-
-                if ($folio['fiscal'] !== null) {
-                    $folios->orWhere(fn (Builder $fiscal) => $fiscal
-                        ->where('facturapi_folio', $folio['fiscal'])
-                        ->when($folio['serie'] !== null, fn (Builder $conSerie) => $conSerie->where('facturapi_serie', $folio['serie'])));
-                }
-            });
-        }
-
-        if ($uuid !== '') {
-            $consulta->where('uuid_fiscal', 'like', "%{$uuid}%");
-        }
+        $consulta->buscarTexto($filtros['texto'] ?? '');
 
         if (($filtros['estado'] ?? '') !== '') {
             $consulta->where('estado', $filtros['estado']);
+        }
+
+        if (($filtros['desde'] ?? null) !== null) {
+            $consulta->whereBetween('created_at', [$filtros['desde']->utc(), $filtros['hasta']->utc()]);
         }
     }
 
@@ -509,8 +483,7 @@ class Factura extends Model
     /**
      * Una sola caja de texto contra folio (interno o fiscal), razón social,
      * nombre comercial o RFC del cliente y UUID, combinados con O, para el
-     * buscador del mostrador (034). filtrar() sigue siendo el del listado
-     * (columna por columna con Y). Vacía no filtra.
+     * buscador del mostrador (034) y el de la bandeja. Vacía no filtra.
      *
      * @param  Builder<self>  $consulta
      */

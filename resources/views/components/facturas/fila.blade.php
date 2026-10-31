@@ -1,6 +1,6 @@
 @props(['factura', 'activa' => false])
 
-{{-- Una factura en la lista del dashboard. Sin JavaScript el enlace abre el
+{{-- Una factura en la lista de la bandeja. Sin JavaScript el enlace abre el
      detalle; con él, bandeja-documentos.js la muestra en el visor. --}}
 @php
     $fecha = $factura->created_at->setTimezone(config('app.zona_negocio'));

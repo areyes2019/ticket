@@ -1,4 +1,4 @@
-{{-- Visor del dashboard: acciones, la hoja en HTML y la ventana de envío. Se
+{{-- Visor de la bandeja: acciones, la hoja en HTML y la ventana de envío. Se
      pinta con la página o llega por AJAX (facturas.vista-previa) al elegir una
      fila. Timbrar, cancelar, complemento, duplicar y eliminar siguen en el detalle. --}}
 @php
@@ -11,6 +11,12 @@
         <x-boton href="#dialogo-envio" icono="send" descripcion="Enviar por correo" title="Enviar por correo" data-abrir-dialogo />
     @endif
     @if ($factura->tieneDocumentoFiscal())
+        {{-- Se muestra solo si el navegador puede compartir archivos (compartir-pdf.js). --}}
+        <x-boton tipo="button" variante="secundario" icono="share" descripcion="Compartir PDF" title="Compartir PDF" hidden
+            data-compartir-pdf
+            data-pdf="{{ route('facturas.pdf', $factura) }}"
+            data-archivo="{{ $factura->nombreArchivo('pdf') }}"
+            data-precargar="al-apuntar" />
         <x-boton :href="route('facturas.pdf', $factura)" variante="secundario" icono="file-earmark-pdf" descripcion="Ver PDF" title="Ver PDF" target="_blank" />
         <x-boton :href="route('facturas.pdf', [$factura, 'descargar' => 1])" variante="secundario" icono="download" descripcion="Descargar PDF" title="Descargar PDF" />
         <x-boton :href="route('facturas.xml', $factura)" variante="secundario" icono="filetype-xml" descripcion="Descargar XML" title="Descargar XML" />

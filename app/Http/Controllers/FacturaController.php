@@ -46,16 +46,25 @@ class FacturaController extends Controller
     public function __construct(private TimbradorFacturas $timbrador) {}
 
     /**
-     * Página completa del listado, con filtros y página de la URL.
+     * Bandeja: carpetas (periodos), lista y la vista previa de la factura
+     * pedida en la URL o, si no hay, de la primera de la lista.
      */
     public function index(ListadoFacturasRequest $request): View
     {
-        return view('facturas.index', $this->datosListado($request, $this->facturas($request)));
+        $facturas = $this->facturas($request);
+
+        $abierta = $request->abierta() === null ? null : $request->user()->facturas()->find($request->abierta());
+        $abierta ??= $facturas->first();
+
+        return view('facturas.index', [
+            ...$this->datosListado($request, $facturas),
+            'abierta' => $abierta?->load(['cliente', 'lineas']),
+        ]);
     }
 
     /**
-     * Solo filas y paginación, para la búsqueda dinámica (AJAX). Los enlaces
-     * de página apuntan al listado completo.
+     * Solo carpetas, filas y paginación, para la búsqueda dinámica (AJAX). Los
+     * enlaces de página apuntan a la bandeja completa.
      */
     public function buscar(ListadoFacturasRequest $request): View
     {
@@ -65,8 +74,8 @@ class FacturaController extends Controller
     }
 
     /**
-     * La factura como hoja en HTML con sus acciones, para el visor del
-     * dashboard (AJAX). No consulta la cancelación en facturapi.io: muestra el
+     * La factura como hoja en HTML con sus acciones, para el visor de la
+     * bandeja (AJAX). No consulta la cancelación en facturapi.io: muestra el
      * último estado conocido; el detalle lo refresca.
      */
     public function vistaPrevia(Factura $factura): View
@@ -478,9 +487,11 @@ class FacturaController extends Controller
      */
     private function facturas(ListadoFacturasRequest $request): LengthAwarePaginator
     {
+        [$desde, $hasta] = $request->rango();
+
         return $request->user()->facturas()
             ->with('cliente')
-            ->filtrar($request->filtros())
+            ->filtrar(['texto' => $request->texto(), 'estado' => $request->estado(), 'desde' => $desde, 'hasta' => $hasta])
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->paginate(ListadoFacturasRequest::POR_PAGINA)
@@ -495,9 +506,41 @@ class FacturaController extends Controller
     {
         return [
             'facturas' => $facturas,
-            'campos' => $request->campos(),
-            'hayFiltros' => $request->parametros() !== [],
+            'periodo' => $request->periodo(),
+            'estado' => $request->estado(),
+            'texto' => $request->texto(),
+            'parametros' => $request->parametros(),
+            'contadores' => $this->contadores($request->user()),
         ];
+    }
+
+    /**
+     * Cuántas facturas tiene cada carpeta, sin etiqueta ni búsqueda, en una
+     * sola consulta.
+     *
+     * @return array<string, int>
+     */
+    private function contadores(User $user): array
+    {
+        $columnas = [];
+        $valores = [];
+
+        foreach (array_keys(ListadoFacturasRequest::PERIODOS) as $periodo) {
+            [$desde, $hasta] = ListadoCotizacionesRequest::rango($periodo);
+
+            if ($desde === null) {
+                $columnas[] = "count(*) as {$periodo}";
+
+                continue;
+            }
+
+            $columnas[] = "coalesce(sum(case when created_at between ? and ? then 1 else 0 end), 0) as {$periodo}";
+            array_push($valores, $desde->utc(), $hasta->utc());
+        }
+
+        $fila = $user->facturas()->toBase()->selectRaw(implode(', ', $columnas), $valores)->first();
+
+        return array_map('intval', (array) $fila);
     }
 
     /**

@@ -3,15 +3,22 @@
 namespace App\Http\Requests;
 
 use App\Enums\EstadoFactura;
-use App\Models\Factura;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Parámetros del listado de facturas, compartidos por el listado y la
- * búsqueda dinámica. No rechaza nada: un valor inválido se ignora.
+ * Parámetros de la bandeja de facturas, compartidos por la página y la
+ * búsqueda dinámica: carpeta (periodo), etiqueta (estado), texto de búsqueda
+ * y factura abierta. Las carpetas son las de la bandeja de cotizaciones.
+ *
+ * No rechaza nada: un valor inválido se ignora.
  */
 class ListadoFacturasRequest extends FormRequest
 {
+    public const PERIODOS = ListadoCotizacionesRequest::PERIODOS;
+
+    public const PERIODO_DEFECTO = ListadoCotizacionesRequest::PERIODO_DEFECTO;
+
     public const POR_PAGINA = 25;
 
     /**
@@ -23,51 +30,65 @@ class ListadoFacturasRequest extends FormRequest
     }
 
     /**
-     * Filtros tal como se escribieron (para volver a pintarlos).
-     *
-     * @return array{cliente: string, rfc: string, folio: string, uuid: string, estado: string}
+     * Carpeta activa; "Este mes" si no hay una válida.
      */
-    public function campos(): array
+    public function periodo(): string
+    {
+        $periodo = $this->string('periodo')->toString();
+
+        return array_key_exists($periodo, self::PERIODOS) ? $periodo : self::PERIODO_DEFECTO;
+    }
+
+    /**
+     * Etiqueta activa (un estado de la factura), o '' si no hay.
+     */
+    public function estado(): string
     {
         $estado = $this->string('estado')->toString();
 
-        return [
-            'cliente' => $this->string('cliente')->trim()->toString(),
-            'rfc' => $this->string('rfc')->trim()->upper()->replaceMatches('/\s+/', '')->toString(),
-            'folio' => $this->string('folio')->trim()->toString(),
-            'uuid' => $this->string('uuid')->trim()->toString(),
-            'estado' => EstadoFactura::tryFrom($estado) ? $estado : '',
-        ];
+        return EstadoFactura::tryFrom($estado) ? $estado : '';
     }
 
     /**
-     * Filtros listos para Factura::filtrar().
-     *
-     * @return array<string, mixed>
+     * Texto del buscador tal como se escribió (para volver a pintarlo).
      */
-    public function filtros(): array
+    public function texto(): string
     {
-        return [...$this->campos(), 'folio' => $this->folio()];
+        return $this->string('q')->trim()->toString();
     }
 
     /**
-     * "12" o "FAC-0012" buscan el folio interno 12 y también el folio fiscal
-     * 12; "A12" busca el folio fiscal 12 de la serie A. Otro texto no filtra.
-     *
-     * @return array{interno: int|null, serie: string|null, fiscal: int|null}|null
+     * Factura pedida en la URL (?factura=15), si el valor es un número.
      */
-    public function folio(): ?array
+    public function abierta(): ?int
     {
-        return Factura::folioBuscado($this->campos()['folio']);
+        $id = $this->string('factura')->toString();
+
+        return ctype_digit($id) ? (int) $id : null;
     }
 
     /**
-     * Parámetros no vacíos, para armar enlaces.
+     * Inicio y fin (inclusive) del periodo activo, en la zona del negocio.
+     *
+     * @return array{0: CarbonImmutable|null, 1: CarbonImmutable|null}
+     */
+    public function rango(): array
+    {
+        return ListadoCotizacionesRequest::rango($this->periodo());
+    }
+
+    /**
+     * Parámetros no vacíos, para armar enlaces. Sin la factura abierta:
+     * cambiar de carpeta o etiqueta abre la primera de la lista nueva.
      *
      * @return array<string, string>
      */
     public function parametros(): array
     {
-        return array_filter($this->campos(), fn (string $valor) => $valor !== '');
+        return array_filter([
+            'q' => $this->texto(),
+            'estado' => $this->estado(),
+            'periodo' => $this->periodo() === self::PERIODO_DEFECTO ? '' : $this->periodo(),
+        ], fn (string $valor) => $valor !== '');
     }
 }
