@@ -217,7 +217,7 @@ describe('complemento de pago', function () {
 
         $this->actingAs($this->user)->post("/facturas/{$this->ppd->id}/complemento-pago", [
             'fecha_pago' => now(config('app.zona_negocio'))->toDateString(),
-            'monto' => '58.00',
+            'monto' => '116.00',
             'forma_pago' => '03',
         ])->assertRedirect(route('facturas.show', $this->ppd))->assertSessionHas('exito');
 
@@ -233,16 +233,27 @@ describe('complemento de pago', function () {
                 && $peticion['complements'][0]['type'] === 'pago'
                 && $documento['uuid'] === $this->ppd->uuid_fiscal
                 && $documento['last_balance'] === 116.0
-                && $documento['amount'] === 58.0
-                && $documento['taxes'] === [['type' => 'IVA', 'rate' => 0.16, 'base' => 50.0]];
+                && $documento['amount'] === 116.0
+                && $documento['taxes'] === [['type' => 'IVA', 'rate' => 0.16, 'base' => 100.0]];
         });
     });
+
+    it('rechaza un pago parcial sin timbrar nada', function (string $monto) {
+        Http::fake();
+
+        $this->actingAs($this->user)->post("/facturas/{$this->ppd->id}/complemento-pago", [
+            'fecha_pago' => now(config('app.zona_negocio'))->toDateString(), 'monto' => $monto, 'forma_pago' => '03',
+        ])->assertSessionHasErrorsIn('complemento', 'monto');
+
+        expect($this->ppd->complementoPago()->exists())->toBeFalse();
+        Http::assertNothingSent();
+    })->with(['58.00', '115.99']);
 
     it('rechaza una factura PUE y un monto mayor al total', function () {
         Http::fake();
 
         $this->actingAs($this->user)->post("/facturas/{$this->factura->id}/complemento-pago", [
-            'fecha_pago' => now(config('app.zona_negocio'))->toDateString(), 'monto' => '10.00', 'forma_pago' => '03',
+            'fecha_pago' => now(config('app.zona_negocio'))->toDateString(), 'monto' => $this->factura->total, 'forma_pago' => '03',
         ])->assertSessionHas('error');
 
         $this->actingAs($this->user)->post("/facturas/{$this->ppd->id}/complemento-pago", [

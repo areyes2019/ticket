@@ -481,8 +481,9 @@ Extienden `layouts/app.blade.php` con los componentes de 003. Se agrega "Factura
   - "Cancelar factura" → `<dialog>` con el motivo (`select` de 4) y, si el motivo es `01`, un
     `select` con las facturas propias `timbradas` (folio fiscal — cliente — total). Sin JavaScript
     el `select` de sustituta está siempre visible y la validación exige llenarlo con `01`.
-  - "Registrar complemento de pago" → `<dialog>` con fecha (hoy), monto (precargado con el total,
-    editable) y forma de pago. Si hay complemento: sus datos (fecha, monto, forma, UUID o el error).
+  - "Registrar complemento de pago" → `<dialog>` con fecha (hoy), monto (fijo en el total, ver
+    corrección 1) y forma de pago. Si hay complemento: sus datos (fecha, monto, forma, UUID o el
+    error).
 - Enlaces `href="#dialogo"` con `data-abrir-dialogo` y respaldo `dialog:target`, como 011.
 
 ## JavaScript
@@ -647,6 +648,14 @@ cancelaron al terminar.
   navegador real**: falta abrir `/facturas/crear` (buscador, PPD → 99, resumen en vivo), el
   detalle con sus diálogos (enviar, cancelar con motivo 01, complemento) y "Compartir PDF" en
   Windows 11 y en un teléfono.
+
+### Corrección 1 (2026-11-06): el complemento solo se timbra por el total
+
+Con un solo complemento por factura, un pago parcial dejaba un saldo que ya no se podía timbrar:
+$500 de $1,160 se timbraban y los $660 restantes quedaban bloqueados. Mientras no existan los pagos
+múltiples, `ComplementoPagoRequest` exige que el monto sea igual al total y el campo del diálogo es
+de solo lectura. Esta corrección sustituye a "monto editable" en los criterios 10 y 19 y a "no mayor
+al total" en la validación. Los complementos parciales que ya estén timbrados no se modifican.
 
 ## Criterios de aceptación
 

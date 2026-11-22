@@ -24,18 +24,20 @@ class ComplementoPagoRequest extends FormRequest
     }
 
     /**
-     * El monto no puede pasar del total: el SAT rechaza un pago mayor al saldo
-     * anterior, que aquí es el total de la factura.
+     * El monto debe ser exactamente el total: como solo hay un complemento por
+     * factura, un pago parcial dejaría un saldo que ya no se podría timbrar
+     * (012, corrección 1).
      *
      * @return array<string, array<int, ValidationRule|string|object>>
      */
     public function rules(): array
     {
         $hoy = now(config('app.zona_negocio'))->toDateString();
+        $total = $this->route('factura')->total;
 
         return [
             'fecha_pago' => ['required', 'date_format:Y-m-d', 'before_or_equal:'.$hoy],
-            'monto' => ['required', 'numeric', 'gt:0', 'decimal:0,2', 'max:'.$this->route('factura')->total],
+            'monto' => ['required', 'numeric', 'decimal:0,2', 'min:'.$total, 'max:'.$total],
             'forma_pago' => ['required', Rule::enum(FormaPago::class)->except([FormaPago::PorDefinir])],
         ];
     }
@@ -53,9 +55,12 @@ class ComplementoPagoRequest extends FormRequest
      */
     public function messages(): array
     {
+        $soloTotal = 'Por ahora el complemento solo se puede timbrar por el total de la factura ($'.number_format((float) $this->route('factura')->total, 2).').';
+
         return [
             'fecha_pago.before_or_equal' => 'La fecha de pago no puede ser futura.',
-            'monto.max' => 'El monto no puede ser mayor al total de la factura ($'.number_format((float) $this->route('factura')->total, 2).').',
+            'monto.min' => $soloTotal,
+            'monto.max' => $soloTotal,
             'forma_pago.enum' => 'Elige la forma en que se recibió el pago (no puede ser 99 – Por definir).',
         ];
     }

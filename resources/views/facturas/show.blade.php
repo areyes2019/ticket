@@ -263,9 +263,9 @@
             <form method="POST" action="{{ route('facturas.complemento-pago', $factura) }}">
                 @csrf
                 <h2 id="dialogo-complemento-titulo">Complemento de pago</h2>
-                <p>Total de la factura: <strong>{{ $pesos($factura->total) }}</strong>. Se timbra como un CFDI de pago aparte.</p>
+                <p>Total de la factura: <strong>{{ $pesos($factura->total) }}</strong>. Se timbra como un CFDI de pago aparte. Por ahora solo se puede timbrar cuando la factura ya se pagó completa.</p>
                 <x-campo nombre="fecha_pago" etiqueta="Fecha de pago" tipo="date" :valor="$complemento?->fecha_pago?->toDateString() ?? $hoy" :max="$hoy" required />
-                <x-campo nombre="monto" etiqueta="Monto" tipo="number" :valor="$complemento?->monto ?? $factura->total" min="0.01" :max="$factura->total" step="0.01" inputmode="decimal" required />
+                <x-campo nombre="monto" etiqueta="Monto" tipo="number" :valor="$factura->total" :min="$factura->total" :max="$factura->total" step="0.01" inputmode="decimal" readonly required />
                 <x-campo nombre="forma_pago" etiqueta="Forma de pago" tipo="select" :opciones="$formasPagoComplemento" :valor="$complemento?->forma_pago?->value" vacia="Selecciona la forma de pago" required />
                 <div class="acciones">
                     <x-boton icono="save" data-enviar-una-vez>Timbrar complemento</x-boton>
