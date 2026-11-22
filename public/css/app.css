@@ -103,6 +103,11 @@
     --color-menu-apps-acento: #60a5fa;
     --color-insignia: #dc2626;
 
+    /* Ficha que se copia como imagen: fija, no cambia con el tema */
+    --color-captura-fondo: #fff;
+    --color-captura-precio: #dc2626;
+    --color-captura-texto: #000;
+
     /* Menús desplegables de la barra */
     --ancho-menu-panel: 19rem;
     --lado-menu-panel-icono: 2.25rem;
@@ -1223,17 +1228,17 @@ h1.tarjeta-titulo {
 .ficha-captura {
     padding-bottom: var(--espacio-3);
     text-align: center;
-    background: #fff;
+    background: var(--color-captura-fondo);
 }
 
 .ficha-captura .ficha-foto {
-    background: #fff;
+    background: var(--color-captura-fondo);
     border: 0;
 }
 
 .ficha-captura-precio {
     margin: var(--espacio-3) 0 0;
-    color: #dc2626;
+    color: var(--color-captura-precio);
     font-size: 2.5rem;
     font-weight: 700;
     line-height: 1.1;
@@ -1241,7 +1246,7 @@ h1.tarjeta-titulo {
 
 .ficha-captura-nombre {
     margin: var(--espacio-2) var(--espacio-3) 0;
-    color: #000;
+    color: var(--color-captura-texto);
     font-size: 1.1rem;
     overflow-wrap: anywhere;
 }
