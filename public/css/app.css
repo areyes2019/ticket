@@ -4293,30 +4293,233 @@ a.bandeja-abrir {
     margin: var(--espacio-1) 0;
 }
 
+/* Barra de respuesta estilo WhatsApp (044): clip, texto a lo ancho y
+   enviar. Esquinas rectas y colores del sistema (reglas 3 y 6). Sin
+   JavaScript se ve además el campo de archivo de siempre (adición 1). */
 .wa-redactar {
     display: flex;
-    align-items: flex-end;
+    flex-direction: column;
     gap: var(--espacio-2);
     padding: var(--espacio-3) var(--espacio-4);
     border-top: 1px solid var(--color-borde);
-}
-
-.wa-redactar {
-    flex-wrap: wrap;
-}
-
-.wa-redactar > .campo:first-of-type {
-    flex: 1 1 18rem;
-    min-width: 0;
-    margin: 0;
 }
 
 .wa-redactar > .campo {
     margin: 0;
 }
 
-.wa-redactar textarea {
+.wa-redactar.redactar-activo > .campo {
+    display: none;
+}
+
+.wa-fila {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--espacio-2);
+}
+
+.wa-barra {
+    display: flex;
+    flex: 1;
+    align-items: flex-end;
+    min-width: 0;
+    background: var(--color-superficie);
+    border: 1px solid var(--color-borde-campo);
+    border-radius: var(--radio);
+}
+
+.wa-barra:focus-within {
+    border-color: var(--color-primario);
+}
+
+.wa-barra > .campo {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+}
+
+/* La etiqueta "Respuesta" queda solo para lectores de pantalla (regla 4). */
+.wa-barra > .campo > label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.wa-barra textarea {
+    display: block;
+    line-height: 1.5;
+    border: 0;
     resize: vertical;
+}
+
+.wa-barra textarea:focus {
+    outline: none;
+}
+
+.redactar-activo .wa-barra textarea {
+    max-height: calc(6 * 1.5em + 2 * var(--espacio-2));
+    overflow-y: auto;
+    resize: none;
+}
+
+.wa-clip {
+    position: relative;
+    flex: none;
+}
+
+.wa-clip[hidden] {
+    display: none;
+}
+
+.wa-clip-abrir.boton-suave {
+    color: var(--color-texto-suave);
+    background: transparent;
+}
+
+.wa-clip-abrir.boton-suave:hover,
+.wa-clip-abrir[aria-expanded="true"] {
+    color: var(--color-texto);
+    background: var(--color-neutro);
+}
+
+.wa-menu-adjuntar {
+    position: absolute;
+    bottom: calc(100% + var(--espacio-2));
+    left: 0;
+    z-index: 25;
+    display: flex;
+    flex-direction: column;
+    min-width: 14rem;
+    max-width: calc(100vw - 2 * var(--espacio-4));
+    padding: var(--espacio-1) 0;
+    background: var(--color-superficie);
+    border: 1px solid var(--color-borde-campo);
+    box-shadow: var(--sombra-menu-panel);
+}
+
+.wa-menu-adjuntar[hidden] {
+    display: none;
+}
+
+.wa-menu-adjuntar [role="menuitem"] {
+    display: flex;
+    align-items: center;
+    gap: var(--espacio-2);
+    text-align: left;
+    background: transparent;
+    border-left: 3px solid transparent;
+}
+
+.wa-menu-adjuntar [role="menuitem"]:hover,
+.wa-menu-adjuntar [role="menuitem"]:focus-visible {
+    background: var(--color-superficie-suave);
+    border-left-color: var(--color-primario);
+    outline: none;
+}
+
+.wa-menu-adjuntar [aria-disabled="true"] {
+    color: var(--color-texto-suave);
+    cursor: default;
+}
+
+.wa-proximamente {
+    margin-left: auto;
+    padding-left: var(--espacio-3);
+    font-size: 0.8125rem;
+    color: var(--color-texto-suave);
+}
+
+.wa-enviar {
+    flex: none;
+    align-self: stretch;
+    max-height: 2.75rem;
+    margin-top: auto;
+}
+
+.wa-enviar[aria-disabled="true"] {
+    opacity: 0.55;
+    cursor: default;
+}
+
+.wa-enviar[aria-disabled="true"]:hover {
+    background: var(--color-primario);
+}
+
+.wa-enviando .icono {
+    animation: wa-girar 0.9s linear infinite;
+}
+
+@keyframes wa-girar {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .wa-enviando .icono {
+        animation: none;
+    }
+}
+
+.wa-adjunto {
+    display: flex;
+    align-items: center;
+    gap: var(--espacio-3);
+    min-width: 0;
+    padding: var(--espacio-2) var(--espacio-3);
+    background: var(--color-superficie-suave);
+    border: 1px solid var(--color-borde);
+}
+
+.wa-adjunto[hidden] {
+    display: none;
+}
+
+.wa-adjunto-error {
+    color: var(--color-error);
+    background: var(--color-error-fondo);
+    border-color: var(--color-error-borde);
+}
+
+.wa-adjunto-miniatura {
+    flex: none;
+    width: 2.5rem;
+    height: 2.5rem;
+    object-fit: cover;
+}
+
+.wa-adjunto > .icono {
+    flex: none;
+    font-size: 1.75rem;
+}
+
+.wa-adjunto-datos {
+    flex: 1;
+    min-width: 0;
+}
+
+.wa-adjunto-nombre {
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.wa-adjunto-detalle {
+    font-size: 0.8125rem;
+    color: var(--color-texto-suave);
+}
+
+.wa-adjunto-error .wa-adjunto-detalle {
+    color: var(--color-error);
+}
+
+.wa-aviso-pausa {
+    margin: 0;
 }
 
 /* Respuestas rápidas con "/" (043): la lista flota encima de la caja de

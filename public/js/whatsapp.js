@@ -95,8 +95,20 @@
                     return;
                 }
 
-                if (evento.key === 'Enter' && !evento.shiftKey && caja.value.trim() !== '') {
-                    evento.preventDefault();
+                if (evento.key !== 'Enter' || evento.shiftKey) {
+                    return;
+                }
+
+                // 044, regla 19: con la barra nueva manda el botón de enviar
+                // (también envía solo un archivo, sin texto).
+                const enviar = caja.form.querySelector('[data-enviar]');
+                const listo = enviar && enviar.hasAttribute('aria-disabled')
+                    ? enviar.getAttribute('aria-disabled') !== 'true'
+                    : caja.value.trim() !== '';
+
+                evento.preventDefault();
+
+                if (listo) {
                     caja.form.requestSubmit();
                 }
             });

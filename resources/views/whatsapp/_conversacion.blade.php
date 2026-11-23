@@ -61,7 +61,11 @@
     </div>
 
     @if ($abierta->ventanaAbierta())
-        <form method="POST" action="{{ route('whatsapp.mensajes.store', $abierta) }}" enctype="multipart/form-data" class="wa-redactar">
+        {{-- Barra estilo WhatsApp (044): clip con menú de adjuntos, texto a lo
+             ancho y enviar. Sin JavaScript el clip queda oculto y se ve el
+             campo de archivo de siempre (adición 1). --}}
+        <form method="POST" action="{{ route('whatsapp.mensajes.store', $abierta) }}" enctype="multipart/form-data" class="wa-redactar"
+              data-redactar data-max-bytes="{{ config('whatsapp.max_mb_archivo') * 1024 * 1024 }}" data-max-mb="{{ config('whatsapp.max_mb_archivo') }}">
             @csrf
             {{-- Respuestas rápidas con "/" (043): la lista viaja con la página
                  (adición 1) y la arma respuestas-rapidas.js. Sin JavaScript
@@ -71,11 +75,40 @@
                 <div class="wa-respuestas" id="wa-respuestas-lista" role="listbox" aria-label="Respuestas rápidas" hidden></div>
                 <p class="solo-lectores" id="wa-respuestas-aviso" aria-live="polite"></p>
             @endisset
-            <x-campo nombre="texto" id="wa-texto" etiqueta="Respuesta" tipo="textarea" rows="2" maxlength="4000"
-                     placeholder="Escribe una respuesta o / para respuestas rápidas… (contestar pausa el agente en este chat)" class="wa-redactar-texto" />
+
+            {{-- Regla 14: el archivo elegido, encima de la barra. --}}
+            <div class="wa-adjunto" data-adjunto aria-live="polite" hidden></div>
+
+            <div class="wa-fila">
+                <div class="wa-barra">
+                    <div class="wa-clip" data-clip hidden>
+                        <x-boton tipo="button" variante="suave" icono="paperclip" descripcion="Adjuntar" class="wa-clip-abrir"
+                                 aria-haspopup="menu" aria-expanded="false" aria-controls="wa-menu-adjuntar" data-clip-boton />
+                        <div class="wa-menu-adjuntar" id="wa-menu-adjuntar" role="menu" aria-label="Adjuntar" hidden>
+                            <x-boton tipo="button" variante="suave" icono="file-earmark-pdf" role="menuitem" tabindex="-1"
+                                     data-adjuntar="documento" data-accept="application/pdf">Documento</x-boton>
+                            <x-boton tipo="button" variante="suave" icono="image" role="menuitem" tabindex="-1"
+                                     data-adjuntar="imagen" data-accept="image/jpeg,image/png,image/webp">Imagen</x-boton>
+                            {{-- Regla 11: de adorno hasta que se defina qué hace. --}}
+                            <x-boton tipo="button" variante="suave" icono="shop" role="menuitem" tabindex="-1" aria-disabled="true"
+                                     data-adjuntar="catalogo">Catálogo <span class="wa-proximamente">Próximamente</span></x-boton>
+                        </div>
+                    </div>
+
+                    <x-campo nombre="texto" id="wa-texto" etiqueta="Respuesta" tipo="textarea" rows="2" maxlength="4000"
+                             placeholder="Escribe un mensaje o / para respuestas rápidas" class="wa-redactar-texto" />
+                </div>
+
+                <x-boton icono="send-fill" descripcion="Enviar" class="wa-enviar" data-enviar />
+            </div>
+
             <x-campo nombre="archivo" id="wa-archivo" etiqueta="Adjuntar imagen o PDF (máx. {{ config('whatsapp.max_mb_archivo') }} MB)" tipo="file"
                      accept="image/jpeg,image/png,image/webp,application/pdf" />
-            <x-boton icono="send">Enviar</x-boton>
+
+            @if ($abierta->estado === EstadoConversacion::Agente)
+                {{-- Regla 5. --}}
+                <p class="ayuda wa-aviso-pausa">Contestar pausa el agente en este chat.</p>
+            @endif
         </form>
     @else
         {{-- Regla 65. --}}
