@@ -3041,6 +3041,172 @@ a.bandeja-abrir {
     display: none;
 }
 
+/* Campos en columnas (042, regla 36): dos por fila en pantallas anchas, uno
+   en el celular. .ocupa-fila ocupa la fila entera. */
+.rejilla-campos {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 var(--espacio-4);
+    align-items: start;
+}
+
+.rejilla-campos-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.ayuda + form > .rejilla-campos {
+    margin-top: var(--espacio-4);
+}
+
+.rejilla-campos > .ocupa-fila {
+    grid-column: 1 / -1;
+}
+
+/* Bloque de ajustes (042, regla 35): título y explicación a la izquierda,
+   campos a la derecha, separados por una línea. */
+.config-bloque {
+    display: grid;
+    grid-template-columns: 16rem minmax(0, 1fr);
+    gap: var(--espacio-5);
+    padding: var(--espacio-5) 0;
+    border-top: 1px solid var(--color-borde);
+}
+
+.config-bloque-texto h3 {
+    margin: 0 0 var(--espacio-2);
+    font-size: var(--texto-base);
+}
+
+.config-bloque-texto .ayuda {
+    margin-bottom: var(--espacio-2);
+}
+
+.config-pie {
+    padding-top: var(--espacio-4);
+    border-top: 1px solid var(--color-borde);
+}
+
+@media (max-width: 48rem) {
+    .rejilla-campos,
+    .rejilla-campos-3,
+    .config-bloque {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .config-bloque {
+        gap: var(--espacio-3);
+    }
+}
+
+/* WhatsApp en Configuración (041 / 042, reglas 37 a 41) */
+.wa-estado {
+    display: grid;
+    gap: var(--espacio-4);
+    margin: var(--espacio-4) 0 var(--espacio-5);
+    padding: var(--espacio-4);
+    background: var(--color-superficie-suave);
+    border: 1px solid var(--color-borde);
+}
+
+.wa-estado .datos dd {
+    margin: 0;
+}
+
+.wa-registrar summary {
+    color: var(--color-primario-oscuro);
+    cursor: pointer;
+}
+
+.wa-registrar-formulario {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--espacio-3);
+    margin-top: var(--espacio-3);
+}
+
+.wa-registrar-formulario .campo {
+    width: 18rem;
+    max-width: 100%;
+    margin-bottom: 0;
+}
+
+.wa-webhook {
+    display: block;
+    padding: var(--espacio-2);
+    font-size: var(--texto-pequeno);
+    word-break: break-all;
+    background: var(--color-superficie-suave);
+    border: 1px solid var(--color-borde);
+}
+
+.wa-agente {
+    padding: var(--espacio-3) var(--espacio-4) 0;
+    border: 1px solid var(--color-borde);
+}
+
+.wa-agente .casilla {
+    margin-bottom: var(--espacio-3);
+    font-weight: 500;
+}
+
+.wa-agente {
+    height: 100%;
+}
+
+.wa-horario {
+    display: grid;
+    gap: var(--espacio-2);
+    max-width: 36rem;
+}
+
+.wa-horario-dia {
+    display: grid;
+    grid-template-columns: 6rem auto minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: var(--espacio-3);
+}
+
+.wa-horario-nombre {
+    font-weight: 500;
+}
+
+.wa-horario .casilla,
+.wa-horario .campo {
+    margin: 0;
+}
+
+/* Las horas llevan su etiqueta solo para lectores: el día y la "a" ya dicen
+   qué es cada una. */
+.wa-horario .campo label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.wa-horario .campo input {
+    padding: var(--espacio-1) var(--espacio-2);
+}
+
+.wa-horario-dia:has(input[type="checkbox"]:not(:checked)) .campo,
+.wa-horario-dia:has(input[type="checkbox"]:not(:checked)) .wa-horario-a {
+    opacity: 0.4;
+}
+
+.wa-horario-a {
+    color: var(--color-texto-suave);
+}
+
+@media (max-width: 48rem) {
+    .wa-horario-dia {
+        grid-template-columns: 5rem auto minmax(0, 1fr) auto minmax(0, 1fr);
+        gap: var(--espacio-2);
+    }
+}
+
 .etiqueta-activa {
     color: var(--color-exito);
     background: var(--color-exito-fondo);
@@ -4161,35 +4327,6 @@ a.bandeja-abrir {
     padding: var(--espacio-3);
     white-space: pre-wrap;
     background: var(--color-wa-negocio);
-}
-
-.wa-registrar {
-    display: flex;
-    gap: var(--espacio-2);
-}
-
-.wa-registrar input {
-    width: 10rem;
-}
-
-.wa-horario {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
-    gap: var(--espacio-2);
-    margin-bottom: var(--espacio-4);
-}
-
-.wa-horario-dia {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--espacio-2);
-    padding: var(--espacio-2) var(--espacio-3);
-    border: 1px solid var(--color-borde);
-}
-
-.wa-horario-dia legend {
-    font-weight: 700;
 }
 
 @media (max-width: 767px) {

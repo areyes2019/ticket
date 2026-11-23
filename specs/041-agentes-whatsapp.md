@@ -667,7 +667,10 @@ Claves nuevas, con sus reglas y textos por defecto:
 - `whatsapp_limite_hora` (20), `whatsapp_limite_dia` (100).
 
 Se presentan en una sección nueva **"WhatsApp"** de Configuración, junto con los datos de conexión
-(regla 5), "Probar conexión", "Registrar número" y "Actualizar plantillas".
+(regla 5), "Probar conexión", "Registrar número" y "Actualizar plantillas". Desde
+[042-configuracion-pestanas.md](042-configuracion-pestanas.md) la sección es una pestaña y su
+acomodo (caja de estado, "Registrar número" en un desplegable, bloques en columnas y horario en
+filas) lo definen las reglas 37 a 41 de esa spec.
 
 ### Servicios (`App\Services\Whatsapp\`)
 

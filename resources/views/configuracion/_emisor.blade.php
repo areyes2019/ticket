@@ -11,14 +11,20 @@
         @csrf
         @method('PUT')
 
-        <x-campo nombre="nombre" etiqueta="Nombre o razón social" :valor="$emisor->nombre" maxlength="255" required />
-        <x-campo nombre="rfc" etiqueta="RFC" :valor="$emisor->rfc" maxlength="13" required />
-        <x-campo nombre="regimen_fiscal" etiqueta="Régimen fiscal" tipo="select" :opciones="App\Enums\RegimenFiscal::opciones()" :valor="$emisor->regimen_fiscal?->value" vacia="Selecciona un régimen fiscal" required />
-        <x-campo nombre="domicilio" etiqueta="Domicilio" :valor="$emisor->domicilio" maxlength="255" ayuda="Una línea, como se imprime: 38024, Celaya, Guanajuato." />
-        <x-campo nombre="correo" etiqueta="Correo" tipo="email" :valor="$emisor->correo" maxlength="255" />
-        <x-campo nombre="telefono" etiqueta="Teléfono" tipo="tel" :valor="$emisor->telefono" />
-        <x-campo nombre="sitio_web" etiqueta="Sitio web" :valor="$emisor->sitio_web" maxlength="255" ayuda="Solo en la cotización." />
-        <x-campo nombre="whatsapp" id="emisor-whatsapp" etiqueta="WhatsApp" tipo="tel" :valor="$emisor->whatsapp" ayuda="Solo en la cotización." />
+        <div class="rejilla-campos">
+            <div class="ocupa-fila">
+                <x-campo nombre="nombre" etiqueta="Nombre o razón social" :valor="$emisor->nombre" maxlength="255" required />
+            </div>
+            <x-campo nombre="rfc" etiqueta="RFC" :valor="$emisor->rfc" maxlength="13" required />
+            <x-campo nombre="regimen_fiscal" etiqueta="Régimen fiscal" tipo="select" :opciones="App\Enums\RegimenFiscal::opciones()" :valor="$emisor->regimen_fiscal?->value" vacia="Selecciona un régimen fiscal" required />
+            <div class="ocupa-fila">
+                <x-campo nombre="domicilio" etiqueta="Domicilio" :valor="$emisor->domicilio" maxlength="255" ayuda="Una línea, como se imprime: 38024, Celaya, Guanajuato." />
+            </div>
+            <x-campo nombre="correo" etiqueta="Correo" tipo="email" :valor="$emisor->correo" maxlength="255" />
+            <x-campo nombre="telefono" etiqueta="Teléfono" tipo="tel" :valor="$emisor->telefono" />
+            <x-campo nombre="sitio_web" etiqueta="Sitio web" :valor="$emisor->sitio_web" maxlength="255" ayuda="Solo en la cotización." />
+            <x-campo nombre="whatsapp" id="emisor-whatsapp" etiqueta="WhatsApp" tipo="tel" :valor="$emisor->whatsapp" ayuda="Solo en la cotización." />
+        </div>
 
         <figure class="logo-documentos">
             <img src="{{ asset(App\Services\Documentos\LogoDocumento::RUTA) }}" alt="Logo de Sello Pronto">

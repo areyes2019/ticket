@@ -154,6 +154,49 @@ avisar de cambios sin guardar, autoguardado, páginas separadas por sección y b
     anteriores, sin texto extra.
 29. Sin JavaScript (adición 2) no se ponen esos roles: los enlaces se quedan como enlaces normales.
 
+## Acomodo de las secciones (2026-11-22, después de publicar)
+
+Al ver la pestaña *WhatsApp* en producción, el usuario pidió: "Todo esto me parece muy desordenado.
+Abre el card a lo ancho del área. Reordena botones y campos. Debe verse estético". Estas reglas
+cambian solo el acomodo: los campos, nombres, validaciones y permisos son los mismos.
+
+### Toda la página
+
+34. Configuración usa el ancho grande del sistema (`contenido-ancho`, 72rem) en todas sus
+    pestañas, como las páginas con tablas.
+35. **Bloque de ajustes** (`.config-bloque`): el título y su explicación van en una columna
+    izquierda angosta (16rem) y los campos a la derecha. Los bloques se separan con una línea. En
+    pantallas de 48rem o menos todo va en una columna.
+36. **Campos en columnas** (`.rejilla-campos`): dos campos por fila. `.rejilla-campos-3` pone tres.
+    Un campo largo ocupa la fila entera envolviéndolo en `<div class="ocupa-fila">`. En el
+    celular, uno por fila.
+    - *Emisor*: nombre (fila entera); RFC | régimen; domicilio (fila entera); correo | teléfono;
+      sitio web | WhatsApp. El logo y **Guardar emisor** quedan debajo, como antes.
+
+### Pestaña WhatsApp
+
+37. **Caja de estado** arriba, con fondo suave, solo si hay número conectado: el número (nombre y
+    teléfono) y el gasto de Claude del mes contra el tope, como datos en dos columnas; debajo, los
+    botones **Probar conexión** y **Actualizar plantillas**.
+38. **Registrar número** se guarda en un desplegable dentro de esa caja ("Registrar el número en
+    Meta (solo una vez, al darlo de alta)"), porque se usa una sola vez. Al abrirlo aparecen el
+    PIN y el botón en una línea. Se abre solo si el PIN regresó con error.
+39. Sin número conectado, en lugar de la caja va un aviso: "Todavía no hay un número conectado.
+    Llena la conexión con Meta y guarda."
+40. El formulario se parte en cinco bloques (regla 35):
+    - **Conexión con Meta**: la dirección del webhook va en la columna de la izquierda, en un
+      recuadro; a la derecha, Phone number ID | WABA ID, Token | App secret y el token de
+      verificación en la fila entera.
+    - **Agentes**: los dos agentes lado a lado, cada uno en un recuadro con su casilla de
+      encendido arriba y sus indicaciones abajo.
+    - **Horario de atención**: una fila por día: nombre, casilla *Abierto*, hora de apertura, "a"
+      y hora de cierre. Las horas de un día cerrado se ven atenuadas. Las etiquetas "Abre" y
+      "Cierra" quedan solo para lectores de pantalla.
+    - **Avisos al pasar con una persona**: *En horario* | *Fuera de horario*, como cuadros de
+      texto de 3 renglones.
+    - **Límites**: tope mensual | respuestas por hora | respuestas por día, en tres columnas.
+41. **Guardar WhatsApp** va al final, separado por una línea.
+
 ## Backend (Laravel)
 
 ### `ConfiguracionController`
@@ -248,5 +291,12 @@ Implementada el 2026-11-22, con las 4 pruebas de `tests/Feature/ConfiguracionPes
   porque `<x-card>` ya pinta un `<section class="tarjeta">` adentro.
 - **Punto de aviso cuadrado:** `.pestana-aviso` es un cuadrito sin `border-radius`, porque
   `EstiloUniformeTest` no permite esquinas redondeadas en `app.css`. Usa `--color-advertencia`.
+- **Pestaña WhatsApp vacía (corregido):** el campo *WhatsApp* del emisor tenía `id="whatsapp"`,
+  igual que la sección; el script tomaba el campo y la sección nunca se mostraba. El campo pasó a
+  `id="emisor-whatsapp"` y el script busca las secciones solo entre los hijos del contenedor. Una
+  prueba revisa que ningún id de pestaña se repita.
+- **Acomodo (reglas 34 a 41):** se quitaron los estilos viejos de `.wa-registrar`, `.wa-horario` y
+  `.wa-horario-dia` de 041, que pintaban el horario como cajas. El horario sigue usando
+  `<x-campo>` (lo exige `EstiloUniformeTest`) y esconde con CSS las etiquetas de las horas.
 - **Barra:** lleva `data-pestanas-barra` y cada enlace `data-pestana` e `id="pestana-<ancla>"`,
   que el script usa para `aria-labelledby`.

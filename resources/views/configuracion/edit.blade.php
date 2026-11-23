@@ -2,6 +2,9 @@
 
 @section('title', 'Configuración · '.config('app.name'))
 
+{{-- Ancha (042, regla 34): los bloques ponen sus campos en columnas. --}}
+@section('contenido-clase', 'contenido-ancho')
+
 @section('content')
     <h1>Configuración</h1>
 
