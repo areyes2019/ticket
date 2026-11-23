@@ -77,3 +77,11 @@ it('las pestañas de Emisor y WhatsApp avisan cuando falta algo', function () {
         ->assertOk()
         ->assertDontSee('pestana-aviso', false);
 });
+
+it('ningún elemento de la página repite el id de una pestaña', function () {
+    $html = $this->actingAs($this->admin)->get('/configuracion')->getContent();
+
+    foreach (['emisor', 'datos-bancarios', 'whatsapp', 'mensajes'] as $ancla) {
+        expect(substr_count($html, 'id="'.$ancla.'"'))->toBe(1);
+    }
+});

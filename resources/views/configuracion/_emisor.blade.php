@@ -18,7 +18,7 @@
         <x-campo nombre="correo" etiqueta="Correo" tipo="email" :valor="$emisor->correo" maxlength="255" />
         <x-campo nombre="telefono" etiqueta="Teléfono" tipo="tel" :valor="$emisor->telefono" />
         <x-campo nombre="sitio_web" etiqueta="Sitio web" :valor="$emisor->sitio_web" maxlength="255" ayuda="Solo en la cotización." />
-        <x-campo nombre="whatsapp" etiqueta="WhatsApp" tipo="tel" :valor="$emisor->whatsapp" ayuda="Solo en la cotización." />
+        <x-campo nombre="whatsapp" id="emisor-whatsapp" etiqueta="WhatsApp" tipo="tel" :valor="$emisor->whatsapp" ayuda="Solo en la cotización." />
 
         <figure class="logo-documentos">
             <img src="{{ asset(App\Services\Documentos\LogoDocumento::RUTA) }}" alt="Logo de Sello Pronto">

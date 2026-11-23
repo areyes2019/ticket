@@ -16,7 +16,11 @@
 
     pestanas.forEach(function (pestana) {
         const ancla = pestana.dataset.pestana;
-        const panel = document.getElementById(ancla);
+        // Solo entre las secciones del contenedor: un campo de un formulario
+        // puede tener el mismo id (el WhatsApp del emisor).
+        const panel = Array.from(contenedor.children).find(function (hijo) {
+            return hijo.classList.contains('config-panel') && hijo.id === ancla;
+        });
 
         paneles[ancla] = panel;
         pestana.setAttribute('role', 'tab');
