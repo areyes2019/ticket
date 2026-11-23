@@ -876,3 +876,12 @@ it('desde la ficha del cliente abre su conversación o el envío de una plantill
     $conversacion = conversacion(['wa_id' => '524497654321', 'telefono_10' => '4497654321']);
     $this->actingAs($this->user)->get("/whatsapp/cliente/{$cliente->id}")->assertRedirect("/whatsapp/{$conversacion->id}");
 });
+
+it('el aviso de privacidad es público, indexable y menciona a los proveedores', function () {
+    $this->get('/privacidad')
+        ->assertOk()
+        ->assertSee('Aviso de privacidad')
+        ->assertSee('Meta Platforms')
+        ->assertSee('Anthropic')
+        ->assertSee('index, follow', false);
+});

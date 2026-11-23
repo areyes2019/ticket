@@ -48,6 +48,7 @@ use App\Http\Controllers\WhatsappController;
 use App\Http\Controllers\WhatsappWebhookController;
 use App\Http\Middleware\AsegurarUsuarioActivo;
 use App\Http\Middleware\CandadoMostrador;
+use App\Models\Emisor;
 use Illuminate\Support\Facades\Route;
 
 // La raíz no tiene vista propia: lleva al panel o al login según haya sesión.
@@ -60,6 +61,9 @@ Route::middleware('throttle:autofactura')->group(function () {
     Route::get('autofactura/{token}', [AutofacturaController::class, 'show'])->where('token', '[A-Za-z0-9]{64}')->name('autofactura.show');
     Route::post('autofactura/{token}', [AutofacturaController::class, 'store'])->where('token', '[A-Za-z0-9]{64}')->name('autofactura.store');
 });
+
+// Aviso de privacidad: público; Meta lo exige para publicar la app de WhatsApp (041).
+Route::get('privacidad', fn () => view('legal.privacidad', ['emisor' => Emisor::actual()]))->name('privacidad');
 
 // Webhook de WhatsApp (041): público, sin sesión ni CSRF. La firma de Meta
 // (X-Hub-Signature-256) es la autorización.
