@@ -627,6 +627,18 @@ it('dar_datos_bancarios regresa los datos visibles en cotizaciones', function ()
     expect($resultado->datos['cuentas'][0])->toMatchArray(['banco' => 'BBVA', 'clabe' => $dato->clabe]);
 });
 
+it('dar_datos_bancarios regresa el texto de "Formas de pago" cuando está lleno, sin la CLABE', function () {
+    $dato = DatoBancario::factory()->create(['nombre_banco' => 'BBVA']);
+    $conversacion = conversacion();
+    $conversacion->numero->forceFill(['indicaciones_ventas' => ['pago' => "Santander\nTarjeta: 4000 0000 0000 0002"]])->save();
+
+    $resultado = app(DarDatosBancarios::class)->ejecutar(new ContextoTurno($conversacion->fresh()), []);
+
+    expect($resultado->datos['formas_de_pago'])->toContain('4000 0000 0000 0002')
+        ->and($resultado->datos)->not->toHaveKey('cuentas')
+        ->and(json_encode($resultado->datos))->not->toContain((string) $dato->clabe);
+});
+
 // --- Herramientas de facturación (reglas 44 a 51) ---
 
 function ventaPagada(User $user, string $telefono = '449 123 4567'): Pedido
