@@ -70,7 +70,8 @@ class Emisor extends Model
     }
 
     /**
-     * "lunes a viernes de 09:00 a 18:00, sábado de 09:00 a 14:00".
+     * "lunes de 9:00 a.m. a 6:00 p.m., sábado de 9:00 a.m. a 2:00 p.m.":
+     * en 12 horas, que es como lo lee el cliente (y como lo repite la IA).
      */
     public function horarioTexto(): string
     {
@@ -78,11 +79,21 @@ class Emisor extends Model
 
         foreach ($this->horarioSemanal() as $dia => $tramo) {
             if ($tramo !== null) {
-                $partes[] = mb_strtolower(self::DIAS[$dia]).' de '.$tramo[0].' a '.$tramo[1];
+                $partes[] = mb_strtolower(self::DIAS[$dia]).' de '.self::hora12($tramo[0]).' a '.self::hora12($tramo[1]);
             }
         }
 
         return $partes === [] ? 'por confirmar' : implode(', ', $partes);
+    }
+
+    /**
+     * "19:00" → "7:00 p.m.", "09:30" → "9:30 a.m.", "12:00" → "12:00 p.m.".
+     */
+    public static function hora12(string $hora): string
+    {
+        [$h, $m] = array_map('intval', explode(':', $hora));
+
+        return sprintf('%d:%02d %s', $h % 12 ?: 12, $m, $h < 12 ? 'a.m.' : 'p.m.');
     }
 
     /**

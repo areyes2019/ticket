@@ -158,7 +158,7 @@ it('el horario se guarda con el negocio, aunque no haya WhatsApp', function () {
     expect($horario['lun'])->toBe(['10:00', '14:00'])
         ->and($horario['mar'])->toBeNull()
         ->and($horario['sab'])->toBeNull()
-        ->and(Emisor::actual()->horarioTexto())->toBe('lunes de 10:00 a 14:00');
+        ->and(Emisor::actual()->horarioTexto())->toBe('lunes de 10:00 a.m. a 2:00 p.m.');
 
     // Guardar el emisor no borra el horario.
     $this->actingAs($this->admin)->put('/configuracion/emisor', ['nombre' => 'SELLO PRONTO', 'rfc' => 'EKU9003173C9', 'regimen_fiscal' => '612']);

@@ -817,7 +817,7 @@ it('el aviso fuera de horario lleva el horario de atención', function () {
     Emisor::actual()->fill(['horario' => ['lun' => ['09:00', '18:00'], 'mar' => null, 'mie' => null, 'jue' => null, 'vie' => null, 'sab' => null, 'dom' => null]])->save();
     $lunesNoche = now(config('app.zona_negocio'))->next('Monday')->setTime(22, 0);
 
-    expect($this->numero->fresh()->avisoHumano($lunesNoche))->toContain('lunes de 09:00 a 18:00')
+    expect($this->numero->fresh()->avisoHumano($lunesNoche))->toContain('lunes de 9:00 a.m. a 6:00 p.m.')
         ->and($this->numero->fresh()->avisoHumano($lunesNoche->copy()->setTime(10, 0)))->toBe(WhatsappNumero::AVISO_HUMANO);
 });
 
