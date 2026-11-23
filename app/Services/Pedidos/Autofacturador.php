@@ -43,7 +43,10 @@ class Autofacturador
     ) {}
 
     /**
-     * @param  array{rfc: string, razon_social: string, regimen_fiscal: string, codigo_postal_fiscal: string, uso_cfdi: string, correo: string}  $datos
+     * Por WhatsApp (041) el correo es opcional: sin correo no se envía nada y
+     * el cliente conserva el que tenía.
+     *
+     * @param  array{rfc: string, razon_social: string, regimen_fiscal: string, codigo_postal_fiscal: string, uso_cfdi: string, correo: ?string}  $datos
      */
     public function facturar(Pedido $pedido, array $datos): ResultadoAutofactura
     {
@@ -94,7 +97,7 @@ class Autofacturador
             return new ResultadoAutofactura(
                 timbrado: $resultado,
                 factura: $preparada,
-                correoEnviado: $this->enviarCorreo($preparada, $datos['correo']),
+                correoEnviado: ($datos['correo'] ?? null) !== null && $this->enviarCorreo($preparada, $datos['correo']),
             );
         }
 
@@ -119,7 +122,7 @@ class Autofacturador
             'razon_social' => $datos['razon_social'],
             'regimen_fiscal' => $datos['regimen_fiscal'],
             'codigo_postal_fiscal' => $datos['codigo_postal_fiscal'],
-            'correo' => $datos['correo'],
+            ...(($datos['correo'] ?? null) === null ? [] : ['correo' => $datos['correo']]),
         ];
 
         $cliente = $pedido->user->clientes()->where('rfc', $datos['rfc'])->first();

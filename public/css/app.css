@@ -103,6 +103,11 @@
     --color-menu-apps-acento: #60a5fa;
     --color-insignia: #dc2626;
 
+    /* Bandeja de WhatsApp (041) */
+    --color-wa-cliente: #fff;
+    --color-wa-negocio: #dcfce7;
+    --color-wa-sistema: #fef9c3;
+
     /* Ficha que se copia como imagen: fija, no cambia con el tema */
     --color-captura-fondo: #fff;
     --color-captura-precio: #dc2626;
@@ -3880,4 +3885,285 @@ a.bandeja-abrir {
     font-size: 2rem;
     font-weight: 700;
     color: var(--color-primario-oscuro);
+}
+
+/* Bandeja de WhatsApp (041): la conversación ocupa el visor; mensajes del
+   cliente a la izquierda y del negocio a la derecha. */
+.etiqueta-cerrada {
+    color: var(--color-texto-suave);
+    background: var(--color-neutro);
+}
+
+.whatsapp-pendientes {
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.wa-contador-humano:not([hidden]) {
+    color: var(--color-texto-invertido);
+    background: var(--color-insignia);
+}
+
+.wa-punto {
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    margin-right: var(--espacio-1);
+    background: var(--color-insignia);
+}
+
+.wa-fila-por-vencer {
+    box-shadow: inset 3px 0 0 var(--color-insignia);
+}
+
+.wa-visor {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+}
+
+.wa-conversacion {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.wa-conversacion > .bandeja-volver {
+    margin: var(--espacio-2) var(--espacio-3) 0;
+}
+
+.wa-encabezado {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--espacio-2) var(--espacio-4);
+    padding: var(--espacio-3) var(--espacio-4);
+    border-bottom: 1px solid var(--color-borde);
+}
+
+.wa-encabezado h2 {
+    margin: 0;
+    font-size: var(--texto-subtitulo);
+}
+
+.wa-encabezado .ayuda {
+    margin: 0;
+}
+
+.wa-encabezado-estado {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--espacio-1);
+    margin-left: auto;
+}
+
+.wa-motivo {
+    flex-basis: 100%;
+    margin: 0;
+    font-size: var(--texto-pequeno);
+    color: var(--color-advertencia);
+}
+
+.wa-acciones {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--espacio-2);
+    padding: var(--espacio-2) var(--espacio-4);
+    border-bottom: 1px solid var(--color-borde);
+}
+
+.wa-acciones form {
+    margin: 0;
+}
+
+.wa-ligar-cliente summary {
+    font-size: var(--texto-pequeno);
+    color: var(--color-primario);
+    cursor: pointer;
+}
+
+.wa-ligar-cliente form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--espacio-2);
+    margin-top: var(--espacio-2);
+}
+
+.wa-mensajes {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--espacio-2);
+    min-height: 12rem;
+    padding: var(--espacio-4);
+    overflow-y: auto;
+    background: var(--color-fondo);
+}
+
+.wa-mensaje {
+    max-width: min(36rem, 85%);
+    padding: var(--espacio-2) var(--espacio-3);
+    font-size: var(--texto-pequeno);
+    border: 1px solid var(--color-borde);
+    border-radius: var(--radio);
+    overflow-wrap: anywhere;
+}
+
+.wa-mensaje p {
+    margin: 0;
+}
+
+.wa-mensaje-cliente {
+    align-self: flex-start;
+    background: var(--color-wa-cliente);
+}
+
+.wa-mensaje-negocio {
+    align-self: flex-end;
+    background: var(--color-wa-negocio);
+}
+
+.wa-mensaje-sistema {
+    align-self: center;
+    max-width: 90%;
+    color: var(--color-texto-suave);
+    background: var(--color-wa-sistema);
+}
+
+.wa-mensaje-sistema time {
+    margin-left: var(--espacio-2);
+    font-size: var(--texto-mini);
+}
+
+.wa-mensaje-herramienta {
+    align-self: flex-end;
+    max-width: 90%;
+    color: var(--color-texto-suave);
+    background: var(--color-superficie-suave);
+    border-style: dashed;
+}
+
+.wa-mensaje-herramienta summary {
+    cursor: pointer;
+}
+
+.wa-herramienta-datos {
+    max-height: 14rem;
+    margin: var(--espacio-2) 0 0;
+    overflow: auto;
+    font-size: var(--texto-mini);
+    white-space: pre-wrap;
+}
+
+.wa-mensaje-autor {
+    margin-bottom: var(--espacio-1);
+    font-size: var(--texto-mini);
+    font-weight: 700;
+    color: var(--color-texto-suave);
+}
+
+.wa-mensaje-pie {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--espacio-2);
+    margin-top: var(--espacio-1);
+    font-size: var(--texto-mini);
+    color: var(--color-texto-suave);
+}
+
+.wa-estado-fallido {
+    color: var(--color-error);
+}
+
+.wa-imagen {
+    display: block;
+    max-width: 100%;
+    max-height: 16rem;
+    margin-bottom: var(--espacio-1);
+}
+
+.wa-archivo,
+.wa-enlace-documento {
+    display: inline-flex;
+    align-items: center;
+    margin: var(--espacio-1) 0;
+}
+
+.wa-redactar {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--espacio-2);
+    padding: var(--espacio-3) var(--espacio-4);
+    border-top: 1px solid var(--color-borde);
+}
+
+.wa-redactar {
+    flex-wrap: wrap;
+}
+
+.wa-redactar > .campo:first-of-type {
+    flex: 1 1 18rem;
+    min-width: 0;
+    margin: 0;
+}
+
+.wa-redactar > .campo {
+    margin: 0;
+}
+
+.wa-redactar textarea {
+    resize: vertical;
+}
+
+.wa-conversacion > .alerta {
+    margin: var(--espacio-3) var(--espacio-4);
+}
+
+.wa-vista-plantilla {
+    padding: var(--espacio-3);
+    white-space: pre-wrap;
+    background: var(--color-wa-negocio);
+}
+
+.wa-registrar {
+    display: flex;
+    gap: var(--espacio-2);
+}
+
+.wa-registrar input {
+    width: 10rem;
+}
+
+.wa-horario {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+    gap: var(--espacio-2);
+    margin-bottom: var(--espacio-4);
+}
+
+.wa-horario-dia {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--espacio-2);
+    padding: var(--espacio-2) var(--espacio-3);
+    border: 1px solid var(--color-borde);
+}
+
+.wa-horario-dia legend {
+    font-weight: 700;
+}
+
+@media (max-width: 767px) {
+    .wa-mensaje {
+        max-width: 92%;
+    }
+
+    .wa-encabezado-estado {
+        margin-left: 0;
+    }
 }

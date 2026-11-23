@@ -208,6 +208,11 @@ say "Recacheando"
 remote "cd '$REMOTE_APP' && $REMOTE_PHP artisan optimize:clear --no-ansi >/dev/null && $REMOTE_PHP artisan optimize --no-ansi >/dev/null"
 ok "config, rutas, eventos y vistas en caché"
 
+# La cola de WhatsApp (041) la atiende una tarea de hPanel cada minuto; así el
+# siguiente trabajador ya toma el código nuevo.
+remote "cd '$REMOTE_APP' && $REMOTE_PHP artisan queue:restart --no-ansi >/dev/null"
+ok "cola reiniciada"
+
 if [ "$EN_MANTENIMIENTO" = "1" ]; then
     remote "cd '$REMOTE_APP' && $REMOTE_PHP artisan up --no-ansi" >/dev/null
     EN_MANTENIMIENTO=0

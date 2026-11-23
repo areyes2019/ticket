@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -46,6 +47,16 @@ class User extends Authenticatable
     public function intentosAcceso(): HasMany
     {
         return $this->hasMany(IntentoAcceso::class);
+    }
+
+    /**
+     * El número de WhatsApp de la cuenta (041, regla 4): a lo más uno.
+     *
+     * @return HasOne<WhatsappNumero, $this>
+     */
+    public function whatsappNumero(): HasOne
+    {
+        return $this->hasOne(WhatsappNumero::class);
     }
 
     /**

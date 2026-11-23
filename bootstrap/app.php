@@ -12,7 +12,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Webhook de WhatsApp (041): lo llama Meta, sin sesión; lo protege su firma.
+        $middleware->validateCsrfTokens(except: ['webhooks/whatsapp']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

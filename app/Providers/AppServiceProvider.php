@@ -11,6 +11,8 @@ use App\Models\PedidoPago;
 use App\Models\Reembolso;
 use App\Models\User;
 use App\Services\Documentos\LogoDocumento;
+use App\Services\Whatsapp\Claude\ClienteClaude;
+use App\Services\Whatsapp\Claude\ClienteClaudeAnthropic;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
@@ -29,6 +31,9 @@ class AppServiceProvider extends ServiceProvider
     {
         // Un logo leído por petición: el correo genera el PDF varias veces.
         $this->app->scoped(LogoDocumento::class);
+
+        // Agentes de WhatsApp (041): las pruebas lo cambian por respuestas guionadas.
+        $this->app->bind(ClienteClaude::class, ClienteClaudeAnthropic::class);
     }
 
     /**
@@ -58,5 +63,8 @@ class AppServiceProvider extends ServiceProvider
 
         // Portal público de autofacturación (019): lo puede llamar cualquiera.
         RateLimiter::for('autofactura', fn (Request $request) => Limit::perMinute(20)->by($request->ip()));
+
+        // Webhook de WhatsApp (041): público; la firma de Meta es la autorización.
+        RateLimiter::for('whatsapp-webhook', fn (Request $request) => Limit::perMinute(300)->by($request->ip()));
     }
 }

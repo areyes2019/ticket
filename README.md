@@ -25,6 +25,25 @@ schtasks /Create /TN "ticket_factura scheduler" /SC MINUTE /MO 1 /TR "cmd /c cd 
   `php artisan cotizaciones:purgar-vencidas`.
 - `php artisan schedule:list` muestra qué está agendado y cuándo corre.
 
+## Cola de trabajos (agentes de WhatsApp, 041)
+
+Los agentes de WhatsApp contestan en segundo plano, con la cola `database`. Alguien tiene que
+atender la cola:
+
+- **En desarrollo (Laragon):** deja abierta una terminal con `php artisan queue:work`.
+- **En Hostinger:** en hPanel → Avanzado → Cron Jobs, una **segunda** tarea cada minuto (además
+  de la del scheduler), con la ruta de PHP y del proyecto del servidor:
+
+  ```
+  cd ~/domains/<dominio>/ticket_factura && php artisan queue:work --stop-when-empty --max-time=55 --tries=6 --timeout=50
+  ```
+
+  Arranca, atiende lo que haya durante 55 segundos y termina; el siguiente minuto arranca otro. Por
+  eso un agente puede tardar hasta un minuto en empezar a contestar (041, regla 24).
+- `deploy/deploy.sh` corre `php artisan queue:restart` al final de cada despliegue.
+- Los turnos que fallaron tres veces quedan en `failed_jobs` (`php artisan queue:failed`); la
+  conversación ya pasó a una persona.
+
 ## Despliegue a producción
 
 Producción vive en Hostinger. Los datos del servidor (alias SSH, rutas, URL) van en

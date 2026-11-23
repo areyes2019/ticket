@@ -68,10 +68,17 @@
     @if ($cliente->telefono)
         Tel. {{ $cliente->telefono }}<br>
     @endif
+    {{-- 041: la persona que cotizó por WhatsApp. --}}
+    @if ($cotizacion->contacto_nombre || $cotizacion->contacto_telefono)
+        Atención: {{ trim($cotizacion->contacto_nombre.' '.($cotizacion->contacto_telefono ? '· '.$cotizacion->contacto_telefono : ''), ' ·') }}<br>
+    @endif
 @endsection
 
 @section('conceptos')
     <x-pdf.conceptos :lineas="$cotizacion->lineas" />
+    @if ($cotizacion->notas)
+        <p class="notas"><strong>Detalles:</strong> {!! nl2br(e($cotizacion->notas)) !!}</p>
+    @endif
 @endsection
 
 @section('totales')

@@ -7,12 +7,13 @@
         [
             'nombre' => 'Ventas',
             'icono' => 'graph-up-arrow',
-            'rutas' => ['pedidos.*', 'facturas.*', 'cotizaciones.*', 'clientes.*'],
+            'rutas' => ['pedidos.*', 'facturas.*', 'cotizaciones.*', 'clientes.*', 'whatsapp.*'],
             'opciones' => [
                 ['ruta' => 'pedidos', 'icono' => 'ticket-perforated', 'nombre' => 'Ventas', 'detalle' => 'Mostrador y cotizaciones aceptadas'],
                 ['ruta' => 'facturas', 'icono' => 'receipt', 'nombre' => 'Facturas', 'detalle' => 'Comprobantes emitidos y timbrado'],
                 ['ruta' => 'cotizaciones', 'icono' => 'file-earmark-text', 'nombre' => 'Cotizaciones', 'detalle' => 'Propuestas para tus clientes'],
                 ['ruta' => 'clientes', 'icono' => 'people', 'nombre' => 'Clientes', 'detalle' => 'Datos fiscales y de contacto'],
+                ['ruta' => 'whatsapp', 'icono' => 'whatsapp', 'nombre' => 'WhatsApp', 'detalle' => 'Conversaciones con los agentes'],
             ],
         ],
         [

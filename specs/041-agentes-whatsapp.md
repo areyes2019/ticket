@@ -1,6 +1,7 @@
 # Spec: Agentes de WhatsApp (ventas y facturación) con la API de Claude
 
-> **Estado: aprobada, por implementar.** El 2026-11-22 el usuario aprobó las 27 asunciones
+> **Estado: implementada el 2026-11-23, falta probarla con el número real** (ver "Estado de
+> implementación" al final). El 2026-11-22 el usuario aprobó las 27 asunciones
 > funcionales (con cambios en la 5, la 7 y la 18), las seis adiciones técnicas y, sin cambios, las
 > "decisiones tomadas al redactar" (A a H, resumidas al final).
 
@@ -854,3 +855,38 @@ Aprobadas sin cambios el 2026-11-22:
   servidor, el historial ya se guarda aquí, y Managed Agents cobra además el tiempo de cada sesión.
 - **H. Valores por defecto:** tope de US$ 50 al mes, 20 turnos por hora y 100 por día por cliente,
   agentes apagados hasta que los enciendas.
+
+## Estado de implementación
+
+Implementada el 2026-11-23, con las 59 pruebas de `tests/Feature/WhatsappAgentesTest.php` (la suite
+completa pasa). **Falta** el alta del número en Meta y la prueba de punta a punta con el número real
+(pasos 2 y 5 del orden sugerido), y correr la migración en MySQL. Diferencias con lo escrito:
+
+- **Ajustes en `whatsapp_numeros`, no en `ClaveConfiguracion`.** Encendido de agentes, indicaciones,
+  horario, avisos, tope y límites son columnas del número: pertenecen a él, y el formulario genérico
+  de Configuración pinta cada clave como un mensaje de texto. La sección "WhatsApp" tiene su propio
+  formulario (`ConfiguracionWhatsappController`).
+- **`pedidos` no gana `telefono_10`.** `pedidos.cliente_telefono` ya se guarda normalizado
+  (`+52` y 10 dígitos, 019), así que la regla 44 compara contra `+52{10 dígitos}`. Solo
+  `clientes` gana la columna.
+- **`conversaciones` gana `ventas_validadas`** (JSON) para que una venta validada por
+  `buscar_venta` se pueda timbrar en un turno posterior (el cliente confirma en otro mensaje), y
+  `aviso_audio_el` para el aviso de audio una vez al día.
+- **Fallas a media vuelta:** si Claude falla de forma pasajera **antes** de usar cualquier
+  herramienta, el trabajo se reintenta (regla 25). Si ya usó alguna (por ejemplo, ya creó una
+  cotización), no se reintenta para no repetir acciones: pasa a humano con el aviso de falla.
+- **El servicio de facturación caído** (`ErrorPac`) no reintenta el turno: el agente le dice al
+  cliente que se intenta en unos minutos, y la factura pendiente se reutiliza en el siguiente
+  intento (como en el portal de 019).
+- **Transferencia:** el agente que recibe arranca una petición nueva con el mismo historial (no
+  hereda las herramientas del otro). A lo más dos transferencias por turno.
+- **Agente apagado:** si el agente actual está apagado, la conversación pasa a humano con el aviso de
+  la regla 30 (si no, el cliente no recibiría nada).
+- **Cola:** `ProcesarConversacion` es `ShouldBeUniqueUntilProcessing` (una en cola por conversación;
+  la que llega mientras otra corre espera el candado de turno). `tries = 6` (las esperas por el
+  candado cuentan como intento) y `maxExceptions = 3`.
+- **Modelo y API:** SDK oficial `anthropic-ai/sdk` 1.12, ruta beta por el respaldo ante rechazos
+  (`server-side-fallback-2026-07-01`, `fallbacks: "default"`), `thinking` adaptativo y `effort`
+  configurable. La forma de la petición se revisó con el serializador del SDK (sin red).
+- **Iconos:** la bandeja usa el icono `robot` de Bootstrap Icons en lugar de emojis (estilo
+  uniforme, 003).

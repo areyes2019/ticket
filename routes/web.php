@@ -7,6 +7,7 @@ use App\Http\Controllers\CatalogoSatController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\ComplementoPagoController;
 use App\Http\Controllers\ConfiguracionController;
+use App\Http\Controllers\ConfiguracionWhatsappController;
 use App\Http\Controllers\ConstanciaController;
 use App\Http\Controllers\CotizacionController;
 use App\Http\Controllers\CotizacionPagoController;
@@ -43,6 +44,8 @@ use App\Http\Controllers\ProveedorController;
 use App\Http\Controllers\ReembolsoController;
 use App\Http\Controllers\SaldoController;
 use App\Http\Controllers\TransferenciaController;
+use App\Http\Controllers\WhatsappController;
+use App\Http\Controllers\WhatsappWebhookController;
 use App\Http\Middleware\AsegurarUsuarioActivo;
 use App\Http\Middleware\CandadoMostrador;
 use Illuminate\Support\Facades\Route;
@@ -56,6 +59,13 @@ Route::get('/estilos', EstilosController::class)->name('estilos');
 Route::middleware('throttle:autofactura')->group(function () {
     Route::get('autofactura/{token}', [AutofacturaController::class, 'show'])->where('token', '[A-Za-z0-9]{64}')->name('autofactura.show');
     Route::post('autofactura/{token}', [AutofacturaController::class, 'store'])->where('token', '[A-Za-z0-9]{64}')->name('autofactura.store');
+});
+
+// Webhook de WhatsApp (041): público, sin sesión ni CSRF. La firma de Meta
+// (X-Hub-Signature-256) es la autorización.
+Route::middleware('throttle:whatsapp-webhook')->group(function () {
+    Route::get('webhooks/whatsapp', [WhatsappWebhookController::class, 'verificar'])->name('whatsapp.webhook.verificar');
+    Route::post('webhooks/whatsapp', [WhatsappWebhookController::class, 'recibir'])->name('whatsapp.webhook.recibir');
 });
 
 // CandadoMostrador (033): con la sesión del mostrador, solo sus pantallas y lo que usan.
@@ -216,11 +226,39 @@ Route::middleware(['auth', AsegurarUsuarioActivo::class, CandadoMostrador::class
     Route::resource('pedidos', PedidoController::class)
         ->parameters(['pedidos' => 'pedido']);
 
+    // Bandeja de WhatsApp (041). Las rutas estáticas van antes de {conversacion}.
+    Route::prefix('whatsapp')->name('whatsapp.')->controller(WhatsappController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('lista', 'lista')->name('lista');
+        Route::get('archivos/{mensaje}', 'archivo')->name('archivo');
+        Route::get('cliente/{cliente}', 'abrirCliente')->name('cliente.abrir');
+        Route::post('cliente/{cliente}/plantilla', 'plantillaNueva')->name('plantilla.nueva');
+        Route::get('{conversacion}', 'show')->name('show');
+        Route::get('{conversacion}/nuevos', 'nuevos')->name('nuevos');
+        Route::post('{conversacion}/mensajes', 'enviarMensaje')->name('mensajes.store');
+        Route::post('{conversacion}/plantilla', 'enviarPlantilla')->name('plantilla');
+        Route::patch('{conversacion}/estado', 'cambiarEstado')->name('estado');
+        Route::patch('{conversacion}/limite', 'quitarLimite')->name('limite');
+        Route::patch('{conversacion}/cliente', 'ligarCliente')->name('cliente');
+    });
+
     Route::get('configuracion', [ConfiguracionController::class, 'edit'])->name('configuracion.edit');
     Route::put('configuracion', [ConfiguracionController::class, 'update'])->name('configuracion.update');
     Route::put('configuracion/emisor', [ConfiguracionController::class, 'actualizarEmisor'])
         ->middleware('can:editar-emisor')
         ->name('configuracion.emisor');
+
+    // WhatsApp (041): conexión y ajustes de los agentes, solo el administrador.
+    Route::controller(ConfiguracionWhatsappController::class)
+        ->prefix('configuracion/whatsapp')
+        ->name('configuracion.whatsapp')
+        ->middleware('can:editar-emisor')
+        ->group(function () {
+            Route::put('/', 'update');
+            Route::post('probar', 'probar')->name('.probar');
+            Route::post('registrar', 'registrar')->name('.registrar');
+            Route::post('plantillas', 'plantillas')->name('.plantillas');
+        });
 
     // Datos bancarios (027): del negocio, sin scope por usuario; como el
     // emisor, solo los cambia el administrador. La lista vive en Configuración.

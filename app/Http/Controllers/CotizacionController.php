@@ -15,6 +15,7 @@ use App\Models\Cotizacion;
 use App\Models\CotizacionLinea;
 use App\Models\Pedido;
 use App\Models\User;
+use App\Services\Cotizaciones\CreadorCotizacion;
 use App\Services\Cotizaciones\GeneradorPdfCotizacion;
 use App\Services\Documentos\CalculadoraTotalesDocumento;
 use App\Services\Inventario\RegistradorInventario;
@@ -82,20 +83,9 @@ class CotizacionController extends Controller
     /**
      * El folio, la cotización y sus líneas se guardan juntos.
      */
-    public function store(CotizacionRequest $request): RedirectResponse
+    public function store(CotizacionRequest $request, CreadorCotizacion $creador): RedirectResponse
     {
-        $cotizacion = DB::transaction(function () use ($request) {
-            $cotizacion = $request->user()->cotizaciones()->make($request->datosCotizacion());
-            $cotizacion->folio = $this->siguienteFolio($request->user());
-            $cotizacion->congelarDescuentoCliente();
-            $cotizacion->congelarDatosBancarios();
-            $cotizacion->aplicarTotales($request->totales());
-            $cotizacion->save();
-
-            $this->guardarLineas($cotizacion, $request->lineas(), $request->totales());
-
-            return $cotizacion;
-        });
+        $cotizacion = $creador->crear($request->user(), $request->datosCotizacion(), $request->lineas(), $request->totales());
 
         // Desde el mostrador (033), la nueva queda en su pantalla de envío.
         $destino = match ($request->input('origen')) {
@@ -323,38 +313,16 @@ class CotizacionController extends Controller
 
     private function siguienteFolio(User $user): int
     {
-        $bloqueado = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
-        $folio = max($bloqueado->ultimo_folio_cotizacion, (int) $bloqueado->cotizaciones()->max('folio')) + 1;
-
-        $bloqueado->forceFill(['ultimo_folio_cotizacion' => $folio])->save();
-
-        return $folio;
+        return CreadorCotizacion::siguienteFolio($user);
     }
 
     /**
-     * Reemplaza las líneas. El costo se copia del artículo en este momento
-     * (una sola consulta); importe e IVA salen de la calculadora.
-     *
      * @param  list<array<string, mixed>>  $lineas
      * @param  array<string, mixed>  $totales
      */
     private function guardarLineas(Cotizacion $cotizacion, array $lineas, array $totales): void
     {
-        $costos = Articulo::withTrashed()
-            ->whereIn('id', array_filter(array_column($lineas, 'articulo_id')))
-            ->pluck('costo_con_descuento', 'id');
-
-        $cotizacion->lineas()->delete();
-
-        foreach ($lineas as $i => $linea) {
-            $cotizacion->lineas()->create([
-                ...$linea,
-                'orden' => $i + 1,
-                'importe' => $totales['lineas'][$i]['importe'],
-                'iva_importe' => $totales['lineas'][$i]['iva_importe'],
-                'costo_unitario' => $linea['articulo_id'] === null ? null : $costos->get($linea['articulo_id']),
-            ]);
-        }
+        app(CreadorCotizacion::class)->guardarLineas($cotizacion, $lineas, $totales);
     }
 
     /**

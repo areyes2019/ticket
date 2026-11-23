@@ -25,6 +25,16 @@
         @if ($cliente->telefono)
             <div><dt>Teléfono</dt><dd>{{ $cliente->telefono }}</dd></div>
         @endif
+        {{-- 041: la persona que cotizó por WhatsApp y los datos del sello. --}}
+        @if ($cotizacion->contacto_nombre || $cotizacion->contacto_telefono)
+            <div><dt>Atención</dt><dd>{{ trim($cotizacion->contacto_nombre.' '.($cotizacion->contacto_telefono ? '· '.$cotizacion->contacto_telefono : ''), ' ·') }}</dd></div>
+        @endif
+        @if ($cotizacion->whatsapp_conversacion_id)
+            <div><dt>Origen</dt><dd><a href="{{ route('whatsapp.show', $cotizacion->whatsapp_conversacion_id) }}">Conversación de WhatsApp</a></dd></div>
+        @endif
+        @if ($cotizacion->notas)
+            <div><dt>Detalles</dt><dd>{!! nl2br(e($cotizacion->notas)) !!}</dd></div>
+        @endif
         {{-- Solo en pantalla (023): el PDF que recibe el cliente no lo lleva. "Al cotizar" porque es el congelado. --}}
         @if ($cotizacion->tieneDescuentoCliente())
             <div data-descuento-cliente-al-cotizar><dt>Descuento de cliente al cotizar</dt><dd><strong>{{ App\Models\Cliente::porcentajeTexto($cotizacion->descuento_cliente_porcentaje) }}%</strong></dd></div>

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\RegimenFiscal;
+use App\Services\Whatsapp\Telefono;
 use Database\Factories\ClienteFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -50,6 +51,16 @@ class Cliente extends Model
         'descuento_permanente' => '0.00',
         'es_distribuidor' => false,
     ];
+
+    /**
+     * telefono_10 (041, regla 76) lo escribe solo el modelo al guardar.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (Cliente $cliente) {
+            $cliente->telefono_10 = Telefono::diezDigitos($cliente->telefono);
+        });
+    }
 
     /**
      * @return BelongsTo<User, $this>
