@@ -23,6 +23,10 @@ return [
         ],
     ],
 
+    // Regla 24: el turno corre en la misma visita del webhook, después de
+    // contestarle a Meta; la cola (cron cada minuto) queda de respaldo.
+    'responder_al_momento' => (bool) env('WHATSAPP_AL_MOMENTO', true),
+
     // Regla 75: mensajes de texto que ve el agente; el resto va en el resumen.
     'mensajes_historial' => 40,
     'resumir_cada' => 20,

@@ -38,8 +38,9 @@ atender la cola:
   cd ~/domains/<dominio>/ticket_factura && php artisan queue:work --stop-when-empty --max-time=55 --tries=6 --timeout=50
   ```
 
-  Arranca, atiende lo que haya durante 55 segundos y termina; el siguiente minuto arranca otro. Por
-  eso un agente puede tardar hasta un minuto en empezar a contestar (041, regla 24).
+  Arranca, atiende lo que haya durante 55 segundos y termina; el siguiente minuto arranca otro.
+  Normalmente el agente contesta al momento, en la misma visita del webhook; la cola es el
+  respaldo cuando ese intento falla (041, decisión D corregida).
 - `deploy/deploy.sh` corre `php artisan queue:restart` al final de cada despliegue.
 - Los turnos que fallaron tres veces quedan en `failed_jobs` (`php artisan queue:failed`); la
   conversación ya pasó a una persona.

@@ -885,3 +885,27 @@ it('el aviso de privacidad es público, indexable y menciona a los proveedores',
         ->assertSee('Anthropic')
         ->assertSee('index, follow', false);
 });
+
+it('contesta al momento después de responderle a Meta, con la cola de respaldo', function () {
+    config(['whatsapp.responder_al_momento' => true]);
+    Bus::fake();
+    metaFalso();
+    $this->claude->guion = [claudeTexto('¡Hola! ¿En qué te ayudo?')];
+
+    enviarAviso(avisoMeta([textoCliente('Hola')]))->assertOk();
+
+    expect(textosEnviados())->toBe(['¡Hola! ¿En qué te ayudo?'])
+        ->and(WhatsappMensaje::where('direccion', 'entrante')->where('respondido', false)->count())->toBe(0);
+    Bus::assertDispatched(ProcesarConversacion::class);
+});
+
+it('si el turno al momento falla, no rompe el webhook y queda pendiente para la cola', function () {
+    config(['whatsapp.responder_al_momento' => true]);
+    Bus::fake();
+    metaFalso();
+    $this->claude->guion = [new ClaudeException('saturado', pasajera: true)];
+
+    enviarAviso(avisoMeta([textoCliente('Hola')]))->assertOk();
+
+    expect(WhatsappMensaje::where('direccion', 'entrante')->where('respondido', false)->count())->toBe(1);
+});

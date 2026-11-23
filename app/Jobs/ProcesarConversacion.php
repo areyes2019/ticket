@@ -77,6 +77,39 @@ class ProcesarConversacion implements ShouldBeUniqueUntilProcessing, ShouldQueue
     }
 
     /**
+     * Respuesta al momento (041, regla 24 corregida): el webhook ya le contestó
+     * a Meta y, en la misma visita, corre el turno sin esperar al cron. El
+     * trabajo en cola queda de respaldo: si esto falla o no alcanza el candado,
+     * el cron lo atiende y reintenta como siempre. Nunca lanza.
+     */
+    public static function alMomento(int $conversacionId): void
+    {
+        $conversacion = WhatsappConversacion::find($conversacionId);
+
+        if ($conversacion === null) {
+            return;
+        }
+
+        $candado = Cache::lock('wa-turno:'.$conversacion->id, 120);
+
+        if (! $candado->get()) {
+            return;
+        }
+
+        ignore_user_abort(true);
+        @set_time_limit(150);
+
+        try {
+            app(OrquestadorTurno::class)->correr($conversacion);
+        } catch (Throwable $error) {
+            // El trabajo en cola lo reintenta en el siguiente minuto.
+            Log::info('El turno al momento falló; queda para la cola.', ['conversacion' => $conversacion->id, 'error' => $error->getMessage()]);
+        } finally {
+            $candado->release();
+        }
+    }
+
+    /**
      * Regla 25: a la tercera, pasa a humano con aviso al cliente.
      */
     public function failed(?Throwable $error): void

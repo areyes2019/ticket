@@ -846,7 +846,8 @@ Aprobadas sin cambios el 2026-11-22:
 - **C. Facturar solo con el mismo teléfono de la venta o con el enlace/QR del ticket** (regla 44),
   para que nadie facture la compra de otra persona adivinando el folio.
 - **D. Espera de hasta un minuto** antes de que el agente empiece a contestar, por la cola en
-  Hostinger (regla 24).
+  Hostinger (regla 24). **Corregida el 2026-11-23** (ver "Estado de implementación"): se contesta
+  al momento y la cola queda de respaldo.
 - **E. Refresco cada 20 segundos** en la bandeja, sin tiempo real (regla 63).
 - **F. Modelo Claude Opus 5.5 con esfuerzo bajo** (configuración). Se cambia a Sonnet 5.5 desde el
   `.env` si se quiere bajar el costo a la mitad.
@@ -890,3 +891,10 @@ completa pasa). **Falta** el alta del número en Meta y la prueba de punta a pun
   configurable. La forma de la petición se revisó con el serializador del SDK (sin red).
 - **Iconos:** la bandeja usa el icono `robot` de Bootstrap Icons en lugar de emojis (estilo
   uniforme, 003).
+- **Respuesta al momento (corrección de la decisión D, 2026-11-23, a pedido del usuario):** el
+  webhook guarda el mensaje, encola el turno como respaldo y le contesta `200` a Meta; después, en
+  la misma visita (`defer()`, que en LiteSpeed suelta la respuesta con
+  `litespeed_finish_request`), corre el turno con `ProcesarConversacion::alMomento()` bajo el
+  mismo candado. El cliente recibe la respuesta en lo que tarda Claude (5 a 15 s). Si ese turno
+  falla o no alcanza el candado, el trabajo en cola lo atiende en el siguiente minuto con sus
+  reintentos de siempre. `WHATSAPP_AL_MOMENTO=false` vuelve al comportamiento de solo cola.

@@ -117,7 +117,14 @@ class ReceptorWebhook
         });
 
         if ($encolar !== null) {
+            // La cola es el respaldo; si se puede, se contesta al momento,
+            // después de soltar la respuesta a Meta.
             ProcesarConversacion::dispatch($encolar->id);
+
+            if (config('whatsapp.responder_al_momento')) {
+                $id = $encolar->id;
+                defer(fn () => ProcesarConversacion::alMomento($id), 'whatsapp-turno-'.$id);
+            }
         }
     }
 
