@@ -57,5 +57,7 @@
 @endsection
 
 @push('scripts')
+    {{-- Antes de whatsapp.js: con la lista abierta, Enter elige y no envía (043). --}}
+    <script src="{{ asset('js/respuestas-rapidas.js') }}?v={{ filemtime(public_path('js/respuestas-rapidas.js')) }}"></script>
     <script src="{{ asset('js/whatsapp.js') }}?v={{ filemtime(public_path('js/whatsapp.js')) }}"></script>
 @endpush

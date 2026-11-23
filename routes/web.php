@@ -42,6 +42,7 @@ use App\Http\Controllers\PedidoEntregaController;
 use App\Http\Controllers\PedidoPagoController;
 use App\Http\Controllers\ProveedorController;
 use App\Http\Controllers\ReembolsoController;
+use App\Http\Controllers\RespuestaRapidaController;
 use App\Http\Controllers\SaldoController;
 use App\Http\Controllers\TransferenciaController;
 use App\Http\Controllers\WhatsappController;
@@ -279,6 +280,19 @@ Route::middleware(['auth', AsegurarUsuarioActivo::class, CandadoMostrador::class
             Route::patch('{datoBancario}/visible', 'alternarVisible')->name('visible');
             Route::patch('{datoBancario}/mover/{direccion}', 'mover')->whereIn('direccion', ['arriba', 'abajo'])->name('mover');
             Route::get('{datoBancario}/logo', 'logo')->name('logo');
+        });
+
+    // Respuestas rápidas del chat de WhatsApp (043): del negocio, para
+    // cualquier usuario con sesión. La lista vive en Configuración.
+    Route::controller(RespuestaRapidaController::class)
+        ->prefix('configuracion/respuestas-rapidas')
+        ->name('configuracion.respuestas-rapidas.')
+        ->group(function () {
+            Route::get('crear', 'create')->name('create');
+            Route::post('/', 'store')->name('store');
+            Route::get('{respuestaRapida}/editar', 'edit')->name('edit');
+            Route::put('{respuestaRapida}', 'update')->name('update');
+            Route::delete('{respuestaRapida}', 'destroy')->name('destroy');
         });
 
     // Inventario. Las rutas estáticas van antes de {articulo}, o se tomarían

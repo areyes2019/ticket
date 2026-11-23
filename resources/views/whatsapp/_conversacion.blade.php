@@ -63,8 +63,16 @@
     @if ($abierta->ventanaAbierta())
         <form method="POST" action="{{ route('whatsapp.mensajes.store', $abierta) }}" enctype="multipart/form-data" class="wa-redactar">
             @csrf
+            {{-- Respuestas rápidas con "/" (043): la lista viaja con la página
+                 (adición 1) y la arma respuestas-rapidas.js. Sin JavaScript
+                 no se usa y la caja funciona igual (adición 2). --}}
+            @isset($respuestasRapidas)
+                <script type="application/json" id="wa-respuestas-rapidas" data-configuracion="{{ route('configuracion.edit') }}#respuestas-rapidas">@json($respuestasRapidas, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE)</script>
+                <div class="wa-respuestas" id="wa-respuestas-lista" role="listbox" aria-label="Respuestas rápidas" hidden></div>
+                <p class="solo-lectores" id="wa-respuestas-aviso" aria-live="polite"></p>
+            @endisset
             <x-campo nombre="texto" id="wa-texto" etiqueta="Respuesta" tipo="textarea" rows="2" maxlength="4000"
-                     placeholder="Escribe una respuesta… (contestar pausa el agente en este chat)" class="wa-redactar-texto" />
+                     placeholder="Escribe una respuesta o / para respuestas rápidas… (contestar pausa el agente en este chat)" class="wa-redactar-texto" />
             <x-campo nombre="archivo" id="wa-archivo" etiqueta="Adjuntar imagen o PDF (máx. {{ config('whatsapp.max_mb_archivo') }} MB)" tipo="file"
                      accept="image/jpeg,image/png,image/webp,application/pdf" />
             <x-boton icono="send">Enviar</x-boton>

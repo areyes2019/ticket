@@ -29,6 +29,10 @@
             </div>
         @endcan
 
+        <div id="respuestas-rapidas" class="config-panel">
+            @include('configuracion._respuestas-rapidas')
+        </div>
+
         <div id="mensajes" class="config-panel">
             <form method="POST" action="{{ route('configuracion.update') }}">
                 @csrf

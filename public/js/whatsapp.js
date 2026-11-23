@@ -85,11 +85,16 @@
             }
         });
 
-        // Enter envía y Mayús+Enter hace salto de línea.
+        // Enter envía y Mayús+Enter hace salto de línea. Con la lista de
+        // respuestas rápidas abierta, Enter elige y no envía (043, regla 9).
         const caja = bandeja.querySelector('#wa-texto');
 
         if (caja) {
             caja.addEventListener('keydown', function (evento) {
+                if (evento.defaultPrevented || caja.getAttribute('aria-expanded') === 'true') {
+                    return;
+                }
+
                 if (evento.key === 'Enter' && !evento.shiftKey && caja.value.trim() !== '') {
                     evento.preventDefault();
                     caja.form.requestSubmit();

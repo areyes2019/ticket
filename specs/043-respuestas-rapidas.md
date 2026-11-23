@@ -1,7 +1,8 @@
 # Spec: Respuestas rápidas en el chat de WhatsApp
 
-> **Estado: aprobada, sin implementar.** El usuario aprobó el 2026-11-22, sin cambios, las 21
-> asunciones funcionales y las 4 adiciones técnicas.
+> **Estado: implementada el 2026-11-22, falta revisarla a mano en el navegador** (ver "Estado de
+> implementación" al final). El usuario aprobó el 2026-11-22, sin cambios, las 21 asunciones
+> funcionales y las 4 adiciones técnicas.
 
 **Modifica:**
 
@@ -352,3 +353,21 @@ no tiene pruebas de JavaScript.
 2. Datos para el chat en `WhatsappController` y en `_conversacion`, con las pruebas 35 a 37.
 3. `respuestas-rapidas.js` y su CSS. Revisión a mano en el navegador: abrir, filtrar, elegir con
    mouse y teclado, variables y Escape.
+
+## Estado de implementación
+
+Implementada el 2026-11-22, con las 17 pruebas de `tests/Feature/RespuestasRapidasTest.php` y la
+prueba 31 de `ConfiguracionPestanasTest` ajustada. La suite completa pasa.
+
+- **Enter en el chat:** `whatsapp.js` ya mandaba el mensaje con Enter (041). Ahora no lo hace si el
+  evento ya viene con `preventDefault` o si la caja tiene `aria-expanded="true"`. Además,
+  `respuestas-rapidas.js` se carga antes que `whatsapp.js`.
+- **Sin coincidencias:** con la lista abierta y "Sin respuestas guardadas", Enter cierra la lista y
+  envía como siempre, porque no hay nada que elegir.
+- **Atajo:** se validan por separado los espacios (`not_regex`) y los signos (`regex`), cada uno con
+  su mensaje (regla 2). El campo acepta 31 caracteres para dejar lugar a la "/" que se quita sola.
+- **JSON:** `@json` con `JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE`. Los acentos se ven
+  tal cual y `</script>` sale como `\u003C/script\u003E` (escapado).
+- **Fecha:** `now()->locale('es')->translatedFormat('j \d\e F \d\e Y')`.
+- **Pendiente:** correr la migración en producción y revisar a mano la lista: abrir, filtrar, elegir
+  con mouse y teclado, variables y Escape.

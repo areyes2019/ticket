@@ -8,6 +8,7 @@ use App\Http\Requests\ConfiguracionRequest;
 use App\Models\Configuracion;
 use App\Models\DatoBancario;
 use App\Models\Emisor;
+use App\Models\RespuestaRapida;
 use App\Services\Pedidos\MensajePedido;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,7 +18,8 @@ use Illuminate\View\View;
 /**
  * Almacén clave→valor por usuario (los dos mensajes de pedidos, 019), los
  * datos del emisor de toda la instalación (026) y la lista de sus datos
- * bancarios (027; se editan en DatoBancarioController).
+ * bancarios (027; se editan en DatoBancarioController) y de las respuestas
+ * rápidas del chat (043; se editan en RespuestaRapidaController).
  */
 class ConfiguracionController extends Controller
 {
@@ -32,13 +34,15 @@ class ConfiguracionController extends Controller
             'ejemplo' => MensajePedido::ejemplo(),
             'emisor' => $emisor = Emisor::actual(),
             'datosBancarios' => DatoBancario::query()->ordenados()->get(),
+            'respuestasRapidas' => RespuestaRapida::query()->ordenadas()->get(),
             'pestanas' => $this->pestanas($request, $emisor),
         ]);
     }
 
     /**
      * Las pestañas que ve este usuario, en orden (042, regla 2). Las tres del
-     * negocio solo para el administrador; `advertencia` pinta la señal de las
+     * negocio solo para el administrador; Respuestas rápidas (043) y Mensajes
+     * para todos; `advertencia` pinta la señal de las
      * reglas 17 y 18.
      *
      * @return list<array{ancla: string, titulo: string, icono: string, advertencia: ?string}>
@@ -53,6 +57,8 @@ class ConfiguracionController extends Controller
             $pestanas[] = ['ancla' => 'whatsapp', 'titulo' => 'WhatsApp', 'icono' => 'whatsapp', 'advertencia' => $request->user()->whatsappNumero === null ? 'Sin conectar' : null];
         }
 
+        // Para todos los usuarios (043, regla 15).
+        $pestanas[] = ['ancla' => 'respuestas-rapidas', 'titulo' => 'Respuestas rápidas', 'icono' => 'lightning-charge', 'advertencia' => null];
         $pestanas[] = ['ancla' => 'mensajes', 'titulo' => 'Mensajes de pedidos', 'icono' => 'envelope', 'advertencia' => null];
 
         return $pestanas;

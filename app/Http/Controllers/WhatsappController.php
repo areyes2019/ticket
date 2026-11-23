@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\EstadoConversacion;
 use App\Models\Cliente;
+use App\Models\RespuestaRapida;
 use App\Models\WhatsappConversacion;
 use App\Models\WhatsappMensaje;
 use App\Models\WhatsappPlantilla;
@@ -267,7 +268,32 @@ class WhatsappController extends Controller
             'plantillas' => $numero?->plantillas()->where('estado', 'APPROVED')->orderBy('nombre')->get() ?? collect(),
             'clientes' => $abierta === null ? collect() : $request->user()->clientes()->orderBy('razon_social')->get(['id', 'razon_social', 'rfc', 'nombre_contacto']),
             'gasto' => $numero === null ? null : app(RegistroUso::class)->porcentaje($request->user(), $numero->tope_mensual_usd),
+            'respuestasRapidas' => $this->respuestasRapidas($abierta),
         ]);
+    }
+
+    /**
+     * Lo que necesita la lista de "/" en el chat (043, adición 1): todas las
+     * respuestas rápidas y los valores de {nombre} y {fecha}. Solo con la
+     * ventana de 24 horas abierta, porque sin ella no hay caja de respuesta
+     * (regla 13).
+     *
+     * @return array{respuestas: list<array{atajo: string, texto: string}>, nombre: string, fecha: string}|null
+     */
+    private function respuestasRapidas(?WhatsappConversacion $abierta): ?array
+    {
+        if ($abierta === null || ! $abierta->ventanaAbierta()) {
+            return null;
+        }
+
+        return [
+            'respuestas' => RespuestaRapida::query()->ordenadas()->get(['atajo', 'texto'])
+                ->map(fn (RespuestaRapida $r) => ['atajo' => $r->atajo, 'texto' => $r->texto])
+                ->all(),
+            // Regla 4: solo el cliente ligado, no el nombre de perfil de WhatsApp.
+            'nombre' => (string) ($abierta->cliente?->nombre_contacto ?: $abierta->cliente?->razon_social ?: ''),
+            'fecha' => now()->locale('es')->translatedFormat('j \d\e F \d\e Y'),
+        ];
     }
 
     /**

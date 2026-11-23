@@ -25,23 +25,27 @@ function conectarWhatsapp(User $user): void
     $numero->save();
 }
 
-it('el administrador ve las cuatro pestañas en orden con sus secciones', function () {
+it('el administrador ve las cinco pestañas en orden con sus secciones', function () {
     $this->actingAs($this->admin)->get('/configuracion')
         ->assertOk()
         ->assertSee('data-pestanas-barra', false)
-        ->assertSeeInOrder(['href="#emisor"', 'href="#datos-bancarios"', 'href="#whatsapp"', 'href="#mensajes"'], false)
-        ->assertSeeInOrder(['Emisor', 'Datos bancarios', 'WhatsApp', 'Mensajes de pedidos'])
+        ->assertSeeInOrder(['href="#emisor"', 'href="#datos-bancarios"', 'href="#whatsapp"', 'href="#respuestas-rapidas"', 'href="#mensajes"'], false)
+        ->assertSeeInOrder(['Emisor', 'Datos bancarios', 'WhatsApp', 'Respuestas rápidas', 'Mensajes de pedidos'])
         ->assertSee('id="emisor"', false)
         ->assertSee('id="datos-bancarios"', false)
         ->assertSee('id="whatsapp"', false)
+        ->assertSee('id="respuestas-rapidas"', false)
         ->assertSee('id="mensajes"', false);
 });
 
-it('el usuario normal solo ve los mensajes, sin barra de pestañas', function () {
+// 043 cambia la regla 6 de 042: con Respuestas rápidas el usuario normal ya
+// tiene dos pestañas y ve la barra, pero no las del negocio.
+it('el usuario normal ve respuestas rápidas y mensajes, sin las del negocio', function () {
     $this->actingAs($this->user)->get('/configuracion')
         ->assertOk()
         ->assertSee('id="mensajes"', false)
-        ->assertDontSee('data-pestanas-barra', false)
+        ->assertSee('id="respuestas-rapidas"', false)
+        ->assertSee('data-pestanas-barra', false)
         ->assertDontSee('id="emisor"', false)
         ->assertDontSee('id="datos-bancarios"', false)
         ->assertDontSee('id="whatsapp"', false);
