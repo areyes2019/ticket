@@ -74,23 +74,10 @@
             </div>
         </section>
 
-        <section class="config-bloque">
-            <div class="config-bloque-texto">
-                <h3>Agentes</h3>
-                <p class="ayuda">Las indicaciones se agregan a las reglas fijas del sistema; no las sustituyen.</p>
-            </div>
-            <div class="rejilla-campos">
-                <div class="wa-agente">
-                    <x-campo nombre="ventas_activo" etiqueta="Agente de ventas encendido" tipo="checkbox" :valor="$numero?->ventas_activo" />
-                    <x-campo nombre="instrucciones_ventas" etiqueta="Indicaciones para el agente de ventas" tipo="textarea" rows="6" maxlength="4000" :valor="$numero?->instrucciones_ventas"
-                             ayuda="Políticas, tiempos de entrega, preguntas frecuentes, tono." />
-                </div>
-                <div class="wa-agente">
-                    <x-campo nombre="facturacion_activo" etiqueta="Agente de facturación encendido" tipo="checkbox" :valor="$numero?->facturacion_activo" />
-                    <x-campo nombre="instrucciones_facturacion" etiqueta="Indicaciones para el agente de facturación" tipo="textarea" rows="6" maxlength="4000" :valor="$numero?->instrucciones_facturacion" />
-                </div>
-            </div>
-        </section>
+        {{-- Un bloque por agente con sus indicaciones por secciones (045, regla 14). --}}
+        @foreach (App\Enums\AgenteWhatsapp::cases() as $agente)
+            @include('configuracion._whatsapp-agente', ['agente' => $agente, 'numero' => $numero])
+        @endforeach
 
         <section class="config-bloque">
             <div class="config-bloque-texto">

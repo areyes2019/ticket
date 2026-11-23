@@ -3140,18 +3140,85 @@ a.bandeja-abrir {
     border: 1px solid var(--color-borde);
 }
 
-.wa-agente {
-    padding: var(--espacio-3) var(--espacio-4) 0;
-    border: 1px solid var(--color-borde);
-}
-
-.wa-agente .casilla {
-    margin-bottom: var(--espacio-3);
+/* Indicaciones de los agentes por secciones (045) */
+[data-indicaciones] .casilla {
     font-weight: 500;
 }
 
-.wa-agente {
-    height: 100%;
+.wa-plegable {
+    padding: var(--espacio-3) 0;
+    border-top: 1px solid var(--color-borde);
+}
+
+.wa-plegable > summary {
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.wa-plegable[open] > summary {
+    margin-bottom: var(--espacio-3);
+}
+
+/* La etiqueta de "Otras indicaciones" repite el título del desplegable. */
+.wa-plegable .campo:has(.wa-otras) > label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.wa-pregunta {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--espacio-3);
+    align-items: start;
+    margin: 0;
+    padding: var(--espacio-3) 0;
+    border: 0;
+    border-bottom: 1px solid var(--color-borde);
+}
+
+.wa-pregunta:first-child {
+    padding-top: 0;
+}
+
+.wa-pregunta .campo:last-of-type {
+    margin-bottom: 0;
+}
+
+.wa-pregunta-quitar {
+    margin-top: 1.75rem;
+}
+
+.wa-pregunta-error {
+    margin: var(--espacio-2) 0 0;
+    font-size: var(--texto-pequeno);
+    color: var(--color-error);
+}
+
+.campo-error textarea {
+    border-color: var(--color-error);
+}
+
+.wa-preguntas-tope {
+    margin-top: var(--espacio-3);
+}
+
+.wa-contador {
+    margin: 0;
+}
+
+@media (max-width: 48rem) {
+    .wa-pregunta {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .wa-pregunta-quitar {
+        margin-top: 0;
+        justify-self: end;
+    }
 }
 
 .wa-horario {

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\AgenteWhatsapp;
+use App\Services\Whatsapp\TextoIndicaciones;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -23,8 +24,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'verify_token',
     'ventas_activo',
     'facturacion_activo',
-    'instrucciones_ventas',
-    'instrucciones_facturacion',
+    'indicaciones_ventas',
+    'indicaciones_facturacion',
     'horario',
     'aviso_humano',
     'aviso_humano_fuera_horario',
@@ -96,12 +97,22 @@ class WhatsappNumero extends Model
         };
     }
 
+    /**
+     * La caja de indicaciones del agente con todas sus claves (045, regla 22).
+     *
+     * @return array<string, mixed>
+     */
+    public function indicaciones(AgenteWhatsapp $agente): array
+    {
+        return TextoIndicaciones::normalizar($agente, $this->{$agente->columnaIndicaciones()} ?? []);
+    }
+
+    /**
+     * El texto de las indicaciones que recibe el agente (045, regla 20).
+     */
     public function instrucciones(AgenteWhatsapp $agente): ?string
     {
-        return match ($agente) {
-            AgenteWhatsapp::Ventas => $this->instrucciones_ventas,
-            AgenteWhatsapp::Facturacion => $this->instrucciones_facturacion,
-        };
+        return TextoIndicaciones::armar($agente, $this->indicaciones($agente));
     }
 
     /**
@@ -176,6 +187,8 @@ class WhatsappNumero extends Model
             'app_secret' => 'encrypted',
             'ventas_activo' => 'boolean',
             'facturacion_activo' => 'boolean',
+            'indicaciones_ventas' => 'array',
+            'indicaciones_facturacion' => 'array',
             'horario' => 'array',
             'tope_mensual_usd' => 'decimal:2',
             'limite_hora' => 'integer',

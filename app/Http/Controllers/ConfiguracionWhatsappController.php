@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AgenteWhatsapp;
 use App\Models\WhatsappNumero;
 use App\Models\WhatsappPlantilla;
 use App\Services\Whatsapp\ClienteMeta;
 use App\Services\Whatsapp\MetaException;
+use App\Services\Whatsapp\TextoIndicaciones;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -23,6 +25,18 @@ class ConfiguracionWhatsappController extends Controller
         $numero = $request->user()->whatsappNumero ?? new WhatsappNumero;
         $nuevo = ! $numero->exists;
 
+        // Pares de preguntas frecuentes vacíos fuera y renumerados (045, regla 32).
+        foreach (AgenteWhatsapp::cases() as $agente) {
+            $columna = $agente->columnaIndicaciones();
+
+            if (is_array($request->input($columna))) {
+                $request->merge([$columna => [
+                    ...$request->input($columna),
+                    'preguntas' => TextoIndicaciones::sinVacios($request->input($columna.'.preguntas')),
+                ]]);
+            }
+        }
+
         $datos = $request->validate([
             'phone_number_id' => ['required', 'string', 'regex:/^\d{5,32}$/', Rule::unique('whatsapp_numeros', 'phone_number_id')->ignore($numero->id)],
             'waba_id' => ['required', 'string', 'regex:/^\d{5,32}$/'],
@@ -32,8 +46,7 @@ class ConfiguracionWhatsappController extends Controller
             'verify_token' => ['required', 'string', 'min:12', 'max:64', 'regex:/^[A-Za-z0-9_\-]+$/'],
             'ventas_activo' => ['boolean'],
             'facturacion_activo' => ['boolean'],
-            'instrucciones_ventas' => ['nullable', 'string', 'max:4000'],
-            'instrucciones_facturacion' => ['nullable', 'string', 'max:4000'],
+            ...$this->reglasIndicaciones(),
             'horario' => ['array'],
             'horario.*.abierto' => ['boolean'],
             'horario.*.abre' => ['nullable', 'date_format:H:i'],
@@ -47,6 +60,7 @@ class ConfiguracionWhatsappController extends Controller
             'phone_number_id.unique' => 'Este número ya está conectado a otra cuenta.',
             'phone_number_id.regex' => 'El identificador del número son solo dígitos.',
             'waba_id.regex' => 'El identificador de la cuenta de WhatsApp son solo dígitos.',
+            ...$this->mensajesIndicaciones(),
         ]);
 
         $horario = [];
@@ -56,6 +70,15 @@ class ConfiguracionWhatsappController extends Controller
             $horario[$dia] = ! empty($tramo['abierto']) && ! empty($tramo['abre']) && ! empty($tramo['cierra']) && $tramo['abre'] < $tramo['cierra']
                 ? [$tramo['abre'], $tramo['cierra']]
                 : null;
+        }
+
+        // Solo la caja de cada agente con sus claves y los textos limpios (045, reglas 22 y 37).
+        foreach (AgenteWhatsapp::cases() as $agente) {
+            $columna = $agente->columnaIndicaciones();
+
+            if (array_key_exists($columna, $datos)) {
+                $datos[$columna] = TextoIndicaciones::normalizar($agente, $datos[$columna]);
+            }
         }
 
         $numero->fill([
@@ -75,6 +98,55 @@ class ConfiguracionWhatsappController extends Controller
         $numero->save();
 
         return $this->volver()->with('exito', 'Ajustes de WhatsApp guardados.');
+    }
+
+    /**
+     * Validación de las indicaciones por secciones (045, regla 17).
+     *
+     * @return array<string, list<string>>
+     */
+    private function reglasIndicaciones(): array
+    {
+        $reglas = [];
+
+        foreach (AgenteWhatsapp::cases() as $agente) {
+            $a = $agente->columnaIndicaciones();
+            $reglas[$a] = ['nullable', 'array'];
+
+            foreach (array_keys($agente->seccionesTexto()) as $clave) {
+                $reglas["{$a}.{$clave}"] = ['nullable', 'string', 'max:'.TextoIndicaciones::MAX_SECCION];
+            }
+
+            $reglas["{$a}.preguntas"] = ['array', 'max:'.TextoIndicaciones::MAX_PREGUNTAS];
+            $reglas["{$a}.preguntas.*.pregunta"] = ["required_with:{$a}.preguntas.*.respuesta", 'nullable', 'string', 'max:'.TextoIndicaciones::MAX_PREGUNTA];
+            $reglas["{$a}.preguntas.*.respuesta"] = ["required_with:{$a}.preguntas.*.pregunta", 'nullable', 'string', 'max:'.TextoIndicaciones::MAX_RESPUESTA];
+        }
+
+        return $reglas;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function mensajesIndicaciones(): array
+    {
+        $mensajes = [];
+
+        foreach (AgenteWhatsapp::cases() as $agente) {
+            $a = $agente->columnaIndicaciones();
+
+            foreach ($agente->seccionesTexto() as $clave => $seccion) {
+                $mensajes["{$a}.{$clave}.max"] = "{$seccion['titulo']}: máximo ".number_format(TextoIndicaciones::MAX_SECCION).' caracteres.';
+            }
+
+            $mensajes["{$a}.preguntas.max"] = 'Llegaste al máximo de '.TextoIndicaciones::MAX_PREGUNTAS.' preguntas frecuentes.';
+            $mensajes["{$a}.preguntas.*.pregunta.required_with"] = 'Falta la pregunta.';
+            $mensajes["{$a}.preguntas.*.respuesta.required_with"] = 'Falta la respuesta.';
+            $mensajes["{$a}.preguntas.*.pregunta.max"] = 'La pregunta lleva máximo '.TextoIndicaciones::MAX_PREGUNTA.' caracteres.';
+            $mensajes["{$a}.preguntas.*.respuesta.max"] = 'La respuesta lleva máximo '.TextoIndicaciones::MAX_RESPUESTA.' caracteres.';
+        }
+
+        return $mensajes;
     }
 
     public function probar(Request $request, ClienteMeta $meta): RedirectResponse

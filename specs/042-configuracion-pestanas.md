@@ -183,12 +183,16 @@ cambian solo el acomodo: los campos, nombres, validaciones y permisos son los mi
     PIN y el botón en una línea. Se abre solo si el PIN regresó con error.
 39. Sin número conectado, en lugar de la caja va un aviso: "Todavía no hay un número conectado.
     Llena la conexión con Meta y guarda."
-40. El formulario se parte en cinco bloques (regla 35):
+40. El formulario se parte en cinco bloques (regla 35); seis desde 045, que parte *Agentes* en dos:
     - **Conexión con Meta**: la dirección del webhook va en la columna de la izquierda, en un
       recuadro; a la derecha, Phone number ID | WABA ID, Token | App secret y el token de
       verificación en la fila entera.
-    - **Agentes**: los dos agentes lado a lado, cada uno en un recuadro con su casilla de
-      encendido arriba y sus indicaciones abajo.
+    - **Agentes**: ~~los dos agentes lado a lado, cada uno en un recuadro con su casilla de
+      encendido arriba y sus indicaciones abajo~~. Desde
+      [045](045-indicaciones-por-secciones.md) (regla 14) son **dos bloques**, *Agente de ventas* y
+      *Agente de facturación*, uno debajo del otro: casilla de encendido, secciones en dos
+      columnas, *Preguntas frecuentes* y *Otras indicaciones* plegables en la fila entera, y el
+      contador de caracteres.
     - **Horario de atención**: una fila por día: nombre, casilla *Abierto*, hora de apertura, "a"
       y hora de cierre. Las horas de un día cerrado se ven atenuadas. Las etiquetas "Abre" y
       "Cierra" quedan solo para lectores de pantalla.

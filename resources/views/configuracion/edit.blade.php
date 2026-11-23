@@ -52,4 +52,5 @@
 
 @push('scripts')
     <script src="{{ asset('js/configuracion-pestanas.js') }}?v={{ filemtime(public_path('js/configuracion-pestanas.js')) }}"></script>
+    <script src="{{ asset('js/indicaciones-agente.js') }}?v={{ filemtime(public_path('js/indicaciones-agente.js')) }}"></script>
 @endpush

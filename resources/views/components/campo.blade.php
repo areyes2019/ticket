@@ -3,6 +3,7 @@
     'etiqueta',
     'tipo' => 'text',
     'id' => null,
+    'clave' => null,
     'valor' => null,
     'ayuda' => null,
     'opciones' => [],
@@ -11,7 +12,10 @@
 
 @php
     $id ??= $nombre;
-    $conError = isset($errors) && $errors->has($nombre);
+    // Ruta con puntos para old() y los errores cuando el nombre lleva corchetes
+    // (indicaciones_ventas[preguntas][2][respuesta], 045).
+    $clave ??= $nombre;
+    $conError = isset($errors) && $errors->has($clave);
 
     $attributes = $attributes->merge(array_filter([
         'aria-invalid' => $conError ? 'true' : null,
@@ -21,7 +25,7 @@
 
 @if ($tipo === 'checkbox')
     <label class="casilla">
-        <input id="{{ $id }}" type="checkbox" name="{{ $nombre }}" value="1" @checked(old($nombre, $valor)) {{ $attributes }}>
+        <input id="{{ $id }}" type="checkbox" name="{{ $nombre }}" value="1" @checked(old($clave, $valor)) {{ $attributes }}>
         {{ $etiqueta }}
     </label>
 @else
@@ -44,22 +48,22 @@
                     <option value="">{{ $vacia }}</option>
                 @endif
                 @foreach ($opciones as $valorOpcion => $textoOpcion)
-                    <option value="{{ $valorOpcion }}" @selected((string) old($nombre, $valor) === (string) $valorOpcion)>{{ $textoOpcion }}</option>
+                    <option value="{{ $valorOpcion }}" @selected((string) old($clave, $valor) === (string) $valorOpcion)>{{ $textoOpcion }}</option>
                 @endforeach
             </select>
         @elseif ($tipo === 'radio')
             <div class="opciones-radio" role="radiogroup" aria-labelledby="{{ $id }}-etiqueta">
                 @foreach ($opciones as $valorOpcion => $textoOpcion)
                     <label>
-                        <input id="{{ $id }}-{{ $valorOpcion }}" type="radio" name="{{ $nombre }}" value="{{ $valorOpcion }}" @checked((string) old($nombre, $valor) === (string) $valorOpcion) {{ $attributes }}>
+                        <input id="{{ $id }}-{{ $valorOpcion }}" type="radio" name="{{ $nombre }}" value="{{ $valorOpcion }}" @checked((string) old($clave, $valor) === (string) $valorOpcion) {{ $attributes }}>
                         {{ $textoOpcion }}
                     </label>
                 @endforeach
             </div>
         @elseif ($tipo === 'textarea')
-            <textarea id="{{ $id }}" name="{{ $nombre }}" {{ $attributes }}>{{ old($nombre, $valor) }}</textarea>
+            <textarea id="{{ $id }}" name="{{ $nombre }}" {{ $attributes }}>{{ old($clave, $valor) }}</textarea>
         @else
-            <input id="{{ $id }}" type="{{ $tipo }}" name="{{ $nombre }}" value="{{ old($nombre, $valor) }}" {{ $attributes }}>
+            <input id="{{ $id }}" type="{{ $tipo }}" name="{{ $nombre }}" value="{{ old($clave, $valor) }}" {{ $attributes }}>
         @endif
 
         @if ($ayuda)

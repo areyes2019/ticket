@@ -467,9 +467,11 @@ perderlos.
 81. **Configuración de los agentes (asunción 26)**, por cuenta:
     - encender o apagar **cada agente** por separado (si el de facturación está apagado, el de
       ventas no transfiere: dice que un asesor ayuda con la factura y pasa a humano);
-    - **instrucciones adicionales** de cada agente (área de texto, máx. 4 000 caracteres): políticas,
-      tiempos de entrega, tono, preguntas frecuentes. Se agregan **después** de las reglas fijas del
-      sistema y no las pueden quitar;
+    - **indicaciones** de cada agente, **por secciones** (desde
+      [045](045-indicaciones-por-secciones.md)): en ventas, formas de pago, entregas y envíos,
+      cambios y devoluciones, tono, preguntas frecuentes (hasta 30 pares pregunta/respuesta) y
+      otras; en facturación, requisitos para facturar, plazos, tono, preguntas frecuentes y otras.
+      Se agregan **después** de las reglas fijas del sistema y no las pueden quitar;
     - horario de atención, textos de pase a humano, tope de gasto y límites por cliente.
 
 ## Adiciones técnicas
@@ -660,7 +662,9 @@ Claves nuevas, con sus reglas y textos por defecto:
 
 - `whatsapp_ventas_activo`, `whatsapp_facturacion_activo` (booleanos, por defecto **apagados**: se
   encienden después de probar);
-- `whatsapp_instrucciones_ventas`, `whatsapp_instrucciones_facturacion` (máx. 4 000);
+- `whatsapp_instrucciones_ventas`, `whatsapp_instrucciones_facturacion` (máx. 4 000). Se
+  reemplazaron por las columnas JSON `indicaciones_ventas` e `indicaciones_facturacion`, con
+  secciones y preguntas frecuentes (ver [045](045-indicaciones-por-secciones.md));
 - `whatsapp_horario` (JSON por día);
 - `whatsapp_aviso_humano`, `whatsapp_aviso_humano_fuera_horario`;
 - `whatsapp_tope_mensual_usd` (por defecto 50);
@@ -692,7 +696,9 @@ filas) lo definen las reglas 37 a 41 de esa spec.
   2. Revisa palabras de humano (regla 29) y audios (regla 18) sin Claude.
   3. Marca leído y "escribiendo…".
   4. Arma la petición: `system` = reglas fijas del agente (`resources/prompts/whatsapp/ventas.md` y
-     `facturacion.md`) + datos del negocio (`Emisor`) + instrucciones de la cuenta, con caché;
+     `facturacion.md`) + datos del negocio (`Emisor`) + instrucciones de la cuenta, con caché.
+     Las instrucciones las arma `TextoIndicaciones` a partir de las secciones, siempre en el
+     mismo orden para no perder la caché (045, reglas 20 y 36 a 38);
      `messages` = resumen + últimos 40 mensajes + pendientes (imágenes y PDF del turno como
      contenido, regla 80) + fecha y hora actual y estado de la ventana.
   5. Ciclo de herramientas: mientras `stop_reason = tool_use`, ejecuta las herramientas del agente
@@ -869,7 +875,9 @@ completa pasa). **Falta** el alta del número en Meta y la prueba de punta a pun
 - **Ajustes en `whatsapp_numeros`, no en `ClaveConfiguracion`.** Encendido de agentes, indicaciones,
   horario, avisos, tope y límites son columnas del número: pertenecen a él, y el formulario genérico
   de Configuración pinta cada clave como un mensaje de texto. La sección "WhatsApp" tiene su propio
-  formulario (`ConfiguracionWhatsappController`).
+  formulario (`ConfiguracionWhatsappController`). Desde [045](045-indicaciones-por-secciones.md),
+  las indicaciones son las columnas JSON `indicaciones_ventas` e `indicaciones_facturacion` en
+  lugar de `instrucciones_*`.
 - **`pedidos` no gana `telefono_10`.** `pedidos.cliente_telefono` ya se guarda normalizado
   (`+52` y 10 dígitos, 019), así que la regla 44 compara contra `+52{10 dígitos}`. Solo
   `clientes` gana la columna.
