@@ -11,6 +11,7 @@ use App\Models\Emisor;
 use App\Services\Pedidos\MensajePedido;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
 /**
@@ -29,9 +30,32 @@ class ConfiguracionController extends Controller
                 ->all(),
             'huecos' => MensajePedido::HUECOS,
             'ejemplo' => MensajePedido::ejemplo(),
-            'emisor' => Emisor::actual(),
+            'emisor' => $emisor = Emisor::actual(),
             'datosBancarios' => DatoBancario::query()->ordenados()->get(),
+            'pestanas' => $this->pestanas($request, $emisor),
         ]);
+    }
+
+    /**
+     * Las pestañas que ve este usuario, en orden (042, regla 2). Las tres del
+     * negocio solo para el administrador; `advertencia` pinta la señal de las
+     * reglas 17 y 18.
+     *
+     * @return list<array{ancla: string, titulo: string, icono: string, advertencia: ?string}>
+     */
+    private function pestanas(Request $request, Emisor $emisor): array
+    {
+        $pestanas = [];
+
+        if (Gate::allows('editar-emisor')) {
+            $pestanas[] = ['ancla' => 'emisor', 'titulo' => 'Emisor', 'icono' => 'building', 'advertencia' => $emisor->estaCompleto() ? null : 'Faltan datos fiscales'];
+            $pestanas[] = ['ancla' => 'datos-bancarios', 'titulo' => 'Datos bancarios', 'icono' => 'bank', 'advertencia' => null];
+            $pestanas[] = ['ancla' => 'whatsapp', 'titulo' => 'WhatsApp', 'icono' => 'whatsapp', 'advertencia' => $request->user()->whatsappNumero === null ? 'Sin conectar' : null];
+        }
+
+        $pestanas[] = ['ancla' => 'mensajes', 'titulo' => 'Mensajes de pedidos', 'icono' => 'envelope', 'advertencia' => null];
+
+        return $pestanas;
     }
 
     /**
@@ -54,6 +78,6 @@ class ConfiguracionController extends Controller
             );
         }
 
-        return redirect()->route('configuracion.edit')->with('exito', 'Configuración guardada.');
+        return redirect()->to(route('configuracion.edit').'#mensajes')->with('exito', 'Configuración guardada.');
     }
 }

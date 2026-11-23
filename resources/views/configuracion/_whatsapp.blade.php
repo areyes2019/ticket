@@ -6,7 +6,7 @@
     $gasto = $numero === null ? 0 : app(App\Services\Whatsapp\RegistroUso::class)->gastoDelMes(auth()->user());
 @endphp
 
-<x-card titulo="WhatsApp" id="whatsapp">
+<x-card titulo="WhatsApp">
     <p class="ayuda">
         Número de la API de WhatsApp Cloud de Meta con los agentes de ventas y facturación.
         Webhook para Meta: <code>{{ route('whatsapp.webhook.recibir') }}</code>, campo <code>messages</code>.

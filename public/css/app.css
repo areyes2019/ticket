@@ -3002,9 +3002,43 @@ a.bandeja-abrir {
     color: var(--color-texto);
 }
 
-.pestanas a[aria-current="page"] {
+.pestanas a[aria-current="page"],
+.pestanas a[aria-selected="true"] {
     color: var(--color-primario-oscuro);
     border-bottom-color: var(--color-primario);
+}
+
+/* Configuración en pestañas (042) */
+.config-pestanas .pestanas {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+
+.config-pestanas .pestanas a {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--espacio-2);
+    white-space: nowrap;
+}
+
+.config-pestanas .pestanas a:focus-visible {
+    color: var(--color-texto);
+    background: var(--color-superficie-suave);
+    outline: 2px solid var(--color-primario);
+    outline-offset: -2px;
+}
+
+.pestana-aviso {
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    background: var(--color-advertencia);
+}
+
+.config-pestanas.pestanas-activas .config-panel:not(.activa) {
+    display: none;
 }
 
 .etiqueta-activa {

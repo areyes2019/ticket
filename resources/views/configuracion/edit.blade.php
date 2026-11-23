@@ -7,22 +7,42 @@
 
     @include('documentos._mensajes')
 
-    @can('editar-emisor')
-        @include('configuracion._emisor')
-        @include('configuracion._datos-bancarios')
-        @include('configuracion._whatsapp')
-    @endcan
+    {{-- Pestañas (042). El servidor manda todas las secciones visibles; el
+         script solo esconde las no elegidas cuando ya cargó (adición 2). --}}
+    <div class="config-pestanas" data-pestanas>
+        @if (count($pestanas) > 1)
+            @include('configuracion._pestanas')
+        @endif
 
-    <form method="POST" action="{{ route('configuracion.update') }}">
-        @csrf
-        @method('PUT')
+        @can('editar-emisor')
+            <div id="emisor" class="config-panel">
+                @include('configuracion._emisor')
+            </div>
+            <div id="datos-bancarios" class="config-panel">
+                @include('configuracion._datos-bancarios')
+            </div>
+            <div id="whatsapp" class="config-panel">
+                @include('configuracion._whatsapp')
+            </div>
+        @endcan
 
-        @foreach ($claves as $clave)
-            @include('configuracion._mensaje', ['clave' => $clave, 'valor' => $valores[$clave->value]])
-        @endforeach
+        <div id="mensajes" class="config-panel">
+            <form method="POST" action="{{ route('configuracion.update') }}">
+                @csrf
+                @method('PUT')
 
-        <div class="acciones">
-            <x-boton icono="save">Guardar</x-boton>
+                @foreach ($claves as $clave)
+                    @include('configuracion._mensaje', ['clave' => $clave, 'valor' => $valores[$clave->value]])
+                @endforeach
+
+                <div class="acciones">
+                    <x-boton icono="save">Guardar</x-boton>
+                </div>
+            </form>
         </div>
-    </form>
+    </div>
 @endsection
+
+@push('scripts')
+    <script src="{{ asset('js/configuracion-pestanas.js') }}?v={{ filemtime(public_path('js/configuracion-pestanas.js')) }}"></script>
+@endpush
