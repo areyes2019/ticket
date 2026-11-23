@@ -5,6 +5,10 @@
 > funcionales (con cambios en la 5, la 7 y la 18), las seis adiciones técnicas y, sin cambios, las
 > "decisiones tomadas al redactar" (A a H, resumidas al final).
 
+> **Cambiada por [046](046-configuracion-negocio-whatsapp-ia.md):** el horario de atención es del
+> negocio (tabla `emisor`) y se edita en la pestaña *Negocio*; los agentes, avisos y límites se
+> guardan en la pestaña *Agentes IA*, aparte de la conexión.
+
 **Modifica:**
 
 - [011-cotizaciones.md](011-cotizaciones.md): `cotizaciones` gana `notas`, `contacto_nombre`,

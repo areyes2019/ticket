@@ -2,6 +2,8 @@
 // visibles; este script las convierte en pestañas (roles WAI-ARIA, flechas,
 // Inicio/Fin), elige la inicial (ancla > última usada > primera) y recuerda
 // la última en localStorage. Si no carga, la página se ve completa.
+// 046, adición 3: el ancla de un bloque (#datos-bancarios) abre la pestaña
+// que lo contiene y baja hasta él.
 (function () {
     const CLAVE = 'configuracion.pestana';
     const contenedor = document.querySelector('[data-pestanas]');
@@ -32,6 +34,36 @@
 
     function existe(ancla) {
         return Object.prototype.hasOwnProperty.call(paneles, ancla);
+    }
+
+    // Una pestaña o un bloque dentro de una: {pestana, bloque} o null.
+    function resolver(ancla) {
+        if (!ancla) {
+            return null;
+        }
+        if (existe(ancla)) {
+            return { pestana: ancla, bloque: null };
+        }
+
+        const elemento = document.getElementById(ancla);
+        const panel = elemento && elemento.closest('.config-panel');
+
+        if (panel && panel.parentElement === contenedor && existe(panel.id)) {
+            return { pestana: panel.id, bloque: elemento };
+        }
+
+        return null;
+    }
+
+    // Abre lo resuelto: arriba si es pestaña, en el bloque si es bloque.
+    function irA(destino) {
+        abrir(destino.pestana);
+
+        if (destino.bloque) {
+            destino.bloque.scrollIntoView();
+        } else {
+            window.scrollTo(0, 0);
+        }
     }
 
     function leerGuardada() {
@@ -73,15 +105,17 @@
         return decodeURIComponent(location.hash.replace(/^#/, ''));
     }
 
-    const inicial = [anclaActual(), leerGuardada()].find(existe) || pestanas[0].dataset.pestana;
+    const porAncla = resolver(anclaActual());
+    const inicial = porAncla || resolver(leerGuardada()) || { pestana: pestanas[0].dataset.pestana, bloque: null };
 
     contenedor.classList.add('pestanas-activas');
-    abrir(inicial);
 
-    // Al llegar con ancla el navegador ya bajó hasta la sección; con las
-    // pestañas no hace falta (regla de la sección Frontend).
-    if (anclaActual()) {
-        window.scrollTo(0, 0);
+    // Al llegar con ancla de pestaña el navegador ya bajó hasta la sección;
+    // con las pestañas se vuelve arriba (042). Con ancla de bloque, al bloque.
+    if (porAncla) {
+        irA(inicial);
+    } else {
+        abrir(inicial.pestana);
     }
 
     barra.addEventListener('click', function (evento) {
@@ -120,9 +154,10 @@
 
     // Un enlace con ancla dentro de la misma página también cambia de pestaña.
     window.addEventListener('hashchange', function () {
-        if (existe(anclaActual())) {
-            abrir(anclaActual());
-            window.scrollTo(0, 0);
+        const destino = resolver(anclaActual());
+
+        if (destino) {
+            irA(destino);
         }
     });
 })();

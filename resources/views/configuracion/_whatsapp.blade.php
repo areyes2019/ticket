@@ -1,15 +1,14 @@
-{{-- WhatsApp (041): conexión con Meta y ajustes de los agentes. Solo el
-     administrador; el número queda ligado a su cuenta (regla 4). Acomodo por
-     bloques: título y explicación a la izquierda, campos a la derecha (042,
-     reglas 34 a 41). --}}
+{{-- WhatsApp (041): el canal, es decir, el número y la conexión con Meta. Los
+     agentes van en la pestaña Agentes IA (046, regla 8). Solo el
+     administrador; el número queda ligado a su cuenta (041, regla 4). Acomodo
+     por bloques: título y explicación a la izquierda, campos a la derecha
+     (042, reglas 34 a 41). --}}
 @php
     $numero = auth()->user()->whatsappNumero;
-    $horario = $numero?->horarioSemanal() ?? App\Models\WhatsappNumero::HORARIO_POR_DEFECTO;
-    $gasto = $numero === null ? 0 : app(App\Services\Whatsapp\RegistroUso::class)->gastoDelMes(auth()->user());
 @endphp
 
 <x-card titulo="WhatsApp">
-    <p class="ayuda">Número de la API de WhatsApp Cloud de Meta con los agentes de ventas y facturación.</p>
+    <p class="ayuda">Número de la API de WhatsApp Cloud de Meta. Los agentes de ventas y facturación se ajustan en la pestaña <a href="#agentes">Agentes IA</a>.</p>
 
     {{-- Estado del número y acciones sobre la conexión (regla 35). --}}
     @if ($numero)
@@ -18,10 +17,6 @@
                 <div>
                     <dt>Número</dt>
                     <dd><strong>{{ $numero->nombre_visible ?? 'Número conectado' }}</strong>@if ($numero->numero_visible)<br>{{ $numero->numero_visible }}@endif</dd>
-                </div>
-                <div>
-                    <dt>Gasto estimado de Claude este mes</dt>
-                    <dd><strong>US$ {{ number_format($gasto, 2) }}</strong> de US$ {{ number_format((float) $numero->tope_mensual_usd, 2) }}</dd>
                 </div>
             </dl>
 
@@ -74,55 +69,8 @@
             </div>
         </section>
 
-        {{-- Un bloque por agente con sus indicaciones por secciones (045, regla 14). --}}
-        @foreach (App\Enums\AgenteWhatsapp::cases() as $agente)
-            @include('configuracion._whatsapp-agente', ['agente' => $agente, 'numero' => $numero])
-        @endforeach
-
-        <section class="config-bloque">
-            <div class="config-bloque-texto">
-                <h3>Horario de atención</h3>
-                <p class="ayuda">Los agentes contestan siempre. El horario solo cambia el aviso cuando una conversación pasa a una persona.</p>
-            </div>
-            <div class="wa-horario">
-                @foreach (App\Models\WhatsappNumero::DIAS as $dia => $nombre)
-                    @php $tramo = $horario[$dia] ?? null; @endphp
-                    <div class="wa-horario-dia" role="group" aria-labelledby="horario-{{ $dia }}-nombre">
-                        <span class="wa-horario-nombre" id="horario-{{ $dia }}-nombre">{{ $nombre }}</span>
-                        <x-campo nombre="horario[{{ $dia }}][abierto]" id="horario-{{ $dia }}-abierto" etiqueta="Abierto" tipo="checkbox" :valor="$tramo !== null" />
-                        <x-campo nombre="horario[{{ $dia }}][abre]" id="horario-{{ $dia }}-abre" etiqueta="Abre" tipo="time" :valor="$tramo[0] ?? '09:00'" />
-                        <span class="wa-horario-a" aria-hidden="true">a</span>
-                        <x-campo nombre="horario[{{ $dia }}][cierra]" id="horario-{{ $dia }}-cierra" etiqueta="Cierra" tipo="time" :valor="$tramo[1] ?? '18:00'" />
-                    </div>
-                @endforeach
-            </div>
-        </section>
-
-        <section class="config-bloque">
-            <div class="config-bloque-texto">
-                <h3>Avisos al pasar con una persona</h3>
-                <p class="ayuda">Lo que recibe el cliente cuando la conversación pasa a alguien del equipo. <code>{horario}</code> se cambia por el horario de atención.</p>
-            </div>
-            <div class="rejilla-campos">
-                <x-campo nombre="aviso_humano" etiqueta="En horario" tipo="textarea" rows="3" :valor="$numero?->aviso_humano ?? App\Models\WhatsappNumero::AVISO_HUMANO" maxlength="500" />
-                <x-campo nombre="aviso_humano_fuera_horario" etiqueta="Fuera de horario" tipo="textarea" rows="3" :valor="$numero?->aviso_humano_fuera_horario ?? App\Models\WhatsappNumero::AVISO_HUMANO_FUERA_HORARIO" maxlength="500" />
-            </div>
-        </section>
-
-        <section class="config-bloque">
-            <div class="config-bloque-texto">
-                <h3>Límites</h3>
-                <p class="ayuda">Al llegar al tope de gasto, los agentes se pausan y todo pasa a una persona hasta el mes siguiente.</p>
-            </div>
-            <div class="rejilla-campos rejilla-campos-3">
-                <x-campo nombre="tope_mensual_usd" etiqueta="Tope de gasto mensual (US$)" tipo="number" step="0.01" min="0" :valor="$numero?->tope_mensual_usd ?? 50" required />
-                <x-campo nombre="limite_hora" etiqueta="Respuestas por cliente, por hora" tipo="number" min="1" :valor="$numero?->limite_hora ?? 20" required />
-                <x-campo nombre="limite_dia" etiqueta="Respuestas por cliente, por día" tipo="number" min="1" :valor="$numero?->limite_dia ?? 100" required />
-            </div>
-        </section>
-
         <div class="acciones config-pie">
-            <x-boton icono="save">Guardar WhatsApp</x-boton>
+            <x-boton icono="save">Guardar conexión</x-boton>
         </div>
     </form>
 </x-card>

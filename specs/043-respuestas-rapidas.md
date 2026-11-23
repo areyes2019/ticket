@@ -4,6 +4,10 @@
 > implementación" al final). El usuario aprobó el 2026-11-22, sin cambios, las 21 asunciones
 > funcionales y las 4 adiciones técnicas.
 
+> **Cambiada por [046](046-configuracion-negocio-whatsapp-ia.md):** desde el 2026-11-23 la lista
+> ya no tiene pestaña propia; es el bloque *Respuestas rápidas* (`#respuestas-rapidas`) de la
+> pestaña *WhatsApp*, para todos los usuarios.
+
 **Modifica:**
 
 - [041-agentes-whatsapp.md](041-agentes-whatsapp.md): la caja de respuesta de la conversación

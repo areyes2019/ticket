@@ -1,6 +1,6 @@
 {{-- Respuestas rápidas (043): textos que se insertan en el chat de WhatsApp
      tecleando "/atajo". Del negocio y para todos los usuarios. --}}
-<x-card titulo="Respuestas rápidas">
+<x-card titulo="Respuestas rápidas" id="respuestas-rapidas">
     <div class="encabezado">
         <p class="ayuda">Escribe / en el chat de WhatsApp para insertarlas. Puedes usar {nombre} y {fecha}.</p>
         <x-boton :href="route('configuracion.respuestas-rapidas.create')" icono="plus-lg">Nueva respuesta</x-boton>

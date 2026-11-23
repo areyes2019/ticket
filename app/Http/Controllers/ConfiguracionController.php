@@ -40,26 +40,25 @@ class ConfiguracionController extends Controller
     }
 
     /**
-     * Las pestañas que ve este usuario, en orden (042, regla 2). Las tres del
-     * negocio solo para el administrador; Respuestas rápidas (043) y Mensajes
-     * para todos; `advertencia` pinta la señal de las
-     * reglas 17 y 18.
+     * Las pestañas que ve este usuario, en orden (046, reglas 1, 14 y 15).
+     * El usuario normal tiene Negocio (solo Mensajes de pedidos) y WhatsApp
+     * (solo Respuestas rápidas); Agentes IA y las señales de advertencia
+     * (regla 16) son del administrador.
      *
      * @return list<array{ancla: string, titulo: string, icono: string, advertencia: ?string}>
      */
     private function pestanas(Request $request, Emisor $emisor): array
     {
-        $pestanas = [];
+        $admin = Gate::allows('editar-emisor');
 
-        if (Gate::allows('editar-emisor')) {
-            $pestanas[] = ['ancla' => 'emisor', 'titulo' => 'Emisor', 'icono' => 'building', 'advertencia' => $emisor->estaCompleto() ? null : 'Faltan datos fiscales'];
-            $pestanas[] = ['ancla' => 'datos-bancarios', 'titulo' => 'Datos bancarios', 'icono' => 'bank', 'advertencia' => null];
-            $pestanas[] = ['ancla' => 'whatsapp', 'titulo' => 'WhatsApp', 'icono' => 'whatsapp', 'advertencia' => $request->user()->whatsappNumero === null ? 'Sin conectar' : null];
+        $pestanas = [
+            ['ancla' => 'negocio', 'titulo' => 'Negocio', 'icono' => 'shop', 'advertencia' => $admin && ! $emisor->estaCompleto() ? 'Faltan datos fiscales' : null],
+            ['ancla' => 'whatsapp', 'titulo' => 'WhatsApp', 'icono' => 'whatsapp', 'advertencia' => $admin && $request->user()->whatsappNumero === null ? 'Sin conectar' : null],
+        ];
+
+        if ($admin) {
+            $pestanas[] = ['ancla' => 'agentes', 'titulo' => 'Agentes IA', 'icono' => 'robot', 'advertencia' => null];
         }
-
-        // Para todos los usuarios (043, regla 15).
-        $pestanas[] = ['ancla' => 'respuestas-rapidas', 'titulo' => 'Respuestas rápidas', 'icono' => 'lightning-charge', 'advertencia' => null];
-        $pestanas[] = ['ancla' => 'mensajes', 'titulo' => 'Mensajes de pedidos', 'icono' => 'envelope', 'advertencia' => null];
 
         return $pestanas;
     }
@@ -73,6 +72,33 @@ class ConfiguracionController extends Controller
         Emisor::actual()->fill($request->validated())->save();
 
         return redirect()->to(route('configuracion.edit').'#emisor')->with('exito', 'Datos del emisor guardados.');
+    }
+
+    /**
+     * Horario de atención del negocio (046, adición 1). Un día cerrado, sin
+     * horas o con apertura no menor que el cierre queda cerrado (null).
+     */
+    public function actualizarHorario(Request $request): RedirectResponse
+    {
+        $datos = $request->validate([
+            'horario' => ['array'],
+            'horario.*.abierto' => ['boolean'],
+            'horario.*.abre' => ['nullable', 'date_format:H:i'],
+            'horario.*.cierra' => ['nullable', 'date_format:H:i'],
+        ]);
+
+        $horario = [];
+
+        foreach (array_keys(Emisor::DIAS) as $dia) {
+            $tramo = $datos['horario'][$dia] ?? [];
+            $horario[$dia] = ! empty($tramo['abierto']) && ! empty($tramo['abre']) && ! empty($tramo['cierra']) && $tramo['abre'] < $tramo['cierra']
+                ? [$tramo['abre'], $tramo['cierra']]
+                : null;
+        }
+
+        Emisor::actual()->fill(['horario' => $horario])->save();
+
+        return redirect()->to(route('configuracion.edit').'#horario')->with('exito', 'Horario de atención guardado.');
     }
 
     public function update(ConfiguracionRequest $request): RedirectResponse

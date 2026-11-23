@@ -451,7 +451,7 @@ class OrquestadorTurno
             'Domicilio' => $emisor->domicilio,
             'Teléfono' => $emisor->telefono,
             'Sitio web' => $emisor->sitio_web,
-            'Horario de atención' => $conversacion->numero->horarioTexto(),
+            'Horario de atención' => $emisor->horarioTexto(),
         ]);
 
         $texto = $base."\n\n## Datos del negocio\n\n".implode("\n", array_map(fn ($k, $v) => "- {$k}: {$v}", array_keys($datos), $datos));

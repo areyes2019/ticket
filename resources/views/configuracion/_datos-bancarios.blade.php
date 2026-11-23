@@ -1,7 +1,7 @@
 {{-- Datos bancarios (027): cuentas a las que el cliente paga, impresas en el
      encabezado del PDF de las cotizaciones nuevas. Del negocio, como el
      emisor; no son las Cuentas de Tesorería. --}}
-<x-card titulo="Datos bancarios">
+<x-card titulo="Datos bancarios" id="datos-bancarios">
     <div class="encabezado">
         <p class="ayuda">Se imprimen en el encabezado del PDF de las cotizaciones nuevas, en este orden. Las cotizaciones ya creadas conservan los datos con los que se hicieron.</p>
         <x-boton :href="route('configuracion.datos-bancarios.create')" icono="plus-lg">Agregar banco</x-boton>

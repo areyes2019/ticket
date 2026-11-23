@@ -17,24 +17,17 @@
             @include('configuracion._pestanas')
         @endif
 
-        @can('editar-emisor')
-            <div id="emisor" class="config-panel">
+        {{-- Tres pestañas (046, regla 1). Cada bloque lleva su ancla
+             (#emisor, #datos-bancarios, #horario, #mensajes,
+             #respuestas-rapidas): el script abre la pestaña que lo contiene. --}}
+        <div id="negocio" class="config-panel">
+            @can('editar-emisor')
                 @include('configuracion._emisor')
-            </div>
-            <div id="datos-bancarios" class="config-panel">
                 @include('configuracion._datos-bancarios')
-            </div>
-            <div id="whatsapp" class="config-panel">
-                @include('configuracion._whatsapp')
-            </div>
-        @endcan
+                @include('configuracion._horario')
+            @endcan
 
-        <div id="respuestas-rapidas" class="config-panel">
-            @include('configuracion._respuestas-rapidas')
-        </div>
-
-        <div id="mensajes" class="config-panel">
-            <form method="POST" action="{{ route('configuracion.update') }}">
+            <form method="POST" action="{{ route('configuracion.update') }}" id="mensajes">
                 @csrf
                 @method('PUT')
 
@@ -43,10 +36,23 @@
                 @endforeach
 
                 <div class="acciones">
-                    <x-boton icono="save">Guardar</x-boton>
+                    <x-boton icono="save">Guardar mensajes</x-boton>
                 </div>
             </form>
         </div>
+
+        <div id="whatsapp" class="config-panel">
+            @can('editar-emisor')
+                @include('configuracion._whatsapp')
+            @endcan
+            @include('configuracion._respuestas-rapidas')
+        </div>
+
+        @can('editar-emisor')
+            <div id="agentes" class="config-panel">
+                @include('configuracion._agentes')
+            </div>
+        @endcan
     </div>
 @endsection
 

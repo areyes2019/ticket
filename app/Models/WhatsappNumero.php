@@ -26,7 +26,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'facturacion_activo',
     'indicaciones_ventas',
     'indicaciones_facturacion',
-    'horario',
     'aviso_humano',
     'aviso_humano_fuera_horario',
     'tope_mensual_usd',
@@ -37,18 +36,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class WhatsappNumero extends Model
 {
     protected $table = 'whatsapp_numeros';
-
-    public const DIAS = ['lun' => 'Lunes', 'mar' => 'Martes', 'mie' => 'Miércoles', 'jue' => 'Jueves', 'vie' => 'Viernes', 'sab' => 'Sábado', 'dom' => 'Domingo'];
-
-    public const HORARIO_POR_DEFECTO = [
-        'lun' => ['09:00', '18:00'],
-        'mar' => ['09:00', '18:00'],
-        'mie' => ['09:00', '18:00'],
-        'jue' => ['09:00', '18:00'],
-        'vie' => ['09:00', '18:00'],
-        'sab' => ['09:00', '14:00'],
-        'dom' => null,
-    ];
 
     public const AVISO_HUMANO = 'Te comunico con un asesor, en breve te responde.';
 
@@ -116,57 +103,18 @@ class WhatsappNumero extends Model
     }
 
     /**
-     * @return array<string, array{0: string, 1: string}|null>
-     */
-    public function horarioSemanal(): array
-    {
-        return [...self::HORARIO_POR_DEFECTO, ...($this->horario ?? [])];
-    }
-
-    /**
-     * Regla 31: el horario se evalúa en la zona del negocio.
-     */
-    public function enHorario(?CarbonInterface $momento = null): bool
-    {
-        $momento = ($momento ?? now())->copy()->setTimezone(config('app.zona_negocio'));
-        $dia = array_keys(self::DIAS)[$momento->dayOfWeekIso - 1];
-        $tramo = $this->horarioSemanal()[$dia] ?? null;
-
-        if ($tramo === null) {
-            return false;
-        }
-
-        $hora = $momento->format('H:i');
-
-        return $hora >= $tramo[0] && $hora < $tramo[1];
-    }
-
-    /**
-     * "lunes a viernes de 09:00 a 18:00, sábado de 09:00 a 14:00".
-     */
-    public function horarioTexto(): string
-    {
-        $partes = [];
-
-        foreach ($this->horarioSemanal() as $dia => $tramo) {
-            if ($tramo !== null) {
-                $partes[] = mb_strtolower(self::DIAS[$dia]).' de '.$tramo[0].' a '.$tramo[1];
-            }
-        }
-
-        return $partes === [] ? 'por confirmar' : implode(', ', $partes);
-    }
-
-    /**
-     * Regla 30: el aviso que recibe el cliente al pasar a humano.
+     * Regla 30: el aviso que recibe el cliente al pasar a humano. El horario
+     * es del negocio (046, regla 6).
      */
     public function avisoHumano(?CarbonInterface $momento = null): string
     {
-        if ($this->enHorario($momento)) {
+        $negocio = Emisor::actual();
+
+        if ($negocio->enHorario($momento)) {
             return $this->aviso_humano ?: self::AVISO_HUMANO;
         }
 
-        return str_replace('{horario}', $this->horarioTexto(), $this->aviso_humano_fuera_horario ?: self::AVISO_HUMANO_FUERA_HORARIO);
+        return str_replace('{horario}', $negocio->horarioTexto(), $this->aviso_humano_fuera_horario ?: self::AVISO_HUMANO_FUERA_HORARIO);
     }
 
     /**
@@ -189,7 +137,6 @@ class WhatsappNumero extends Model
             'facturacion_activo' => 'boolean',
             'indicaciones_ventas' => 'array',
             'indicaciones_facturacion' => 'array',
-            'horario' => 'array',
             'tope_mensual_usd' => 'decimal:2',
             'limite_hora' => 'integer',
             'limite_dia' => 'integer',

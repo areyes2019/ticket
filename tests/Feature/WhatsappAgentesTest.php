@@ -10,6 +10,7 @@ use App\Models\Cliente;
 use App\Models\Cotizacion;
 use App\Models\Cuenta;
 use App\Models\DatoBancario;
+use App\Models\Emisor;
 use App\Models\Factura;
 use App\Models\Pedido;
 use App\Models\User;
@@ -796,18 +797,15 @@ it('solo el administrador configura el número y un mismo número no se liga a d
     $admin = User::factory()->administrador()->create();
     $datos = [
         'phone_number_id' => '1111111111', 'waba_id' => '3333333333', 'token' => 'x', 'app_secret' => 'y', 'verify_token' => 'verificacion-abcdef',
-        'tope_mensual_usd' => 50, 'limite_hora' => 20, 'limite_dia' => 100,
     ];
 
     $this->actingAs($this->user)->put('/configuracion/whatsapp', $datos)->assertForbidden();
     $this->actingAs($admin)->put('/configuracion/whatsapp', $datos)->assertSessionHasErrors(['phone_number_id' => 'Este número ya está conectado a otra cuenta.']);
 
-    $this->actingAs($admin)->put('/configuracion/whatsapp', [...$datos, 'phone_number_id' => '4444444444', 'horario' => ['lun' => ['abierto' => 1, 'abre' => '10:00', 'cierra' => '14:00']]])->assertSessionHas('exito');
+    $this->actingAs($admin)->put('/configuracion/whatsapp', [...$datos, 'phone_number_id' => '4444444444'])->assertSessionHas('exito');
 
     $numero = $admin->fresh()->whatsappNumero;
-    expect($numero)->token->toBe('x')->ventas_activo->toBeFalse()
-        ->and($numero->horarioSemanal()['lun'])->toBe(['10:00', '14:00'])
-        ->and($numero->horarioSemanal()['mar'])->toBeNull();
+    expect($numero)->token->toBe('x')->ventas_activo->toBeFalse();
 
     // Dejar el token vacío lo conserva.
     $this->actingAs($admin->fresh())->put('/configuracion/whatsapp', [...$datos, 'phone_number_id' => '4444444444', 'token' => '', 'app_secret' => ''])->assertSessionHas('exito');
@@ -815,7 +813,8 @@ it('solo el administrador configura el número y un mismo número no se liga a d
 });
 
 it('el aviso fuera de horario lleva el horario de atención', function () {
-    $this->numero->forceFill(['horario' => ['lun' => ['09:00', '18:00'], 'mar' => null, 'mie' => null, 'jue' => null, 'vie' => null, 'sab' => null, 'dom' => null]])->save();
+    // El horario es del negocio (046, regla 6).
+    Emisor::actual()->fill(['horario' => ['lun' => ['09:00', '18:00'], 'mar' => null, 'mie' => null, 'jue' => null, 'vie' => null, 'sab' => null, 'dom' => null]])->save();
     $lunesNoche = now(config('app.zona_negocio'))->next('Monday')->setTime(22, 0);
 
     expect($this->numero->fresh()->avisoHumano($lunesNoche))->toContain('lunes de 09:00 a 18:00')

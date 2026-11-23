@@ -40,7 +40,7 @@ beforeEach(function () {
 });
 
 it('guarda las secciones y las preguntas limpias y en orden', function () {
-    $this->actingAs($this->admin)->put('/configuracion/whatsapp', datosWhatsapp([
+    $this->actingAs($this->admin)->put('/configuracion/whatsapp/agentes', datosWhatsapp([
         'indicaciones_ventas' => [
             'pago' => "  Transferencia\r\ny efectivo  ",
             'entregas' => '',
@@ -66,17 +66,17 @@ it('guarda las secciones y las preguntas limpias y en orden', function () {
 });
 
 it('rechaza un par con pregunta sin respuesta o respuesta sin pregunta', function () {
-    $this->actingAs($this->admin)->put('/configuracion/whatsapp', datosWhatsapp([
+    $this->actingAs($this->admin)->put('/configuracion/whatsapp/agentes', datosWhatsapp([
         'indicaciones_ventas' => ['preguntas' => [['pregunta' => '¿Hacen fechadores?', 'respuesta' => '']]],
     ]))->assertSessionHasErrors(['indicaciones_ventas.preguntas.0.respuesta' => 'Falta la respuesta.']);
 
-    $this->actingAs($this->admin)->put('/configuracion/whatsapp', datosWhatsapp([
+    $this->actingAs($this->admin)->put('/configuracion/whatsapp/agentes', datosWhatsapp([
         'indicaciones_facturacion' => ['preguntas' => [['pregunta' => '', 'respuesta' => 'Sí.']]],
     ]))->assertSessionHasErrors(['indicaciones_facturacion.preguntas.0.pregunta' => 'Falta la pregunta.']);
 });
 
 it('ignora los pares vacíos y numera desde cero', function () {
-    $this->actingAs($this->admin)->put('/configuracion/whatsapp', datosWhatsapp([
+    $this->actingAs($this->admin)->put('/configuracion/whatsapp/agentes', datosWhatsapp([
         'indicaciones_ventas' => ['preguntas' => [
             3 => ['pregunta' => '', 'respuesta' => '  '],
             5 => ['pregunta' => 'Uno', 'respuesta' => 'A'],
@@ -93,7 +93,7 @@ it('ignora los pares vacíos y numera desde cero', function () {
 });
 
 it('valida los límites de secciones, preguntas y respuestas', function (array $indicaciones, string $error) {
-    $this->actingAs($this->admin)->put('/configuracion/whatsapp', datosWhatsapp(['indicaciones_ventas' => $indicaciones]))
+    $this->actingAs($this->admin)->put('/configuracion/whatsapp/agentes', datosWhatsapp(['indicaciones_ventas' => $indicaciones]))
         ->assertSessionHasErrors($error);
 })->with([
     '31 preguntas' => [['preguntas' => array_fill(0, 31, ['pregunta' => 'P', 'respuesta' => 'R'])], 'indicaciones_ventas.preguntas'],

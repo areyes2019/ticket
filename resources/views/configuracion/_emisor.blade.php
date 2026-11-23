@@ -1,6 +1,6 @@
 {{-- Datos del emisor (026): uno para toda la instalación, solo lo edita el
      administrador. Formulario propio: guardarlo no reenvía los mensajes. --}}
-<x-card titulo="Datos del emisor">
+<x-card titulo="Datos del emisor" id="emisor">
     @unless ($emisor->estaCompleto())
         <x-alerta tipo="advertencia">Tus cotizaciones y órdenes de compra se están imprimiendo sin datos fiscales del emisor.</x-alerta>
     @endunless

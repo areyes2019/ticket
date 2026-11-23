@@ -137,19 +137,20 @@ it('sin sesión todas las rutas mandan al inicio de sesión', function () {
 
 // --- Pestaña en Configuración (reglas 15 y 16) ---
 
-it('la pestaña sale para el administrador y para el usuario normal, en su lugar', function () {
+// Desde 046 (regla 8) es un bloque de la pestaña WhatsApp, para todos.
+it('el bloque sale en la pestaña WhatsApp para el administrador y para el usuario normal', function () {
     RespuestaRapida::factory()->create(['atajo' => 'pago', 'texto' => 'Transferencia a BBVA']);
     RespuestaRapida::factory()->create(['atajo' => 'horario', 'texto' => 'Lunes a viernes']);
 
     $this->actingAs($this->admin)->get('/configuracion')
         ->assertOk()
-        ->assertSeeInOrder(['href="#emisor"', 'href="#datos-bancarios"', 'href="#whatsapp"', 'href="#respuestas-rapidas"', 'href="#mensajes"'], false)
+        ->assertSeeInOrder(['id="whatsapp"', 'id="respuestas-rapidas"', 'id="agentes"'], false)
         ->assertSeeInOrder(['/horario', '/pago']);
 
     $this->actingAs($this->user)->get('/configuracion')
         ->assertOk()
         ->assertSee('data-pestanas-barra', false)
-        ->assertSeeInOrder(['href="#respuestas-rapidas"', 'href="#mensajes"'], false)
+        ->assertSeeInOrder(['href="#negocio"', 'href="#whatsapp"'], false)
         ->assertSee('id="respuestas-rapidas"', false)
         ->assertSee('Lunes a viernes');
 });

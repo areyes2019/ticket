@@ -4,6 +4,10 @@
 > aprobó el 2026-11-22, sin cambios, las 19 asunciones funcionales y las 4 adiciones técnicas (la
 > adición 1 ajusta la asunción 5).
 
+> **Cambiada por [046](046-configuracion-negocio-whatsapp-ia.md):** desde el 2026-11-23 son tres
+> pestañas (*Negocio*, *WhatsApp* y *Agentes IA*). Las reglas 2, 5, 6, 9, 10, 17, 18 y 40 quedan
+> como dice 046; el resto (cómo funcionan las pestañas) sigue igual.
+
 **Modifica:**
 
 - La vista `configuracion/edit.blade.php`: sus secciones dejan de ir una debajo de otra y pasan a

@@ -252,14 +252,20 @@ Route::middleware(['auth', AsegurarUsuarioActivo::class, CandadoMostrador::class
     Route::put('configuracion/emisor', [ConfiguracionController::class, 'actualizarEmisor'])
         ->middleware('can:editar-emisor')
         ->name('configuracion.emisor');
+    // Horario de atención del negocio (046, adición 1).
+    Route::put('configuracion/horario', [ConfiguracionController::class, 'actualizarHorario'])
+        ->middleware('can:editar-emisor')
+        ->name('configuracion.horario');
 
-    // WhatsApp (041): conexión y ajustes de los agentes, solo el administrador.
+    // WhatsApp (041): conexión y, aparte, ajustes de los agentes (046,
+    // adición 2), solo el administrador.
     Route::controller(ConfiguracionWhatsappController::class)
         ->prefix('configuracion/whatsapp')
         ->name('configuracion.whatsapp')
         ->middleware('can:editar-emisor')
         ->group(function () {
             Route::put('/', 'update');
+            Route::put('agentes', 'agentes')->name('.agentes');
             Route::post('probar', 'probar')->name('.probar');
             Route::post('registrar', 'registrar')->name('.registrar');
             Route::post('plantillas', 'plantillas')->name('.plantillas');
