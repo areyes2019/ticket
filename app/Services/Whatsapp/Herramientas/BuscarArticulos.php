@@ -5,6 +5,7 @@ namespace App\Services\Whatsapp\Herramientas;
 use App\Models\Articulo;
 use App\Services\Whatsapp\ContextoTurno;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\Relation;
 
 /**
  * Ventas (041, reglas 34 a 36): hasta 10 artículos del catálogo de la cuenta
@@ -48,30 +49,63 @@ class BuscarArticulos extends HerramientaBase
             return ResultadoHerramienta::error('Escribe al menos una palabra de dos letras.');
         }
 
-        $buscar = fn (bool $todas) => $turno->user()->articulos()
+        $consulta = fn (bool $todas) => $turno->user()->articulos()
             ->where(function (Builder $consulta) use ($palabras, $todas) {
                 foreach ($palabras as $palabra) {
                     $condicion = fn (Builder $q) => $q->where('nombre', 'like', "%{$palabra}%")->orWhere('modelo', 'like', "%{$palabra}%");
                     $todas ? $consulta->where($condicion) : $consulta->orWhere($condicion);
                 }
-            })
-            ->orderBy('nombre')
-            ->limit(self::LIMITE)
-            ->get();
+            });
 
-        $articulos = $buscar(true);
+        $todas = true;
+        $total = $consulta(true)->count();
 
-        if ($articulos->isEmpty() && count($palabras) > 1) {
-            $articulos = $buscar(false);
+        if ($total === 0 && count($palabras) > 1) {
+            $todas = false;
+            $total = $consulta(false)->count();
         }
 
-        return ResultadoHerramienta::ok([
+        $articulos = $this->porRelevancia($consulta($todas), $palabras)->limit(self::LIMITE)->get();
+
+        $datosResultado = [
             'articulos' => $articulos->map(fn (Articulo $a) => [
                 'id' => $a->id,
                 'nombre' => $a->nombre,
                 'modelo' => $a->modelo,
                 'precio_con_iva' => $a->precio_unitario_con_iva,
             ])->values()->all(),
-        ], 'consultó artículos: "'.$datos['texto'].'" ('.$articulos->count().')');
+            'total_encontrados' => $total,
+        ];
+
+        if ($total > $articulos->count()) {
+            $datosResultado['aviso'] = "Hay {$total} artículos que coinciden y solo se muestran {$articulos->count()}. "
+                .'Si no ves lo que busca el cliente, busca otra vez con palabras más precisas (por ejemplo "sello fechador" en vez de "fechador").';
+        }
+
+        return ResultadoHerramienta::ok($datosResultado, 'consultó artículos: "'.$datos['texto'].'" ('.$total.')');
+    }
+
+    /**
+     * Primero los artículos cuyo nombre trae las palabras más cerca del inicio
+     * ("Sello fechador 4x2" antes que "Almohadilla para sello fechador"), luego
+     * los nombres más cortos y al final el orden alfabético.
+     *
+     * @param  list<string>  $palabras
+     */
+    private function porRelevancia(Builder|Relation $consulta, array $palabras): Builder|Relation
+    {
+        $posiciones = [];
+        $valores = [];
+
+        foreach ($palabras as $palabra) {
+            $posiciones[] = 'CASE WHEN INSTR(LOWER(nombre), ?) = 0 THEN 1000 ELSE INSTR(LOWER(nombre), ?) END';
+            $valores[] = mb_strtolower($palabra);
+            $valores[] = mb_strtolower($palabra);
+        }
+
+        return $consulta
+            ->orderByRaw('('.implode(' + ', $posiciones).')', $valores)
+            ->orderByRaw('LENGTH(nombre)')
+            ->orderBy('nombre');
     }
 }

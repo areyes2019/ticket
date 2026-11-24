@@ -550,6 +550,21 @@ it('buscar_articulos solo regresa artículos de la cuenta con su precio público
         ->and($resultado->json())->not->toContain('costo')->not->toContain('distribuidor');
 });
 
+it('buscar_articulos pone primero los artículos que empiezan con la palabra y avisa cuando hay más', function () {
+    foreach (range(1, 12) as $i) {
+        articuloFacturable($this->user, ['nombre' => "Almohadilla para sello fechador {$i}"]);
+    }
+    articuloFacturable($this->user, ['nombre' => 'Sello fechador de 45 x 30 mm', 'modelo' => 'Printer 53 Dater']);
+    $turno = new ContextoTurno(conversacion());
+
+    $resultado = app(BuscarArticulos::class)->ejecutar($turno, ['texto' => 'fechador']);
+
+    expect($resultado->datos['articulos'])->toHaveCount(BuscarArticulos::LIMITE)
+        ->and($resultado->datos['articulos'][0]['nombre'])->toBe('Sello fechador de 45 x 30 mm')
+        ->and($resultado->datos['total_encontrados'])->toBe(13)
+        ->and($resultado->datos['aviso'])->toContain('Hay 13 artículos');
+});
+
 it('crear_cotizacion rechaza artículos de otra cuenta y nunca toma un precio del agente', function () {
     $ajeno = articuloFacturable(User::factory()->create());
     $turno = new ContextoTurno(conversacion());
