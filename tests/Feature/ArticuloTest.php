@@ -274,6 +274,21 @@ describe('nombre único por proveedor', function () {
 
         expect($articulo->fresh()->modelo)->toBe('R-46');
     });
+
+    it('no cambia la marca de Artículos IA desde el formulario (047)', function (bool $marcado) {
+        $articulo = Articulo::factory()->create(['nombre' => 'Sello redondo 45 mm', 'para_ia' => $marcado]);
+
+        $this->actingAs($articulo->user)
+            ->put("/articulos/{$articulo->id}", datosArticulo($articulo->catalogo, ['para_ia' => ! $marcado]))
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($articulo->user)
+            ->post('/articulos', datosArticulo($articulo->catalogo, ['modelo' => 'R-99', 'nombre' => 'Otro sello', 'para_ia' => '1']))
+            ->assertSessionHasNoErrors();
+
+        expect($articulo->fresh()->para_ia)->toBe($marcado)
+            ->and(Articulo::where('modelo', 'R-99')->sole()->para_ia)->toBeFalse();
+    })->with([true, false]);
 });
 
 describe('edición y eliminación', function () {

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ArticuloController;
+use App\Http\Controllers\ArticuloIaController;
 use App\Http\Controllers\AutofacturaController;
 use App\Http\Controllers\CatalogoController;
 use App\Http\Controllers\CatalogoSatController;
@@ -312,6 +313,15 @@ Route::middleware(['auth', AsegurarUsuarioActivo::class, CandadoMostrador::class
         Route::post('{articulo}/ajuste', [ExistenciaController::class, 'ajuste'])->name('ajuste');
         Route::put('{articulo}/parametros', [ExistenciaController::class, 'parametros'])->name('parametros');
         Route::delete('{articulo}', [ExistenciaController::class, 'destroy'])->name('destroy');
+    });
+
+    // Artículos IA (047): la lista que el agente de ventas ofrece primero.
+    Route::prefix('articulos-ia')->name('articulos-ia.')->controller(ArticuloIaController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('buscar', 'buscar')->name('buscar');
+        Route::get('agregar', 'agregar')->name('agregar');
+        Route::post('{articulo}', 'store')->name('store');
+        Route::delete('{articulo}', 'destroy')->name('destroy');
     });
 
     // Tesorería: en el menú se llama "Contabilidad".

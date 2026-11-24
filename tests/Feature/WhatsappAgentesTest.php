@@ -546,8 +546,89 @@ it('buscar_articulos solo regresa artículos de la cuenta con su precio público
             'nombre' => 'Sello autoentintable 4x2',
             'modelo' => 'P-4020',
             'precio_con_iva' => $articulo->precio_unitario_con_iva,
+            'disponibilidad' => 'sobre_pedido',
         ])
+        ->and($resultado->datos['lista'])->toBe('todo_el_catalogo')
+        ->and($resultado->datos)->not->toHaveKey('aviso')
         ->and($resultado->json())->not->toContain('costo')->not->toContain('distribuidor');
+});
+
+// --- Artículos IA (047) ---
+
+it('buscar_articulos busca primero en Artículos IA y solo regresa esos', function () {
+    $marcado = articuloFacturable($this->user, ['nombre' => 'Sello autoentintable 4x2', 'para_ia' => true]);
+    articuloFacturable($this->user, ['nombre' => 'Sello autoentintable 4x2 de lujo']);
+    $turno = new ContextoTurno(conversacion());
+
+    $resultado = app(BuscarArticulos::class)->ejecutar($turno, ['texto' => 'autoentintable 4x2', 'todo_el_catalogo' => false]);
+
+    expect($resultado->datos['lista'])->toBe('ia')
+        ->and(array_column($resultado->datos['articulos'], 'id'))->toBe([$marcado->id])
+        ->and($resultado->datos['total_encontrados'])->toBe(1)
+        ->and($resultado->resumen)->toBe('consultó artículos: "autoentintable 4x2" (lista IA, 1)');
+});
+
+it('buscar_articulos pasa solo a todo el catálogo cuando nada de Artículos IA coincide', function () {
+    articuloFacturable($this->user, ['nombre' => 'Sello autoentintable 4x2', 'para_ia' => true]);
+    $madera = articuloFacturable($this->user, ['nombre' => 'Sello de madera con mango']);
+    $turno = new ContextoTurno(conversacion());
+
+    $resultado = app(BuscarArticulos::class)->ejecutar($turno, ['texto' => 'madera', 'todo_el_catalogo' => false]);
+
+    expect($resultado->datos['lista'])->toBe('todo_el_catalogo')
+        ->and(array_column($resultado->datos['articulos'], 'id'))->toBe([$madera->id])
+        ->and($resultado->datos['aviso'])->toContain('Nada de la lista principal coincide')
+        ->and($resultado->resumen)->toBe('consultó artículos: "madera" (todo el catálogo, 1)');
+});
+
+it('buscar_articulos con todo_el_catalogo busca directo en todo el catálogo', function () {
+    articuloFacturable($this->user, ['nombre' => 'Sello autoentintable 4x2', 'para_ia' => true]);
+    articuloFacturable($this->user, ['nombre' => 'Sello autoentintable 4x2 de lujo']);
+    $turno = new ContextoTurno(conversacion());
+
+    $resultado = app(BuscarArticulos::class)->ejecutar($turno, ['texto' => 'autoentintable', 'todo_el_catalogo' => true]);
+
+    expect($resultado->datos['lista'])->toBe('todo_el_catalogo')
+        ->and($resultado->datos['articulos'])->toHaveCount(2)
+        ->and($resultado->datos)->not->toHaveKey('aviso');
+});
+
+it('buscar_articulos dice en existencia o sobre pedido y nunca cuántas piezas hay', function () {
+    $conPiezas = articuloFacturable($this->user, ['nombre' => 'Sello A', 'modelo' => 'A-1', 'para_ia' => true]);
+    $enCero = articuloFacturable($this->user, ['nombre' => 'Sello B', 'modelo' => 'B-1', 'para_ia' => true]);
+    $quitado = articuloFacturable($this->user, ['nombre' => 'Sello C', 'modelo' => 'C-1', 'para_ia' => true]);
+    $sinFila = articuloFacturable($this->user, ['nombre' => 'Sello D', 'modelo' => 'D-1', 'para_ia' => true]);
+    marcarExistencia($conPiezas, 37, minimo: 12);
+    marcarExistencia($enCero, 0, faltante: 3);
+    marcarExistencia($quitado, 8)->delete();
+    $turno = new ContextoTurno(conversacion());
+
+    $resultado = app(BuscarArticulos::class)->ejecutar($turno, ['texto' => 'sello']);
+
+    expect(collect($resultado->datos['articulos'])->pluck('disponibilidad', 'id')->all())->toBe([
+        $conPiezas->id => 'en_existencia',
+        $enCero->id => 'sobre_pedido',
+        $quitado->id => 'sobre_pedido',
+        $sinFila->id => 'sobre_pedido',
+    ])
+        ->and(collect($resultado->datos['articulos'])->every(fn (array $a) => array_keys($a) === ['id', 'nombre', 'modelo', 'precio_con_iva', 'disponibilidad']))->toBeTrue()
+        ->and($resultado->json())->not->toContain('37')->not->toContain('faltante')->not->toContain('minimo');
+});
+
+it('buscar_articulos nunca regresa artículos ajenos ni borrados en ninguna lista', function () {
+    articuloFacturable(User::factory()->create(), ['nombre' => 'Sello ajeno', 'para_ia' => true]);
+    articuloFacturable($this->user, ['nombre' => 'Sello borrado', 'para_ia' => true])->delete();
+    articuloFacturable($this->user, ['nombre' => 'Sello borrado general'])->delete();
+    $propio = articuloFacturable($this->user, ['nombre' => 'Sello propio']);
+    $turno = new ContextoTurno(conversacion());
+
+    foreach ([false, true] as $todo) {
+        $resultado = app(BuscarArticulos::class)->ejecutar($turno, ['texto' => 'sello', 'todo_el_catalogo' => $todo]);
+
+        expect($resultado->datos['lista'])->toBe('todo_el_catalogo')
+            ->and(array_column($resultado->datos['articulos'], 'id'))->toBe([$propio->id])
+            ->and($resultado->datos)->not->toHaveKey('aviso');
+    }
 });
 
 it('buscar_articulos pone primero los artículos que empiezan con la palabra y avisa cuando hay más', function () {

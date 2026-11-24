@@ -28,11 +28,12 @@
         [
             'nombre' => 'Inventario',
             'icono' => 'boxes',
-            'rutas' => ['articulos.*', 'catalogos.*', 'existencias.*'],
+            'rutas' => ['articulos.*', 'catalogos.*', 'existencias.*', 'articulos-ia.*'],
             'opciones' => [
                 ['ruta' => 'articulos', 'icono' => 'box-seam', 'nombre' => 'Artículos', 'detalle' => 'Catálogo general con precios'],
                 ['ruta' => 'catalogos', 'icono' => 'collection', 'nombre' => 'Catálogos', 'detalle' => 'Listas de cada proveedor'],
                 ['ruta' => 'existencias', 'icono' => 'boxes', 'nombre' => 'Existencias', 'detalle' => 'Piezas en bodega y reposición'],
+                ['ruta' => 'articulos-ia', 'icono' => 'robot', 'nombre' => 'Artículos IA', 'detalle' => 'Lo que la IA ofrece primero'],
             ],
         ],
         [

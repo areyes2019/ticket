@@ -28,6 +28,9 @@ use Illuminate\Support\Str;
  * solo el modelo.
  *
  * imagen_ruta la escribe solo ProcesadorImagenArticulo, al guardar el archivo.
+ *
+ * para_ia (047) la escribe solo ArticuloIaController; por no ser asignable, el
+ * formulario, la importación y el clonado no la tocan.
  */
 #[Fillable([
     'catalogo_id',
@@ -282,6 +285,31 @@ class Articulo extends Model
     }
 
     /**
+     * Los de la lista "Artículos IA" (047), que el agente de ventas ofrece
+     * primero.
+     *
+     * @param  Builder<self>  $consulta
+     */
+    #[Scope]
+    protected function paraIa(Builder $consulta): void
+    {
+        $consulta->where('para_ia', true);
+    }
+
+    /**
+     * Agrega en_existencia (bool): está en existencias con piezas. Sin fila
+     * viva o con 0 piezas es "sobre pedido" (047, regla 10). Nunca carga la
+     * cantidad.
+     *
+     * @param  Builder<self>  $consulta
+     */
+    #[Scope]
+    protected function conDisponibilidad(Builder $consulta): void
+    {
+        $consulta->withExists(['existencia as en_existencia' => fn (Builder $q) => $q->where('existencia', '>', 0)]);
+    }
+
+    /**
      * Una sola caja de texto contra nombre, modelo o proveedor (combinados con
      * O), para las tarjetas del mostrador (033). Vacía no filtra.
      *
@@ -480,6 +508,7 @@ class Articulo extends Model
             'costo_con_descuento' => 'decimal:2',
             'precio_unitario_sin_iva' => 'decimal:2',
             'precio_distribuidor_sin_iva' => 'decimal:2',
+            'para_ia' => 'boolean',
         ];
     }
 }
